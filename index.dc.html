@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:'IBM Plex Sans',sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none}
+  a:hover{color:var(--accent)}
+  [data-vayu]{
+    --bg:#e9efed; --surface:#ffffff; --surface-2:#f2f6f4; --ink:#0f1c1a; --ink-2:#54615e;
+    --ink-3:#8a9793; --line:#d9e2df; --accent:oklch(0.6 0.11 190); --accent-2:oklch(0.6 0.11 265);
+    --glow:rgba(15,163,154,0.14); --shadow:0 1px 2px rgba(16,28,26,.04),0 12px 32px -12px rgba(16,28,26,.14);
+  }
+  [data-vayu][data-theme="dark"]{
+    --bg:#07110f; --surface:#0e1c19; --surface-2:#13221e; --ink:#e9f2ef; --ink-2:#93a7a2;
+    --ink-3:#5e706b; --line:#1d2e2a; --accent:oklch(0.75 0.12 190); --accent-2:oklch(0.75 0.12 265);
+    --glow:rgba(47,201,189,0.18); --shadow:0 1px 2px rgba(0,0,0,.3),0 18px 40px -14px rgba(0,0,0,.6);
+  }
+  @keyframes vayuPulse{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:1;transform:scale(1.35)}}
+  @keyframes vayuFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+  @keyframes vayuRise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes vayuDrift{from{background-position:0 0}to{background-position:600px 0}}
+</style>
+</helmet>
+<div data-vayu data-theme="{{ theme }}" style="background:var(--bg);color:var(--ink);min-height:100vh;position:relative;overflow-x:hidden;transition:background .4s,color .4s">
+
+  <div style="position:fixed;inset:0;pointer-events:none;z-index:0;background:radial-gradient(1100px 520px at 78% -6%,var(--glow),transparent 60%),radial-gradient(900px 480px at 8% 8%,color-mix(in oklch,var(--accent-2),transparent 88%),transparent 60%)"></div>
+  <div style="position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:64px 64px;mask-image:radial-gradient(circle at 50% 30%,#000,transparent 78%)"></div>
+
+  <nav style="position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;padding:16px clamp(20px,5vw,72px);backdrop-filter:blur(14px);background:color-mix(in oklch,var(--bg),transparent 25%);border-bottom:1px solid var(--line)">
+    <a href="#top" style="display:flex;align-items:center;gap:12px">
+      <span style="display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:linear-gradient(140deg,var(--accent),var(--accent-2));box-shadow:0 6px 18px -6px var(--accent);position:relative">
+        <span style="width:9px;height:9px;border-radius:50%;background:#fff;box-shadow:0 0 0 5px rgba(255,255,255,.28)"></span>
+      </span>
+      <span style="display:flex;flex-direction:column;line-height:1">
+        <span style="font-family:'Space Grotesk';font-weight:700;font-size:19px;letter-spacing:.16em">VAYU</span>
+        <span style="font-family:'IBM Plex Mono';font-size:9.5px;letter-spacing:.22em;color:var(--ink-3);margin-top:3px">AIR INTELLIGENCE</span>
+      </span>
+    </a>
+    <div style="display:flex;align-items:center;gap:clamp(14px,2.4vw,34px);font-size:14px;font-weight:500">
+      <a href="#cities" style="color:var(--ink-2)">Live Cities</a>
+      <a href="#features" style="color:var(--ink-2)">Platform</a>
+      <a href="#how" style="color:var(--ink-2)">How AI Works</a>
+      <button onClick="{{ toggleTheme }}" title="Toggle theme" style="cursor:pointer;width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:15px;display:grid;place-items:center">{{ themeIcon }}</button>
+      <a href="app.html" style="display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:10px;background:var(--ink);color:var(--bg);font-weight:600;font-size:13.5px">Open Dashboard →</a>
+    </div>
+  </nav>
+
+  <header id="top" style="position:relative;z-index:1;max-width:1220px;margin:0 auto;padding:clamp(48px,8vw,104px) clamp(20px,5vw,72px) 40px">
+    <div style="display:inline-flex;align-items:center;gap:10px;padding:7px 14px;border-radius:100px;border:1px solid var(--line);background:var(--surface);font-family:'IBM Plex Mono';font-size:12px;letter-spacing:.04em;color:var(--ink-2);animation:vayuRise .6s both">
+      <span style="width:7px;height:7px;border-radius:50%;background:#55a84b;animation:vayuPulse 1.8s infinite"></span>
+      LIVE · 41 sensors across 4 cities · Chhattisgarh
+    </div>
+    <h1 style="font-family:'Space Grotesk';font-weight:700;font-size:clamp(38px,6.6vw,80px);line-height:1.02;letter-spacing:-.02em;margin:22px 0 0;max-width:15ch;animation:vayuRise .7s .05s both">
+      See the air.<br>Predict the haze.<br><span style="background:linear-gradient(120deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent">Act before it harms.</span>
+    </h1>
+    <p style="font-size:clamp(16px,1.9vw,20px);line-height:1.6;color:var(--ink-2);max-width:56ch;margin:26px 0 0;animation:vayuRise .7s .12s both">
+      VAYU fuses ground sensors, satellite columns and traffic data into a single AI engine — forecasting pollution 72 hours out and recommending the exact interventions that clear the air across Bhilai, Korba, Bilaspur and Raipur.
+    </p>
+    <div style="display:flex;flex-wrap:wrap;gap:14px;margin-top:34px;animation:vayuRise .7s .18s both">
+      <a href="app.html" style="display:inline-flex;align-items:center;gap:9px;padding:15px 26px;border-radius:12px;background:linear-gradient(140deg,var(--accent),var(--accent-2));color:#fff;font-weight:600;font-size:15.5px;box-shadow:0 14px 34px -12px var(--accent)">Launch the platform →</a>
+      <a href="app.html#map" style="display:inline-flex;align-items:center;gap:9px;padding:15px 26px;border-radius:12px;background:var(--surface);border:1px solid var(--line);color:var(--ink);font-weight:600;font-size:15.5px">Explore the live map</a>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:28px;margin-top:52px;padding-top:30px;border-top:1px solid var(--line);animation:vayuRise .7s .24s both">
+      <div><div style="font-family:'Space Grotesk';font-weight:700;font-size:30px">72h</div><div style="font-size:13px;color:var(--ink-3);font-family:'IBM Plex Mono'">forecast horizon</div></div>
+      <div><div style="font-family:'Space Grotesk';font-weight:700;font-size:30px">94.2%</div><div style="font-size:13px;color:var(--ink-3);font-family:'IBM Plex Mono'">model accuracy</div></div>
+      <div><div style="font-family:'Space Grotesk';font-weight:700;font-size:30px">2.1M</div><div style="font-size:13px;color:var(--ink-3);font-family:'IBM Plex Mono'">residents covered</div></div>
+      <div><div style="font-family:'Space Grotesk';font-weight:700;font-size:30px">41</div><div style="font-size:13px;color:var(--ink-3);font-family:'IBM Plex Mono'">monitoring nodes</div></div>
+    </div>
+  </header>
+
+  <section id="cities" style="position:relative;z-index:1;max-width:1220px;margin:0 auto;padding:44px clamp(20px,5vw,72px)">
+    <div style="display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:22px">
+      <h2 style="font-family:'Space Grotesk';font-weight:600;font-size:clamp(22px,3vw,30px);letter-spacing:-.01em">Live city index</h2>
+      <span style="font-family:'IBM Plex Mono';font-size:12px;color:var(--ink-3)">CPCB AQI · updated 2 min ago</span>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px">
+
+      <a href="app.html#map" style="display:block;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:var(--shadow);position:relative;overflow:hidden" style-hover="transform:translateY(-4px)">
+        <div style="position:absolute;top:0;left:0;right:0;height:4px;background:#e6443a"></div>
+        <div style="display:flex;justify-content:space-between;align-items:start"><div><div style="font-family:'Space Grotesk';font-weight:600;font-size:19px">Korba</div><div style="font-size:12.5px;color:var(--ink-3)">Coal & power belt</div></div><span style="font-family:'IBM Plex Mono';font-size:11px;color:#e6443a">▲ 6%</span></div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:18px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:46px;line-height:1;color:#e6443a">312</span><span style="font-size:13px;color:var(--ink-2)">AQI</span></div>
+        <div style="display:inline-block;margin-top:10px;padding:4px 10px;border-radius:100px;font-size:11.5px;font-weight:600;background:color-mix(in oklch,#e6443a,transparent 86%);color:#e6443a">Very Poor · PM2.5 lead</div>
+      </a>
+
+      <a href="app.html#map" style="display:block;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:var(--shadow);position:relative;overflow:hidden" style-hover="transform:translateY(-4px)">
+        <div style="position:absolute;top:0;left:0;right:0;height:4px;background:#f2933a"></div>
+        <div style="display:flex;justify-content:space-between;align-items:start"><div><div style="font-family:'Space Grotesk';font-weight:600;font-size:19px">Bhilai</div><div style="font-size:12.5px;color:var(--ink-3)">Steel corridor</div></div><span style="font-family:'IBM Plex Mono';font-size:11px;color:#f2933a">▲ 2%</span></div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:18px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:46px;line-height:1;color:#f2933a">268</span><span style="font-size:13px;color:var(--ink-2)">AQI</span></div>
+        <div style="display:inline-block;margin-top:10px;padding:4px 10px;border-radius:100px;font-size:11.5px;font-weight:600;background:color-mix(in oklch,#f2933a,transparent 86%);color:#f2933a">Poor · SO₂ elevated</div>
+      </a>
+
+      <a href="app.html#map" style="display:block;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:var(--shadow);position:relative;overflow:hidden" style-hover="transform:translateY(-4px)">
+        <div style="position:absolute;top:0;left:0;right:0;height:4px;background:#f2933a"></div>
+        <div style="display:flex;justify-content:space-between;align-items:start"><div><div style="font-family:'Space Grotesk';font-weight:600;font-size:19px">Raipur</div><div style="font-size:12.5px;color:var(--ink-3)">State capital</div></div><span style="font-family:'IBM Plex Mono';font-size:11px;color:#55a84b">▼ 4%</span></div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:18px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:46px;line-height:1;color:#f2933a">224</span><span style="font-size:13px;color:var(--ink-2)">AQI</span></div>
+        <div style="display:inline-block;margin-top:10px;padding:4px 10px;border-radius:100px;font-size:11.5px;font-weight:600;background:color-mix(in oklch,#f2933a,transparent 86%);color:#f2933a">Poor · Traffic driven</div>
+      </a>
+
+      <a href="app.html#map" style="display:block;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:var(--shadow);position:relative;overflow:hidden" style-hover="transform:translateY(-4px)">
+        <div style="position:absolute;top:0;left:0;right:0;height:4px;background:#e8cf3f"></div>
+        <div style="display:flex;justify-content:space-between;align-items:start"><div><div style="font-family:'Space Grotesk';font-weight:600;font-size:19px">Bilaspur</div><div style="font-size:12.5px;color:var(--ink-3)">Rail & commerce</div></div><span style="font-family:'IBM Plex Mono';font-size:11px;color:#55a84b">▼ 3%</span></div>
+        <div style="display:flex;align-items:baseline;gap:8px;margin-top:18px"><span style="font-family:'Space Grotesk';font-weight:700;font-size:46px;line-height:1;color:#b89b1f">176</span><span style="font-size:13px;color:var(--ink-2)">AQI</span></div>
+        <div style="display:inline-block;margin-top:10px;padding:4px 10px;border-radius:100px;font-size:11.5px;font-weight:600;background:color-mix(in oklch,#b89b1f,transparent 86%);color:#b89b1f">Moderate · Stable</div>
+      </a>
+    </div>
+  </section>
+
+  <section id="features" style="position:relative;z-index:1;max-width:1220px;margin:0 auto;padding:56px clamp(20px,5vw,72px)">
+    <div style="max-width:58ch;margin-bottom:34px">
+      <div style="font-family:'IBM Plex Mono';font-size:12px;letter-spacing:.18em;color:var(--accent);margin-bottom:12px">THE PLATFORM</div>
+      <h2 style="font-family:'Space Grotesk';font-weight:600;font-size:clamp(26px,3.6vw,40px);letter-spacing:-.02em;line-height:1.08">One control room for the air a region breathes</h2>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px">
+
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:var(--shadow)">
+        <div style="width:44px;height:44px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);display:grid;place-items:center;font-size:20px;margin-bottom:16px">🗺️</div>
+        <h3 style="font-family:'Space Grotesk';font-weight:600;font-size:18px;margin-bottom:8px">Live AQI heatmap</h3>
+        <p style="font-size:14px;line-height:1.6;color:var(--ink-2)">Street-level pollution surface rendered over real geography, with sensor pins, wind vectors and hotspot detection.</p>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:var(--shadow)">
+        <div style="width:44px;height:44px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);display:grid;place-items:center;font-size:20px;margin-bottom:16px">📊</div>
+        <h3 style="font-family:'Space Grotesk';font-weight:600;font-size:18px;margin-bottom:8px">Analytics dashboard</h3>
+        <p style="font-size:14px;line-height:1.6;color:var(--ink-2)">Pollutant trends, KPI cards, source apportionment and station health — all cross-filterable in real time.</p>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:var(--shadow)">
+        <div style="width:44px;height:44px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);display:grid;place-items:center;font-size:20px;margin-bottom:16px">🧠</div>
+        <h3 style="font-family:'Space Grotesk';font-weight:600;font-size:18px;margin-bottom:8px">AI forecasting</h3>
+        <p style="font-size:14px;line-height:1.6;color:var(--ink-2)">A spatio-temporal model predicts AQI 72 hours ahead per city, with confidence bands and haze-event flags.</p>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:var(--shadow)">
+        <div style="width:44px;height:44px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);display:grid;place-items:center;font-size:20px;margin-bottom:16px">🎯</div>
+        <h3 style="font-family:'Space Grotesk';font-weight:600;font-size:18px;margin-bottom:8px">Intervention engine</h3>
+        <p style="font-size:14px;line-height:1.6;color:var(--ink-2)">Ranked, costed actions — from construction halts to fleet rerouting — with modelled AQI impact before you commit.</p>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:var(--shadow)">
+        <div style="width:44px;height:44px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);display:grid;place-items:center;font-size:20px;margin-bottom:16px">🔔</div>
+        <h3 style="font-family:'Space Grotesk';font-weight:600;font-size:18px;margin-bottom:8px">Smart alerts</h3>
+        <p style="font-size:14px;line-height:1.6;color:var(--ink-2)">Threshold and forecast-based alerts routed to officials and residents, with school and outdoor-work advisories.</p>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:var(--shadow)">
+        <div style="width:44px;height:44px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);display:grid;place-items:center;font-size:20px;margin-bottom:16px">📄</div>
+        <h3 style="font-family:'Space Grotesk';font-weight:600;font-size:18px;margin-bottom:8px">Reports & export</h3>
+        <p style="font-size:14px;line-height:1.6;color:var(--ink-2)">Auto-generated compliance reports and one-click CSV / PDF export of any view for board and public disclosure.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="how" style="position:relative;z-index:1;max-width:1220px;margin:0 auto;padding:56px clamp(20px,5vw,72px)">
+    <div style="background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:clamp(26px,4vw,52px);box-shadow:var(--shadow);position:relative;overflow:hidden">
+      <div style="position:absolute;inset:0;opacity:.5;background:repeating-linear-gradient(90deg,transparent,transparent 22px,var(--line) 22px,var(--line) 23px);mask-image:linear-gradient(180deg,#000,transparent 70%);pointer-events:none"></div>
+      <div style="position:relative">
+        <div style="font-family:'IBM Plex Mono';font-size:12px;letter-spacing:.18em;color:var(--accent);margin-bottom:12px">HOW THE AI WORKS</div>
+        <h2 style="font-family:'Space Grotesk';font-weight:600;font-size:clamp(24px,3.4vw,38px);letter-spacing:-.02em;max-width:20ch;margin-bottom:34px">From raw signal to clean-air action in three steps</h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:24px">
+          <div>
+            <div style="font-family:'IBM Plex Mono';font-size:13px;color:var(--ink-3)">01 — INGEST</div>
+            <h3 style="font-family:'Space Grotesk';font-weight:600;font-size:20px;margin:10px 0 8px">Fuse every signal</h3>
+            <p style="font-size:14px;line-height:1.6;color:var(--ink-2)">41 ground sensors, satellite aerosol columns, traffic feeds and meteorology stream in every minute and are quality-checked automatically.</p>
+          </div>
+          <div>
+            <div style="font-family:'IBM Plex Mono';font-size:13px;color:var(--ink-3)">02 — PREDICT</div>
+            <h3 style="font-family:'Space Grotesk';font-weight:600;font-size:20px;margin:10px 0 8px">Model the plume</h3>
+            <p style="font-size:14px;line-height:1.6;color:var(--ink-2)">A graph neural network learns how pollution travels between neighbourhoods and forecasts each pollutant 72 hours ahead.</p>
+          </div>
+          <div>
+            <div style="font-family:'IBM Plex Mono';font-size:13px;color:var(--ink-3)">03 — INTERVENE</div>
+            <h3 style="font-family:'Space Grotesk';font-weight:600;font-size:20px;margin:10px 0 8px">Recommend & measure</h3>
+            <p style="font-size:14px;line-height:1.6;color:var(--ink-2)">The engine ranks interventions by modelled AQI reduction and cost, then tracks the real outcome after you act.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="position:relative;z-index:1;max-width:1220px;margin:0 auto;padding:20px clamp(20px,5vw,72px) 70px">
+    <div style="background:linear-gradient(140deg,var(--accent),var(--accent-2));border-radius:24px;padding:clamp(30px,5vw,60px);color:#fff;text-align:center;position:relative;overflow:hidden">
+      <div style="position:absolute;inset:0;opacity:.18;background-image:linear-gradient(rgba(255,255,255,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.5) 1px,transparent 1px);background-size:40px 40px"></div>
+      <div style="position:relative">
+        <h2 style="font-family:'Space Grotesk';font-weight:700;font-size:clamp(26px,4vw,44px);letter-spacing:-.02em;max-width:20ch;margin:0 auto 14px">Ready to clear the air over your city?</h2>
+        <p style="font-size:clamp(15px,1.8vw,18px);opacity:.92;max-width:52ch;margin:0 auto 28px">Step into the live command center — no login needed for the demo.</p>
+        <a href="app.html" style="display:inline-flex;align-items:center;gap:9px;padding:15px 30px;border-radius:12px;background:#fff;color:#0f1c1a;font-weight:700;font-size:16px">Open the dashboard →</a>
+      </div>
+    </div>
+  </section>
+
+  <footer style="position:relative;z-index:1;border-top:1px solid var(--line);padding:34px clamp(20px,5vw,72px);display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between">
+    <div style="display:flex;align-items:center;gap:11px">
+      <span style="display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:linear-gradient(140deg,var(--accent),var(--accent-2))"><span style="width:7px;height:7px;border-radius:50%;background:#fff"></span></span>
+      <span style="font-family:'Space Grotesk';font-weight:700;letter-spacing:.14em">VAYU</span>
+      <span style="font-size:13px;color:var(--ink-3)">Urban Air Quality Intelligence</span>
+    </div>
+    <div style="font-family:'IBM Plex Mono';font-size:12px;color:var(--ink-3)">Demo · Chhattisgarh region · data simulated for prototype</div>
+  </footer>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;100%&quot;,&quot;height&quot;:720}}">
+class Component extends DCLogic {
+  state = { theme: 'light' };
+  componentDidMount(){
+    try{ const t = localStorage.getItem('vayu-theme'); if(t) this.setState({theme:t}); }catch(e){}
+  }
+  renderVals(){
+    const theme = this.state.theme;
+    return {
+      theme,
+      themeIcon: theme === 'dark' ? '☀' : '☾',
+      toggleTheme: () => {
+        const next = this.state.theme === 'dark' ? 'light' : 'dark';
+        this.setState({theme:next});
+        try{ localStorage.setItem('vayu-theme', next); }catch(e){}
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

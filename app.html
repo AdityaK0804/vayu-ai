@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VAYU · Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#e9efed; --surface:#ffffff; --surface-2:#f2f6f4; --ink:#0f1c1a; --ink-2:#54615e;
+    --ink-3:#8a9793; --line:#d9e2df; --accent:oklch(0.6 0.11 190); --accent-2:oklch(0.6 0.11 265);
+    --glow:rgba(15,163,154,0.12); --shadow:0 1px 2px rgba(16,28,26,.04),0 12px 32px -14px rgba(16,28,26,.14);
+    --good:#55a84b; --sat:#8db63f; --mod:#c9a90f; --poor:#f2933a; --vpoor:#e6443a; --sev:#9c2a24;
+  }
+  html[data-theme="dark"]{
+    --bg:#07110f; --surface:#0e1c19; --surface-2:#13221e; --ink:#e9f2ef; --ink-2:#93a7a2;
+    --ink-3:#5e706b; --line:#1d2e2a; --accent:oklch(0.78 0.12 190); --accent-2:oklch(0.75 0.12 265);
+    --glow:rgba(47,201,189,0.16); --shadow:0 1px 2px rgba(0,0,0,.3),0 18px 40px -16px rgba(0,0,0,.6);
+    --mod:#e8cf3f;
+  }
+  html,body{height:100%}
+  body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;transition:background .35s,color .35s;overflow:hidden}
+  a{color:inherit;text-decoration:none}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:var(--line);border-radius:20px;border:3px solid var(--bg)}
+  .mono{font-family:'IBM Plex Mono',monospace}
+  .disp{font-family:'Space Grotesk',sans-serif}
+
+  /* ---------- shell ---------- */
+  .app{display:grid;grid-template-columns:250px 1fr;grid-template-rows:64px 1fr;height:100vh}
+  .topbar{grid-column:1/3;display:flex;align-items:center;gap:18px;padding:0 22px;border-bottom:1px solid var(--line);background:color-mix(in oklch,var(--surface),transparent 6%);backdrop-filter:blur(10px);z-index:30}
+  .brand{display:flex;align-items:center;gap:11px}
+  .brand .logo{display:grid;place-items:center;width:34px;height:34px;border-radius:10px;background:linear-gradient(140deg,var(--accent),var(--accent-2));box-shadow:0 6px 16px -6px var(--accent)}
+  .brand .logo span{width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 0 0 4px rgba(255,255,255,.28)}
+  .brand b{font-family:'Space Grotesk';font-weight:700;font-size:17px;letter-spacing:.15em}
+  .brand small{display:block;font-family:'IBM Plex Mono';font-size:8.5px;letter-spacing:.2em;color:var(--ink-3);margin-top:1px}
+  .search{flex:1;max-width:340px;display:flex;align-items:center;gap:9px;padding:9px 13px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line);color:var(--ink-3);font-size:13.5px}
+  .search input{flex:1;border:0;background:transparent;color:var(--ink);font-family:inherit;font-size:13.5px;outline:none}
+  .tb-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:var(--good);animation:pulse 1.8s infinite}
+  @keyframes pulse{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.35)}}
+  .icon-btn{position:relative;width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;display:grid;place-items:center;font-size:15px;transition:.2s}
+  .icon-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .badge{position:absolute;top:-5px;right:-5px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:var(--vpoor);color:#fff;font-size:10px;font-weight:600;display:grid;place-items:center;font-family:'IBM Plex Mono'}
+  .sel{display:flex;align-items:center;gap:8px;padding:8px 13px;border-radius:10px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-size:13.5px;font-weight:500}
+  .sel select{border:0;background:transparent;color:var(--ink);font-family:inherit;font-weight:500;font-size:13.5px;outline:none;cursor:pointer}
+
+  /* ---------- sidebar ---------- */
+  .side{border-right:1px solid var(--line);background:var(--surface);display:flex;flex-direction:column;padding:16px 12px;gap:3px;overflow-y:auto}
+  .side .grp{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.16em;color:var(--ink-3);padding:14px 12px 6px}
+  .nav{display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:11px;cursor:pointer;color:var(--ink-2);font-weight:500;font-size:14px;transition:.15s;border:1px solid transparent}
+  .nav:hover{background:var(--surface-2);color:var(--ink)}
+  .nav.active{background:color-mix(in oklch,var(--accent),transparent 88%);color:var(--accent);border-color:color-mix(in oklch,var(--accent),transparent 70%)}
+  .nav svg{width:18px;height:18px;flex:none}
+  .nav .n-badge{margin-left:auto;font-family:'IBM Plex Mono';font-size:10px;padding:2px 7px;border-radius:20px;background:var(--surface-2);color:var(--ink-3)}
+  .nav.active .n-badge{background:var(--accent);color:#fff}
+  .side-foot{margin-top:auto;padding:14px 12px 6px;font-size:11.5px;color:var(--ink-3);line-height:1.5}
+  .aq-mini{display:flex;align-items:center;gap:9px;padding:11px;border-radius:12px;background:var(--surface-2);border:1px solid var(--line);margin-top:8px}
+
+  /* ---------- main ---------- */
+  .main{overflow-y:auto;padding:26px clamp(18px,3vw,34px) 60px;position:relative}
+  .section{display:none;animation:fade .4s both}
+  .section.show{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .head{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:22px}
+  .head h1{font-family:'Space Grotesk';font-weight:600;font-size:26px;letter-spacing:-.01em}
+  .head p{font-size:13.5px;color:var(--ink-2);margin-top:5px;max-width:60ch;line-height:1.5}
+  .crumb{font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.1em;color:var(--accent);margin-bottom:9px}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+  .card-h{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 18px 0}
+  .card-h h3{font-family:'Space Grotesk';font-weight:600;font-size:15px}
+  .card-h .sub{font-size:11.5px;color:var(--ink-3)}
+  .grid{display:grid;gap:16px}
+  .kpis{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+  .kpi{padding:17px 18px;position:relative;overflow:hidden}
+  .kpi .top{display:flex;align-items:center;justify-content:space-between}
+  .kpi .lab{font-size:12px;color:var(--ink-2);font-weight:500}
+  .kpi .val{font-family:'Space Grotesk';font-weight:700;font-size:34px;line-height:1;margin-top:12px}
+  .kpi .unit{font-size:12px;color:var(--ink-3);font-weight:500}
+  .kpi .delta{font-family:'IBM Plex Mono';font-size:11.5px;font-weight:500;display:inline-flex;align-items:center;gap:3px;margin-top:9px;padding:2px 7px;border-radius:20px}
+  .up{background:color-mix(in oklch,var(--vpoor),transparent 86%);color:var(--vpoor)}
+  .down{background:color-mix(in oklch,var(--good),transparent 84%);color:var(--good)}
+  .flat{background:var(--surface-2);color:var(--ink-3)}
+  .ico{width:34px;height:34px;border-radius:10px;background:var(--surface-2);display:grid;place-items:center;color:var(--accent)}
+  .ico svg{width:17px;height:17px}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:4px 11px;border-radius:100px;font-size:11.5px;font-weight:600}
+
+  .chip{padding:7px 13px;border-radius:9px;border:1px solid var(--line);background:var(--surface);font-size:12.5px;font-weight:500;color:var(--ink-2);cursor:pointer;transition:.15s}
+  .chip:hover{color:var(--ink)}
+  .chip.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-family:'IBM Plex Mono';font-size:10.5px;letter-spacing:.08em;color:var(--ink-3);font-weight:500;padding:11px 14px;border-bottom:1px solid var(--line);text-transform:uppercase;position:sticky;top:0;background:var(--surface)}
+  td{padding:12px 14px;border-bottom:1px solid var(--line);color:var(--ink-2)}
+  tbody tr:hover{background:var(--surface-2)}
+  td b{color:var(--ink);font-weight:600}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:7px;vertical-align:middle}
+
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:11px 18px;border-radius:11px;font-weight:600;font-size:13.5px;cursor:pointer;border:1px solid var(--line);background:var(--surface);color:var(--ink);transition:.18s}
+  .btn:hover{border-color:var(--accent)}
+  .btn.pri{background:linear-gradient(140deg,var(--accent),var(--accent-2));color:#fff;border:0;box-shadow:0 10px 26px -12px var(--accent)}
+  .btn.pri:hover{filter:brightness(1.05)}
+  .btn svg{width:16px;height:16px}
+
+  /* map */
+  #map{width:100%;height:100%;border-radius:0;background:var(--surface-2)}
+  html[data-theme="dark"] .leaflet-tile{filter:invert(1) hue-rotate(180deg) brightness(.92) contrast(.9)}
+  html[data-theme="dark"] .leaflet-container{background:#0b1512}
+  .leaflet-popup-content-wrapper{border-radius:12px;font-family:'IBM Plex Sans'}
+  .map-wrap{position:relative;height:calc(100vh - 64px - 0px);margin:-26px calc(-1*clamp(18px,3vw,34px)) -60px}
+  .map-panel{position:absolute;z-index:500;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+  .legend{position:absolute;left:18px;bottom:26px;z-index:500;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:13px 15px;box-shadow:var(--shadow)}
+  .legend .row{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--ink-2);margin-top:6px}
+  .legend .sw{width:22px;height:9px;border-radius:3px}
+  .layers{position:absolute;right:18px;top:18px;z-index:500;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:11px 13px;box-shadow:var(--shadow);min-width:172px}
+  .layer-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 0;font-size:13px;font-weight:500}
+  .citydetail{position:absolute;left:18px;top:18px;z-index:500;width:290px;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);overflow:hidden}
+
+  /* toggle switch */
+  .sw-t{width:38px;height:22px;border-radius:20px;background:var(--line);position:relative;cursor:pointer;transition:.2s;flex:none}
+  .sw-t.on{background:var(--accent)}
+  .sw-t b{position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .sw-t.on b{left:18px}
+
+  .insight{background:linear-gradient(140deg,color-mix(in oklch,var(--accent),transparent 90%),color-mix(in oklch,var(--accent-2),transparent 92%));border:1px solid color-mix(in oklch,var(--accent),transparent 74%)}
+  .ai-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;background:var(--accent);color:#fff;font-size:10.5px;font-weight:600;font-family:'IBM Plex Mono';letter-spacing:.06em}
+
+  .interv{padding:18px;display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;border:1px solid var(--line);border-radius:14px;background:var(--surface);transition:.2s}
+  .interv:hover{border-color:color-mix(in oklch,var(--accent),transparent 60%)}
+  .interv.sel{border-color:var(--accent);background:color-mix(in oklch,var(--accent),transparent 93%)}
+  .rank{width:40px;height:40px;border-radius:11px;background:var(--surface-2);display:grid;place-items:center;font-family:'Space Grotesk';font-weight:700;font-size:16px}
+  .mrow{display:flex;gap:20px;flex-wrap:wrap;margin-top:9px}
+  .mrow div{font-size:12px;color:var(--ink-3)}
+  .mrow b{display:block;font-family:'Space Grotesk';font-size:15px;color:var(--ink);margin-top:2px}
+
+  .alert-row{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;padding:15px 16px;border-bottom:1px solid var(--line);cursor:pointer;transition:.15s}
+  .alert-row:hover{background:var(--surface-2)}
+  .alert-row.unread{background:color-mix(in oklch,var(--accent),transparent 96%)}
+  .sev{width:4px;align-self:stretch;border-radius:4px;min-height:38px}
+
+  .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(120px);z-index:9999;background:var(--ink);color:var(--bg);padding:13px 20px;border-radius:12px;font-size:13.5px;font-weight:500;box-shadow:0 14px 40px -10px rgba(0,0,0,.5);transition:transform .35s cubic-bezier(.2,.8,.2,1);display:flex;align-items:center;gap:10px}
+  .toast.show{transform:translateX(-50%) translateY(0)}
+
+  .seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--line);border-radius:11px;padding:3px}
+  .seg button{border:0;background:transparent;padding:7px 14px;border-radius:8px;font-family:inherit;font-size:12.5px;font-weight:500;color:var(--ink-2);cursor:pointer}
+  .seg button.on{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+
+  .field{display:flex;flex-direction:column;gap:6px}
+  .field label{font-size:12px;color:var(--ink-2);font-weight:500}
+  .field select,.field input{padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-family:inherit;font-size:13.5px;outline:none}
+  .field select:focus,.field input:focus{border-color:var(--accent)}
+
+  @media(max-width:900px){
+    .app{grid-template-columns:1fr}
+    .side{position:fixed;top:64px;bottom:0;left:0;width:250px;transform:translateX(-100%);transition:.3s;z-index:40}
+    .side.open{transform:none}
+    .menu-btn{display:grid !important}
+  }
+  .menu-btn{display:none}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <button class="icon-btn menu-btn" onclick="document.querySelector('.side').classList.toggle('open')">☰</button>
+    <a class="brand" href="index.dc.html">
+      <span class="logo"><span></span></span>
+      <span><b>VAYU</b><small>COMMAND CENTER</small></span>
+    </a>
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input placeholder="Search stations, zones, pollutants…" id="globalSearch">
+    </div>
+    <div class="tb-right">
+      <div class="sel">
+        <span class="live-dot"></span>
+        <select id="citySel" onchange="setCity(this.value)">
+          <option value="all">All Cities</option>
+          <option value="korba">Korba</option>
+          <option value="bhilai">Bhilai</option>
+          <option value="raipur">Raipur</option>
+          <option value="bilaspur">Bilaspur</option>
+        </select>
+      </div>
+      <div class="sel" style="gap:7px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        <select id="rangeSel" onchange="setRange(this.value)">
+          <option value="24h">Last 24h</option>
+          <option value="7d">Last 7 days</option>
+          <option value="30d">Last 30 days</option>
+        </select>
+      </div>
+      <button class="icon-btn" onclick="go('alerts')" title="Alerts">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        <span class="badge" id="alertBadge">4</span>
+      </button>
+      <button class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">☾</button>
+    </div>
+  </header>
+
+  <!-- SIDEBAR -->
+  <aside class="side">
+    <div class="grp">MONITOR</div>
+    <div class="nav active" data-view="overview" onclick="go('overview')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+      Overview
+    </div>
+    <div class="nav" data-view="map" onclick="go('map')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 3-6 3v15l6-3 6 3 6-3V3l-6 3-6-3zM9 3v15M15 6v15"/></svg>
+      Live Map
+    </div>
+    <div class="nav" data-view="forecast" onclick="go('forecast')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/><path d="M21 7v5h-5"/></svg>
+      AI Forecast
+      <span class="n-badge">72h</span>
+    </div>
+    <div class="grp">ACT</div>
+    <div class="nav" data-view="interventions" onclick="go('interventions')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="0.5" fill="currentColor"/></svg>
+      Interventions
+      <span class="n-badge">6</span>
+    </div>
+    <div class="nav" data-view="alerts" onclick="go('alerts')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      Alerts
+      <span class="n-badge" style="background:var(--vpoor);color:#fff">4</span>
+    </div>
+    <div class="grp">SYSTEM</div>
+    <div class="nav" data-view="network" onclick="go('network')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.48M7.76 16.24a6 6 0 0 1 0-8.48M19.07 4.93a10 10 0 0 1 0 14.14M4.93 19.07a10 10 0 0 1 0-14.14"/></svg>
+      Sensor Network
+      <span class="n-badge">41</span>
+    </div>
+    <div class="nav" data-view="reports" onclick="go('reports')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>
+      Reports & Export
+    </div>
+
+    <div class="aq-mini" id="sideAq"></div>
+    <div class="side-foot">
+      VAYU v2.4 · demo build<br>Data simulated for prototype<br>© 2025 Smart City Cell
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main" id="main">
+
+    <!-- OVERVIEW -->
+    <section class="section show" id="overview">
+      <div class="head">
+        <div>
+          <div class="crumb">MONITOR / OVERVIEW</div>
+          <h1 id="ovTitle">Regional Air Quality Overview</h1>
+          <p id="ovSub">Real-time picture across the Chhattisgarh industrial belt. Interventions applied here update projected impact everywhere.</p>
+        </div>
+        <div class="seg" id="metricSeg">
+          <button class="on" onclick="setMetric('aqi',this)">AQI</button>
+          <button onclick="setMetric('pm25',this)">PM2.5</button>
+          <button onclick="setMetric('pm10',this)">PM10</button>
+          <button onclick="setMetric('no2',this)">NO₂</button>
+          <button onclick="setMetric('so2',this)">SO₂</button>
+        </div>
+      </div>
+      <div class="grid kpis" id="kpiRow" style="margin-bottom:16px"></div>
+      <div class="grid" style="grid-template-columns:2fr 1fr;margin-bottom:16px" id="ovMid">
+        <div class="card">
+          <div class="card-h"><div><h3 id="trendTitle">AQI trend</h3><div class="sub" id="trendSub">Hourly, last 24 hours</div></div><div class="mono" style="font-size:11px;color:var(--ink-3)" id="trendLegend"></div></div>
+          <div id="trendChart" style="padding:8px 6px 4px"></div>
+        </div>
+        <div class="card insight" style="padding:18px;display:flex;flex-direction:column">
+          <div class="ai-badge">✦ VAYU AI · INSIGHT</div>
+          <h3 class="disp" style="font-weight:600;font-size:17px;margin:14px 0 8px;line-height:1.3" id="insightH"></h3>
+          <p style="font-size:13.5px;line-height:1.6;color:var(--ink-2)" id="insightP"></p>
+          <div style="margin-top:auto;padding-top:16px;display:flex;gap:9px">
+            <button class="btn pri" style="flex:1;justify-content:center" onclick="go('interventions')">See recommended actions</button>
+          </div>
+        </div>
+      </div>
+      <div class="grid" style="grid-template-columns:1fr 1fr 1fr">
+        <div class="card">
+          <div class="card-h"><div><h3>Pollutant breakdown</h3><div class="sub">µg/m³ · current</div></div></div>
+          <div id="pollChart" style="padding:14px 18px 18px"></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><div><h3>City comparison</h3><div class="sub" id="cmpSub">Current AQI</div></div></div>
+          <div id="cmpChart" style="padding:14px 18px 18px"></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><div><h3>Network health</h3><div class="sub">41 monitoring nodes</div></div><a class="mono" style="font-size:11px;color:var(--accent);cursor:pointer" onclick="go('network')">View all →</a></div>
+          <div id="healthChart" style="padding:8px 18px 18px;display:flex;align-items:center;gap:18px"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- MAP -->
+    <section class="section" id="map-view">
+      <div class="map-wrap">
+        <div id="map"></div>
+        <div class="citydetail" id="cityDetail"></div>
+        <div class="layers">
+          <div class="mono" style="font-size:10px;letter-spacing:.14em;color:var(--ink-3);margin-bottom:4px">MAP LAYERS</div>
+          <div class="layer-row">AQI heatmap <span class="sw-t on" id="lyHeat" onclick="toggleLayer('heat',this)"><b></b></span></div>
+          <div class="layer-row">Sensor stations <span class="sw-t on" id="lyStations" onclick="toggleLayer('stations',this)"><b></b></span></div>
+          <div class="layer-row">Wind vectors <span class="sw-t" id="lyWind" onclick="toggleLayer('wind',this)"><b></b></span></div>
+          <div class="layer-row">City labels <span class="sw-t on" id="lyLabels" onclick="toggleLayer('labels',this)"><b></b></span></div>
+          <div style="border-top:1px solid var(--line);margin-top:8px;padding-top:9px">
+            <div class="mono" style="font-size:10px;letter-spacing:.14em;color:var(--ink-3);margin-bottom:7px">POLLUTANT SURFACE</div>
+            <select id="mapMetric" onchange="setMapMetric(this.value)" style="width:100%;padding:8px 10px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-family:inherit;font-size:13px;outline:none">
+              <option value="aqi">Overall AQI</option>
+              <option value="pm25">PM2.5</option>
+              <option value="pm10">PM10</option>
+              <option value="so2">SO₂</option>
+              <option value="no2">NO₂</option>
+            </select>
+          </div>
+        </div>
+        <div class="legend">
+          <div class="mono" style="font-size:10px;letter-spacing:.14em;color:var(--ink-3);margin-bottom:2px">AQI · CPCB SCALE</div>
+          <div class="row"><span class="sw" style="background:var(--good)"></span>0–50 Good</div>
+          <div class="row"><span class="sw" style="background:var(--sat)"></span>51–100 Satisfactory</div>
+          <div class="row"><span class="sw" style="background:var(--mod)"></span>101–200 Moderate</div>
+          <div class="row"><span class="sw" style="background:var(--poor)"></span>201–300 Poor</div>
+          <div class="row"><span class="sw" style="background:var(--vpoor)"></span>301–400 Very Poor</div>
+          <div class="row"><span class="sw" style="background:var(--sev)"></span>401–500 Severe</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FORECAST -->
+    <section class="section" id="forecast">
+      <div class="head">
+        <div>
+          <div class="crumb">MONITOR / AI FORECAST</div>
+          <h1>72-Hour AI Forecast</h1>
+          <p>Spatio-temporal graph model trained on 4 years of local sensor, traffic and meteorology data. Shaded band shows the 90% confidence interval.</p>
+        </div>
+        <div class="ai-badge" style="height:fit-content;white-space:nowrap">✦ MODEL v2.4 · 94.2% ACCURACY</div>
+      </div>
+      <div class="grid kpis" id="fcKpis" style="margin-bottom:16px"></div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-h">
+          <div><h3 id="fcTitle">Forecast — AQI</h3><div class="sub">Past 24h observed · next 72h predicted</div></div>
+          <div class="mono" style="font-size:11px;color:var(--ink-3);display:flex;gap:14px">
+            <span><span style="display:inline-block;width:16px;height:3px;background:var(--ink-2);vertical-align:middle;margin-right:5px"></span>Observed</span>
+            <span><span style="display:inline-block;width:16px;height:3px;background:var(--accent);vertical-align:middle;margin-right:5px"></span>Predicted</span>
+          </div>
+        </div>
+        <div id="fcChart" style="padding:8px 8px 6px"></div>
+      </div>
+      <div class="grid" style="grid-template-columns:1fr 1fr">
+        <div class="card">
+          <div class="card-h"><div><h3>Predicted haze events</h3><div class="sub">Flagged threshold crossings</div></div></div>
+          <div id="hazeList" style="padding:6px 18px 16px"></div>
+        </div>
+        <div class="card">
+          <div class="card-h"><div><h3>Per-pollutant outlook</h3><div class="sub">Peak in next 72h vs now</div></div></div>
+          <div id="fcPoll" style="padding:8px 18px 16px"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INTERVENTIONS -->
+    <section class="section" id="interventions">
+      <div class="head">
+        <div>
+          <div class="crumb">ACT / INTERVENTION ENGINE</div>
+          <h1>AI Intervention Recommendations</h1>
+          <p>Ranked by modelled AQI reduction against cost & effort. Select actions to build a scenario and simulate the combined impact before you commit.</p>
+        </div>
+      </div>
+      <div class="grid" style="grid-template-columns:1fr 340px">
+        <div id="intervList" class="grid" style="gap:12px;align-content:start"></div>
+        <div class="card" style="padding:20px;align-self:start;position:sticky;top:0">
+          <div class="ai-badge">✦ SCENARIO SIMULATOR</div>
+          <div style="text-align:center;margin:22px 0">
+            <div class="mono" style="font-size:11px;color:var(--ink-3)">PROJECTED AQI · <span id="simCity">Korba</span></div>
+            <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-top:10px">
+              <div><div class="disp" style="font-weight:700;font-size:30px;color:var(--ink-3)" id="simBase">312</div><div style="font-size:11px;color:var(--ink-3)">now</div></div>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+              <div><div class="disp" style="font-weight:700;font-size:44px;color:var(--accent)" id="simNew">312</div><div style="font-size:11px;color:var(--accent)" id="simCat">Very Poor</div></div>
+            </div>
+            <div class="pill down" id="simDelta" style="margin-top:12px">no actions selected</div>
+          </div>
+          <div style="font-size:12px;color:var(--ink-2);line-height:1.6;border-top:1px solid var(--line);padding-top:14px" id="simMeta">Select interventions to model combined effect, total cost and time-to-effect.</div>
+          <button class="btn pri" style="width:100%;justify-content:center;margin-top:16px" onclick="deployPlan()">Deploy action plan</button>
+          <button class="btn" style="width:100%;justify-content:center;margin-top:9px" onclick="clearPlan()">Clear scenario</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ALERTS -->
+    <section class="section" id="alerts">
+      <div class="head">
+        <div>
+          <div class="crumb">ACT / ALERTS</div>
+          <h1>Alerts & Advisories</h1>
+          <p>Threshold and forecast-driven alerts routed to officials and residents. Click an alert to mark it read.</p>
+        </div>
+        <div style="display:flex;gap:9px">
+          <button class="btn" onclick="markAllRead()">Mark all read</button>
+          <button class="btn pri" onclick="toast('New alert rule saved')">+ New rule</button>
+        </div>
+      </div>
+      <div class="grid" style="grid-template-columns:1fr 320px">
+        <div class="card" style="overflow:hidden"><div id="alertList"></div></div>
+        <div class="grid" style="gap:16px;align-content:start">
+          <div class="card" style="padding:18px">
+            <h3 class="disp" style="font-weight:600;font-size:15px;margin-bottom:14px">Active alert rules</h3>
+            <div id="ruleList"></div>
+          </div>
+          <div class="card" style="padding:18px">
+            <h3 class="disp" style="font-weight:600;font-size:15px;margin-bottom:6px">Public advisory</h3>
+            <p style="font-size:12.5px;color:var(--ink-2);line-height:1.6" id="advisory"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NETWORK -->
+    <section class="section" id="network">
+      <div class="head">
+        <div>
+          <div class="crumb">SYSTEM / SENSOR NETWORK</div>
+          <h1>Sensor & Station Network</h1>
+          <p>41 monitoring nodes across four cities. Track live status, uptime, calibration and last reading.</p>
+        </div>
+      </div>
+      <div class="grid kpis" id="netKpis" style="margin-bottom:16px"></div>
+      <div class="card" style="overflow:hidden">
+        <div class="card-h" style="padding:14px 18px">
+          <div style="display:flex;gap:8px" id="netFilter">
+            <span class="chip on" onclick="setNetFilter('all',this)">All</span>
+            <span class="chip" onclick="setNetFilter('online',this)">Online</span>
+            <span class="chip" onclick="setNetFilter('calibrating',this)">Calibrating</span>
+            <span class="chip" onclick="setNetFilter('offline',this)">Offline</span>
+          </div>
+          <button class="btn" onclick="exportCSV('stations')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Export CSV</button>
+        </div>
+        <div style="max-height:calc(100vh - 340px);overflow:auto">
+          <table><thead><tr><th>Station</th><th>City</th><th>Status</th><th>AQI</th><th>PM2.5</th><th>Uptime</th><th>Last reading</th><th>Calibrated</th></tr></thead>
+          <tbody id="netBody"></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- REPORTS -->
+    <section class="section" id="reports">
+      <div class="head">
+        <div>
+          <div class="crumb">SYSTEM / REPORTS</div>
+          <h1>Reports & Data Export</h1>
+          <p>Build a report from any city, range and metric set. Export to CSV or a print-ready PDF, or schedule automated delivery.</p>
+        </div>
+      </div>
+      <div class="grid" style="grid-template-columns:340px 1fr">
+        <div class="card" style="padding:20px;align-self:start">
+          <h3 class="disp" style="font-weight:600;font-size:16px;margin-bottom:16px">Report builder</h3>
+          <div class="grid" style="gap:14px">
+            <div class="field"><label>City / region</label>
+              <select id="rpCity"><option value="all">All Cities (regional)</option><option value="korba">Korba</option><option value="bhilai">Bhilai</option><option value="raipur">Raipur</option><option value="bilaspur">Bilaspur</option></select></div>
+            <div class="field"><label>Reporting period</label>
+              <select id="rpRange"><option>Last 24 hours</option><option selected>Last 7 days</option><option>Last 30 days</option><option>Quarter to date</option></select></div>
+            <div class="field"><label>Report type</label>
+              <select id="rpType"><option>CPCB compliance summary</option><option>Executive briefing</option><option>Full pollutant detail</option><option>Intervention impact</option></select></div>
+            <div>
+              <label style="font-size:12px;color:var(--ink-2);font-weight:500">Include metrics</label>
+              <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px" id="rpMetrics"></div>
+            </div>
+            <button class="btn pri" style="justify-content:center" onclick="buildReport()">Generate preview</button>
+            <div style="display:flex;gap:9px">
+              <button class="btn" style="flex:1;justify-content:center" onclick="exportCSV('report')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>CSV</button>
+              <button class="btn" style="flex:1;justify-content:center" onclick="window.print()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>PDF</button>
+            </div>
+          </div>
+        </div>
+        <div class="grid" style="gap:16px;align-content:start">
+          <div class="card" id="reportPreview" style="padding:24px;min-height:300px"></div>
+          <div class="card" style="padding:18px">
+            <h3 class="disp" style="font-weight:600;font-size:15px;margin-bottom:12px">Scheduled reports</h3>
+            <div id="schedList"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================= DATA */
+const AQIBANDS=[[50,'Good','good'],[100,'Satisfactory','sat'],[200,'Moderate','mod'],[300,'Poor','poor'],[400,'Very Poor','vpoor'],[500,'Severe','sev']];
+function cat(v){for(const[t,l,k]of AQIBANDS)if(v<=t)return{label:l,key:k,color:cssVar('--'+k)};return{label:'Severe',key:'sev',color:cssVar('--sev')};}
+function cssVar(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
+function rng(seed){let s=seed%2147483647;if(s<=0)s+=2147483646;return()=>(s=s*16807%2147483647)/2147483647;}
+
+const CITIES={
+  korba:{name:'Korba',tag:'Coal & power belt',lat:22.3595,lng:82.7501,aqi:312,pm25:168,pm10:288,no2:54,so2:62,co:1.7,o3:31,temp:34,humidity:38,wind:7,windDir:225,trend:6,dominant:'PM2.5',stations:12,seed:71},
+  bhilai:{name:'Bhilai',tag:'Steel corridor',lat:21.1938,lng:81.3509,aqi:268,pm25:138,pm10:246,no2:58,so2:44,co:1.5,o3:34,temp:33,humidity:41,wind:8,windDir:200,trend:2,dominant:'SO₂',stations:11,seed:33},
+  raipur:{name:'Raipur',tag:'State capital',lat:21.2514,lng:81.6296,aqi:224,pm25:118,pm10:208,no2:47,so2:26,co:1.3,o3:39,temp:33,humidity:44,wind:9,windDir:240,trend:-4,dominant:'PM2.5',stations:10,seed:52},
+  bilaspur:{name:'Bilaspur',tag:'Rail & commerce',lat:22.0797,lng:82.1409,aqi:176,pm25:92,pm10:162,no2:38,so2:21,co:1.1,o3:42,temp:32,humidity:46,wind:10,windDir:255,trend:-3,dominant:'PM2.5',stations:8,seed:19}
+};
+const ORDER=['korba','bhilai','raipur','bilaspur'];
+const METRICS={aqi:{label:'AQI',unit:''},pm25:{label:'PM2.5',unit:'µg/m³'},pm10:{label:'PM10',unit:'µg/m³'},no2:{label:'NO₂',unit:'µg/m³'},so2:{label:'SO₂',unit:'µg/m³'},o3:{label:'O₃',unit:'µg/m³'}};
+
+/* history generator */
+function history(base,seed,n,amp){const r=rng(seed);const out=[];for(let i=0;i<n;i++){const daily=Math.sin((i/ (n/ (n>48?7:1)))*Math.PI*2)*amp*0.25;const wobble=(r()-0.5)*amp*0.5;out.push(Math.max(15,Math.round(base+daily+wobble - (n-i)*amp*0.004)));}out[out.length-1]=base;return out;}
+function forecast(base,seed,trend){const r=rng(seed+9);const out=[];let v=base;for(let i=0;i<72;i++){const diurnal=Math.sin((i/24)*Math.PI*2 - 1)* (base*0.11);v=base + diurnal + trend*i*0.35 + (r()-0.5)*base*0.06;out.push(Math.max(20,Math.round(v)));}return out;}
+
+/* stations */
+const STATIONS=(()=>{const names={korba:['Korba East','NTPC Colony','Balco Nagar','Darri','Kusmunda','Rampur','Transport Nagar','Kohadia','Urga','Katghora Rd','Power House','Ct-Buff Korba'],bhilai:['Sector 1','Bhilai Steel','Supela','Risali','Junwani','Nehru Nagar','Power House Rd','Kohka','Smriti Nagar','Charoda','Maroda'],raipur:['Collectorate','Shankar Nagar','Telibandha','Pandri','Amanaka','Fafadih','Devendra Nagar','Ring Rd 2','Tatibandh','Sarona'],bilaspur:['Bilaspur City','Tarbahar','Sirgitti','Nehru Chowk','Vyapar Vihar','Torwa','Koni','Mangla']};
+  const out=[];let id=1;ORDER.forEach(c=>{const city=CITIES[c];const r=rng(city.seed+3);names[c].forEach((nm,i)=>{const rr=r();const status=rr>0.90?'offline':rr>0.80?'calibrating':'online';const jitter=()=>(r()-0.5);const a=Math.max(30,Math.round(city.aqi+ (r()-0.5)*70));out.push({id:'CG-'+String(id++).padStart(3,'0'),name:nm,city:c,cityName:city.name,status,aqi:a,pm25:Math.round(city.pm25+(r()-0.5)*40),uptime:status==='offline'?0:Math.round((97+r()*2.9)*10)/10,last:status==='offline'?'—':(Math.round(r()*4)+1)+' min ago',cal:status==='calibrating'?'in progress':(Math.round(r()*40)+3)+' d ago',lat:city.lat+jitter()*0.09,lng:city.lng+jitter()*0.09});});});return out;})();
+
+/* interventions */
+const INTERVENTIONS=[
+  {id:'i1',name:'Halt non-essential construction',cat:'Dust control',impact:34,cost:'Low',effort:'Low',time:'6–12h',desc:'Suspend earthworks & demolition in worst 3 wards; enforce water sprinkling on active sites.'},
+  {id:'i2',name:'Industrial load throttling (evening)',cat:'Emissions',impact:41,cost:'High',effort:'Med',time:'12–24h',desc:'Coordinate 15% output cut at Korba thermal units during forecast peak inversion window.'},
+  {id:'i3',name:'Divert heavy freight off NH-49',cat:'Traffic',impact:22,cost:'Med',effort:'Med',time:'3–6h',desc:'Reroute diesel freight around city core 6pm–10pm to cut NO₂ & road dust corridor.'},
+  {id:'i4',name:'Mechanised road sweeping + misting',cat:'Dust control',impact:18,cost:'Low',effort:'Low',time:'2–4h',desc:'Deploy 8 sweeper-mist units on arterial roads flagged as PM10 hotspots.'},
+  {id:'i5',name:'Public health advisory + school timing',cat:'Public',impact:0,cost:'Low',effort:'Low',time:'1h',desc:'Push SMS/app advisory; shift outdoor school activity & flag N95 for vulnerable groups.'},
+  {id:'i6',name:'Ban open waste & biomass burning',cat:'Emissions',impact:15,cost:'Low',effort:'Med',time:'6–12h',desc:'Ward-level enforcement drive against open burning; SO₂ & PM2.5 reduction overnight.'}
+];
+
+/* alerts */
+let ALERTS=[
+  {id:1,city:'Korba',sev:'severe',type:'Threshold breach',msg:'AQI crossed 300 (Very Poor) at Balco Nagar & Kusmunda. PM2.5 peaking.',time:'8 min ago',read:false},
+  {id:2,city:'Bhilai',sev:'poor',type:'Forecast warning',msg:'Model predicts AQI 280+ within 18h as wind drops to 4 km/h. Prepare dust measures.',time:'34 min ago',read:false},
+  {id:3,city:'Korba',sev:'poor',type:'SO₂ spike',msg:'SO₂ at 62 µg/m³ near thermal cluster — 1.4× 24h average.',time:'1 h ago',read:false},
+  {id:4,city:'Raipur',sev:'mod',type:'Sensor offline',msg:'Station CG-041 (Tatibandh) offline for 22 min. Failover to nearest node active.',time:'2 h ago',read:false},
+  {id:5,city:'Bilaspur',sev:'good',type:'Improvement',msg:'AQI improved to Moderate after overnight rain. Advisory lifted.',time:'5 h ago',read:true}
+];
+const RULES=[['AQI > 300','Very Poor','severe'],['Forecast AQI > 250 in 24h','Predictive','poor'],['SO₂ > 60 µg/m³','Pollutant','poor'],['Station offline > 15 min','System','mod']];
+const SCHED=[['Daily CPCB summary','07:00 IST · all cities','PDF → 6 recipients'],['Weekly executive brief','Mon 09:00 · regional','PDF + CSV → board'],['Monthly compliance','1st · 00:30 · all','CSV → CPCB portal']];
+
+/* ============================================================= STATE */
+let state={city:'all',range:'24h',metric:'aqi',mapMetric:'aqi',netFilter:'all',plan:new Set(),layers:{heat:true,stations:true,wind:false,labels:true}};
+
+/* ============================================================= HELPERS */
+function el(html){const t=document.createElement('template');t.innerHTML=html.trim();return t.content.firstChild;}
+function fmt(n){return n>=1000?(n/1000).toFixed(1)+'k':n;}
+function activeCities(){return state.city==='all'?ORDER:[state.city];}
+function agg(metric){const cs=activeCities();const v=cs.reduce((a,c)=>a+CITIES[c][metric],0)/cs.length;return Math.round(v);}
+function deltaHtml(v){const cls=v>0?'up':v<0?'down':'flat';const ar=v>0?'▲':v<0?'▼':'●';return `<span class="delta ${cls}">${ar} ${Math.abs(v)}%</span>`;}
+
+/* ============================================================= CHARTS (SVG) */
+function lineArea(data,opt){const{w=680,h=190,color='var(--accent)',pad=26,band,dash}=opt||{};const max=Math.max(...data,...(band?band.map(b=>b[1]):[]))*1.1;const min=Math.min(...data,...(band?band.map(b=>b[0]):[]))*0.85;const X=i=>pad+i*(w-pad*2)/(data.length-1);const Y=v=>h-pad-(v-min)/(max-min)*(h-pad*2);
+  let bandPath='';if(band){let up='',dn='';band.forEach((b,i)=>{up+=(i?'L':'M')+X(i)+' '+Y(b[1]);});for(let i=band.length-1;i>=0;i--)dn+='L'+X(i)+' '+Y(band[i][0]);bandPath=`<path d="${up+dn}Z" fill="${color}" opacity="0.12"/>`;}
+  let line='',area='';data.forEach((v,i)=>{line+=(i?'L':'M')+X(i)+' '+Y(v);});area=`M${X(0)} ${h-pad} `+data.map((v,i)=>'L'+X(i)+' '+Y(v)).join(' ')+`L${X(data.length-1)} ${h-pad}Z`;
+  const gid='g'+Math.random().toString(36).slice(2,7);
+  let grid='';for(let g=0;g<=3;g++){const yy=pad+g*(h-pad*2)/3;const val=Math.round(max-(max-min)*g/3);grid+=`<line x1="${pad}" y1="${yy}" x2="${w-pad}" y2="${yy}" stroke="var(--line)" stroke-width="1"/><text x="${pad-6}" y="${yy+3}" text-anchor="end" font-size="9" fill="var(--ink-3)" font-family="IBM Plex Mono">${val}</text>`;}
+  const last=data[data.length-1];
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="display:block"><defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${color}" stop-opacity="0.28"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>${grid}${bandPath}<path d="${area}" fill="url(#${gid})"/><path d="${line}" fill="none" stroke="${color}" stroke-width="2.4" stroke-linejoin="round" ${dash?'stroke-dasharray="'+dash+'"':''}/><circle cx="${X(data.length-1)}" cy="${Y(last)}" r="4" fill="${color}"/><circle cx="${X(data.length-1)}" cy="${Y(last)}" r="8" fill="${color}" opacity="0.2"/></svg>`;
+}
+function splitLine(obs,pred,opt){const{w=900,h=230,pad=30,band}=opt||{};const all=[...obs,...pred];const bandAll=band?band:[];const max=Math.max(...all,...bandAll.map(b=>b[1]))*1.08;const min=Math.min(...all,...bandAll.map(b=>b[0]||b))*0.82;const n=all.length;const X=i=>pad+i*(w-pad*2)/(n-1);const Y=v=>h-pad-(v-min)/(max-min)*(h-pad*2);
+  let grid='';for(let g=0;g<=4;g++){const yy=pad+g*(h-pad*2)/4;const val=Math.round(max-(max-min)*g/4);grid+=`<line x1="${pad}" y1="${yy}" x2="${w-pad}" y2="${yy}" stroke="var(--line)"/><text x="${pad-6}" y="${yy+3}" text-anchor="end" font-size="9.5" fill="var(--ink-3)" font-family="IBM Plex Mono">${val}</text>`;}
+  let bandPath='';if(band){const off=obs.length-1;let up='',dn='';band.forEach((b,i)=>{up+=(i?'L':'M')+X(off+i)+' '+Y(b[1]);});for(let i=band.length-1;i>=0;i--)dn+='L'+X(off+i)+' '+Y(band[i][0]);bandPath=`<path d="${up+dn}Z" fill="var(--accent)" opacity="0.13"/>`;}
+  let obsL='';obs.forEach((v,i)=>{obsL+=(i?'L':'M')+X(i)+' '+Y(v);});
+  let predL='M'+X(obs.length-1)+' '+Y(obs[obs.length-1]);pred.forEach((v,i)=>{predL+='L'+X(obs.length+i)+' '+Y(v);});
+  const div=X(obs.length-1);
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" style="display:block">${grid}<line x1="${div}" y1="${pad}" x2="${div}" y2="${h-pad}" stroke="var(--ink-3)" stroke-dasharray="3 4" opacity="0.6"/><text x="${div+5}" y="${pad+11}" font-size="9.5" fill="var(--ink-3)" font-family="IBM Plex Mono">now</text>${bandPath}<path d="${obsL}" fill="none" stroke="var(--ink-2)" stroke-width="2.2"/><path d="${predL}" fill="none" stroke="var(--accent)" stroke-width="2.6" stroke-linecap="round"/></svg>`;
+}
+function hbars(items){const max=Math.max(...items.map(i=>i.v));return items.map(i=>`<div style="margin-bottom:13px"><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px"><span style="color:var(--ink-2)">${i.label}</span><b class="mono" style="color:var(--ink)">${i.v}${i.unit||''}</b></div><div style="height:9px;border-radius:6px;background:var(--surface-2);overflow:hidden"><div style="height:100%;width:${i.v/max*100}%;border-radius:6px;background:${i.color||'var(--accent)'}"></div></div></div>`).join('');
+}
+function donut(segs){const total=segs.reduce((a,s)=>a+s.v,0);let off=0;const r=52,c=2*Math.PI*r;const circles=segs.map(s=>{const len=s.v/total*c;const el=`<circle cx="70" cy="70" r="${r}" fill="none" stroke="${s.color}" stroke-width="16" stroke-dasharray="${len} ${c-len}" stroke-dashoffset="${-off}" transform="rotate(-90 70 70)"/>`;off+=len;return el;}).join('');
+  return `<svg viewBox="0 0 140 140" width="130" height="130">${circles}<text x="70" y="66" text-anchor="middle" font-size="26" font-family="Space Grotesk" font-weight="700" fill="var(--ink)">${total}</text><text x="70" y="84" text-anchor="middle" font-size="10" fill="var(--ink-3)" font-family="IBM Plex Mono">NODES</text></svg>`;
+}
+
+/* ============================================================= RENDER: OVERVIEW */
+function renderOverview(){
+  const m=state.metric,cs=activeCities();
+  const cityName=state.city==='all'?'Regional':CITIES[state.city].name;
+  document.getElementById('ovTitle').textContent=(state.city==='all'?'Regional':cityName)+' Air Quality Overview';
+  // KPIs
+  const aqi=agg('aqi'),c=cat(aqi);
+  const pm25=agg('pm25'),pm10=agg('pm10');
+  const online=STATIONS.filter(s=>(state.city==='all'||s.city===state.city)&&s.status==='online').length;
+  const total=STATIONS.filter(s=>state.city==='all'||s.city===state.city).length;
+  const domCity=state.city==='all'?CITIES.korba:CITIES[state.city];
+  const trend=state.city==='all'?Math.round(ORDER.reduce((a,x)=>a+CITIES[x].trend,0)/4):CITIES[state.city].trend;
+  const kpis=[
+    {lab:'Current AQI',val:aqi,unit:c.label,delta:trend,color:c.color,ico:'M3 12h4l3 8 4-16 3 8h4'},
+    {lab:'PM2.5',val:pm25,unit:'µg/m³',delta:trend,color:'var(--ink)',ico:'M12 2v20M2 12h20'},
+    {lab:'PM10',val:pm10,unit:'µg/m³',delta:Math.round(trend*0.8),color:'var(--ink)',ico:'M4 6h16M4 12h16M4 18h16'},
+    {lab:'Dominant pollutant',val:domCity.dominant,unit:'primary driver',delta:null,color:'var(--accent)',big:false},
+    {lab:'Stations online',val:online+'/'+total,unit:'nodes reporting',delta:null,color:'var(--good)'}
+  ];
+  document.getElementById('kpiRow').innerHTML=kpis.map(k=>`
+    <div class="card kpi">
+      <div class="top"><span class="lab">${k.lab}</span><span class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${k.ico?'<path d="'+k.ico+'"/>':''}</svg></span></div>
+      <div class="val" style="color:${k.color};font-size:${(''+k.val).length>4?'26px':'34px'}">${k.val}</div>
+      <div style="display:flex;align-items:center;gap:8px"><span class="unit">${k.unit}</span>${k.delta!=null?deltaHtml(k.delta):''}</div>
+    </div>`).join('');
+  // trend chart
+  const n=state.range==='24h'?24:state.range==='7d'?56:60;
+  let series;
+  if(state.city==='all'){series=history(agg(m),700,n,agg(m)*0.4);}else{const ci=CITIES[state.city];series=history(ci[m],ci.seed,n,ci[m]*0.4);}
+  document.getElementById('trendTitle').textContent=METRICS[m].label+' trend';
+  document.getElementById('trendSub').textContent=state.range==='24h'?'Hourly, last 24 hours':state.range==='7d'?'Last 7 days':'Last 30 days';
+  document.getElementById('trendChart').innerHTML=lineArea(series,{w:680,h:200,color:m==='aqi'?c.color:'var(--accent)'});
+  document.getElementById('trendLegend').textContent=cityName+' · '+METRICS[m].label;
+  // insight
+  const worst=ORDER.reduce((a,b)=>CITIES[a].aqi>CITIES[b].aqi?a:b);
+  document.getElementById('insightH').textContent=`${CITIES[worst].name} is the region's hotspot at AQI ${CITIES[worst].aqi}`;
+  document.getElementById('insightP').innerHTML=`Wind is forecast to drop to <b>${CITIES[worst].wind-3} km/h</b> tonight, trapping PM2.5 near the thermal cluster. VAYU projects a further <b>+9%</b> rise by 06:00 unless dust & load-throttling actions begin within 12 hours.`;
+  // pollutant breakdown
+  const pc=state.city==='all'?CITIES.korba:CITIES[state.city];
+  document.getElementById('pollChart').innerHTML=hbars([
+    {label:'PM2.5',v:pc.pm25,color:'var(--vpoor)'},{label:'PM10',v:pc.pm10,color:'var(--poor)'},
+    {label:'NO₂',v:pc.no2,color:'var(--mod)'},{label:'SO₂',v:pc.so2,color:'var(--accent-2)'},
+    {label:'O₃',v:pc.o3,color:'var(--sat)'}
+  ]);
+  // comparison
+  document.getElementById('cmpChart').innerHTML=hbars(ORDER.map(k=>({label:CITIES[k].name,v:CITIES[k].aqi,color:cat(CITIES[k].aqi).color})));
+  // health donut
+  const onAll=STATIONS.filter(s=>s.status==='online').length,cal=STATIONS.filter(s=>s.status==='calibrating').length,off=STATIONS.filter(s=>s.status==='offline').length;
+  document.getElementById('healthChart').innerHTML=donut([{v:onAll,color:'var(--good)'},{v:cal,color:'var(--mod)'},{v:off,color:'var(--vpoor)'}])+
+    `<div style="font-size:12.5px;line-height:2"><div><span class="dot" style="background:var(--good)"></span>${onAll} online</div><div><span class="dot" style="background:var(--mod)"></span>${cal} calibrating</div><div><span class="dot" style="background:var(--vpoor)"></span>${off} offline</div></div>`;
+  renderSideAq();
+}
+function renderSideAq(){
+  const aqi=agg('aqi'),c=cat(aqi);
+  document.getElementById('sideAq').innerHTML=`<div style="width:38px;height:38px;border-radius:10px;background:${c.color};display:grid;place-items:center;color:#fff;font-family:'Space Grotesk';font-weight:700;font-size:15px">${aqi}</div><div><div style="font-size:12.5px;font-weight:600">${state.city==='all'?'Regional avg':CITIES[state.city].name}</div><div style="font-size:11px;color:var(--ink-3)">${c.label} · live</div></div>`;
+}
+function setMetric(m,btn){state.metric=m;document.querySelectorAll('#metricSeg button').forEach(b=>b.classList.remove('on'));btn.classList.add('on');renderOverview();}
+
+/* ============================================================= RENDER: FORECAST */
+function renderForecast(){
+  const city=state.city==='all'?'korba':state.city;const ci=CITIES[city];
+  const obs=history(ci.aqi,ci.seed,24,ci.aqi*0.35);
+  const pred=forecast(ci.aqi,ci.seed,ci.trend);
+  const band=pred.map((v,i)=>[Math.round(v-(6+i*0.7)),Math.round(v+(6+i*0.7))]);
+  document.getElementById('fcTitle').textContent='Forecast — '+ci.name+' AQI';
+  document.getElementById('fcChart').innerHTML=splitLine(obs,pred,{w:900,h:250,band});
+  const peak=Math.max(...pred),peakH=pred.indexOf(peak),pc=cat(peak);
+  const minv=Math.min(...pred);
+  document.getElementById('fcKpis').innerHTML=[
+    {lab:'Peak AQI (72h)',val:peak,unit:pc.label,color:pc.color},
+    {lab:'Peak expected in',val:'+'+peakH+'h',unit:peakH<24?'today':peakH<48?'tomorrow':'in 3 days',color:'var(--ink)'},
+    {lab:'Best window',val:'+'+pred.indexOf(minv)+'h',unit:'AQI '+minv+' · '+cat(minv).label,color:'var(--good)'},
+    {lab:'Model confidence',val:'94.2%',unit:'validated MAE ±11',color:'var(--accent)'}
+  ].map(k=>`<div class="card kpi"><span class="lab">${k.lab}</span><div class="val" style="color:${k.color}">${k.val}</div><span class="unit">${k.unit}</span></div>`).join('');
+  // haze events
+  const events=[];pred.forEach((v,i)=>{if(v>300&&(i===0||pred[i-1]<=300))events.push({h:i,v,lbl:'Very Poor breach'});if(v>400&&(i===0||pred[i-1]<=400))events.push({h:i,v,lbl:'Severe breach'});});
+  const hz=events.length?events.slice(0,4).map(e=>`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)"><div style="width:8px;height:8px;border-radius:50%;background:${cat(e.v).color}"></div><div style="flex:1"><b style="font-size:13.5px;color:var(--ink)">${e.lbl} · AQI ${e.v}</b><div style="font-size:12px;color:var(--ink-3)">Predicted in +${e.h}h (${e.h<24?'today':e.h<48?'tomorrow':'day 3'})</div></div><span class="pill up">action advised</span></div>`).join(''):'<p style="font-size:13px;color:var(--ink-2);padding:16px 0">No threshold breaches predicted in the next 72 hours for this city. 🌤</p>';
+  document.getElementById('hazeList').innerHTML=hz;
+  // per pollutant
+  const polls=['pm25','pm10','no2','so2','o3'];
+  document.getElementById('fcPoll').innerHTML=polls.map(p=>{const now=ci[p];const pk=Math.round(now*(1+(0.12+Math.random()*0.18)));const d=Math.round((pk-now)/now*100);return `<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)"><div style="flex:1;font-size:13px;color:var(--ink-2)">${METRICS[p].label}</div><b class="mono" style="color:var(--ink-3)">${now}</b><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg><b class="mono" style="color:var(--ink)">${pk}</b><span class="pill up" style="min-width:52px;justify-content:center">+${d}%</span></div>`;}).join('');
+}
+
+/* ============================================================= RENDER: INTERVENTIONS */
+function renderInterventions(){
+  const list=document.getElementById('intervList');
+  const sorted=[...INTERVENTIONS].sort((a,b)=>b.impact-a.impact);
+  list.innerHTML=sorted.map((it,idx)=>{const sel=state.plan.has(it.id);return `
+    <div class="interv ${sel?'sel':''}" onclick="togglePlan('${it.id}')">
+      <div class="rank" style="${sel?'background:var(--accent);color:#fff':''}">${idx+1}</div>
+      <div>
+        <div style="display:flex;align-items:center;gap:10px"><b class="disp" style="font-size:15.5px;color:var(--ink)">${it.name}</b><span class="pill" style="background:var(--surface-2);color:var(--ink-3)">${it.cat}</span></div>
+        <p style="font-size:12.5px;color:var(--ink-2);margin-top:5px;line-height:1.5">${it.desc}</p>
+        <div class="mrow"><div>Impact<b style="color:var(--good)">−${it.impact} AQI</b></div><div>Cost<b>${it.cost}</b></div><div>Effort<b>${it.effort}</b></div><div>Time to effect<b>${it.time}</b></div></div>
+      </div>
+      <div class="sw-t ${sel?'on':''}"><b></b></div>
+    </div>`;}).join('');
+  updateSim();
+}
+function togglePlan(id){state.plan.has(id)?state.plan.delete(id):state.plan.add(id);renderInterventions();}
+function clearPlan(){state.plan.clear();renderInterventions();toast('Scenario cleared');}
+function updateSim(){
+  const city=state.city==='all'?'korba':state.city;const base=CITIES[city].aqi;
+  let reduction=0,cost=0;const costMap={Low:1,Med:2,High:3};
+  state.plan.forEach(id=>{const it=INTERVENTIONS.find(x=>x.id===id);reduction+=it.impact;cost+=costMap[it.cost];});
+  reduction=Math.round(reduction*(1-state.plan.size*0.05));// diminishing returns
+  const nw=Math.max(30,base-reduction);const c=cat(nw);
+  document.getElementById('simCity').textContent=CITIES[city].name;
+  document.getElementById('simBase').textContent=base;
+  const simNew=document.getElementById('simNew');simNew.textContent=nw;simNew.style.color=c.color;
+  document.getElementById('simCat').textContent=c.label;document.getElementById('simCat').style.color=c.color;
+  const dl=document.getElementById('simDelta');
+  if(state.plan.size===0){dl.className='pill flat';dl.textContent='no actions selected';document.getElementById('simMeta').textContent='Select interventions to model combined effect, total cost and time-to-effect.';}
+  else{dl.className='pill down';dl.textContent=`−${reduction} AQI (${Math.round(reduction/base*100)}% cleaner)`;const costLbl=cost<=2?'Low':cost<=4?'Moderate':'High';document.getElementById('simMeta').innerHTML=`<b style="color:var(--ink)">${state.plan.size} action(s)</b> selected · combined cost <b style="color:var(--ink)">${costLbl}</b>. Projected to move ${CITIES[city].name} from <b style="color:var(--ink)">${cat(base).label}</b> to <b style="color:${c.color}">${c.label}</b> within the fastest action window.`;}
+}
+function deployPlan(){if(state.plan.size===0){toast('Select at least one action first');return;}toast('✓ Action plan deployed to field teams');}
+
+/* ============================================================= RENDER: ALERTS */
+function renderAlerts(){
+  const sevColor={severe:'var(--sev)',vpoor:'var(--vpoor)',poor:'var(--poor)',mod:'var(--mod)',good:'var(--good)'};
+  document.getElementById('alertList').innerHTML=ALERTS.map(a=>`
+    <div class="alert-row ${a.read?'':'unread'}" onclick="readAlert(${a.id})">
+      <div class="sev" style="background:${sevColor[a.sev]}"></div>
+      <div>
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:3px"><b style="font-size:13.5px;color:var(--ink)">${a.type}</b><span class="pill" style="background:var(--surface-2);color:var(--ink-3)">${a.city}</span>${a.read?'':'<span style="width:7px;height:7px;border-radius:50%;background:var(--accent)"></span>'}</div>
+        <p style="font-size:12.5px;color:var(--ink-2);line-height:1.5">${a.msg}</p>
+      </div>
+      <div class="mono" style="font-size:11px;color:var(--ink-3);white-space:nowrap">${a.time}</div>
+    </div>`).join('');
+  document.getElementById('ruleList').innerHTML=RULES.map(r=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)"><div style="width:8px;height:8px;border-radius:50%;background:var(--${r[2]})"></div><div style="flex:1"><b style="font-size:12.5px;color:var(--ink);display:block">${r[0]}</b><span style="font-size:11px;color:var(--ink-3)">${r[1]}</span></div><span class="sw-t on"><b></b></span></div>`).join('');
+  const unread=ALERTS.filter(a=>!a.read).length;
+  document.getElementById('alertBadge').textContent=unread;document.getElementById('alertBadge').style.display=unread?'grid':'none';
+  const worst=ORDER.reduce((a,b)=>CITIES[a].aqi>CITIES[b].aqi?a:b);
+  document.getElementById('advisory').innerHTML=`⚠ <b style="color:var(--ink)">${CITIES[worst].name}: Very Poor air.</b> Sensitive groups should avoid outdoor exertion. Schools advised to move activity indoors 3–7 PM. Consider N95 near ${CITIES[worst].tag.toLowerCase()}.`;
+}
+function readAlert(id){const a=ALERTS.find(x=>x.id===id);if(a)a.read=true;renderAlerts();}
+function markAllRead(){ALERTS.forEach(a=>a.read=true);renderAlerts();toast('All alerts marked read');}
+
+/* ============================================================= RENDER: NETWORK */
+function renderNetwork(){
+  const rows=STATIONS.filter(s=>(state.city==='all'||s.city===state.city)&&(state.netFilter==='all'||s.status===state.netFilter));
+  const scope=STATIONS.filter(s=>state.city==='all'||s.city===state.city);
+  const on=scope.filter(s=>s.status==='online').length,cal=scope.filter(s=>s.status==='calibrating').length,off=scope.filter(s=>s.status==='offline').length;
+  const avgUp=(scope.filter(s=>s.status!=='offline').reduce((a,s)=>a+s.uptime,0)/(scope.length-off||1)).toFixed(1);
+  document.getElementById('netKpis').innerHTML=[
+    {lab:'Total nodes',val:scope.length,unit:'across '+(state.city==='all'?'4 cities':'city'),color:'var(--ink)'},
+    {lab:'Online',val:on,unit:Math.round(on/scope.length*100)+'% reporting',color:'var(--good)'},
+    {lab:'Calibrating',val:cal,unit:'scheduled maintenance',color:'var(--mod)'},
+    {lab:'Avg uptime',val:avgUp+'%',unit:'trailing 30 days',color:'var(--accent)'}
+  ].map(k=>`<div class="card kpi"><span class="lab">${k.lab}</span><div class="val" style="color:${k.color}">${k.val}</div><span class="unit">${k.unit}</span></div>`).join('');
+  const stColor={online:'var(--good)',calibrating:'var(--mod)',offline:'var(--vpoor)'};
+  document.getElementById('netBody').innerHTML=rows.map(s=>`<tr>
+    <td><b>${s.id}</b><div style="font-size:11.5px;color:var(--ink-3)">${s.name}</div></td>
+    <td>${s.cityName}</td>
+    <td><span class="dot" style="background:${stColor[s.status]}"></span>${s.status[0].toUpperCase()+s.status.slice(1)}</td>
+    <td><b style="color:${cat(s.aqi).color}">${s.status==='offline'?'—':s.aqi}</b></td>
+    <td>${s.status==='offline'?'—':s.pm25}</td>
+    <td>${s.status==='offline'?'0%':s.uptime+'%'}</td>
+    <td>${s.last}</td>
+    <td style="color:var(--ink-3)">${s.cal}</td>
+  </tr>`).join('')||'<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--ink-3)">No stations match this filter.</td></tr>';
+}
+function setNetFilter(f,btn){state.netFilter=f;document.querySelectorAll('#netFilter .chip').forEach(c=>c.classList.remove('on'));btn.classList.add('on');renderNetwork();}
+
+/* ============================================================= RENDER: REPORTS */
+const RPMETRICS=['AQI','PM2.5','PM10','NO₂','SO₂','O₃','Meteorology'];
+let rpSel=new Set(['AQI','PM2.5','PM10']);
+function renderReportsInit(){
+  document.getElementById('rpMetrics').innerHTML=RPMETRICS.map(m=>`<span class="chip ${rpSel.has(m)?'on':''}" onclick="toggleRp('${m}',this)">${m}</span>`).join('');
+  document.getElementById('schedList').innerHTML=SCHED.map(s=>`<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line)"><div class="ico" style="background:var(--surface-2)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div style="flex:1"><b style="font-size:13px;color:var(--ink);display:block">${s[0]}</b><span style="font-size:11.5px;color:var(--ink-3)">${s[1]}</span></div><span class="pill" style="background:var(--surface-2);color:var(--ink-3)">${s[2]}</span></div>`).join('');
+  buildReport();
+}
+function toggleRp(m,btn){rpSel.has(m)?rpSel.delete(m):rpSel.add(m);btn.classList.toggle('on');}
+function buildReport(){
+  const city=document.getElementById('rpCity').value;const range=document.getElementById('rpRange').value;const type=document.getElementById('rpType').value;
+  const cities=city==='all'?ORDER:[city];
+  const avgAqi=Math.round(cities.reduce((a,c)=>a+CITIES[c].aqi,0)/cities.length);
+  const rows=cities.map(c=>{const ci=CITIES[c];return `<tr><td><b>${ci.name}</b></td><td><b style="color:${cat(ci.aqi).color}">${ci.aqi}</b> ${cat(ci.aqi).label}</td>${rpSel.has('PM2.5')?`<td>${ci.pm25}</td>`:''}${rpSel.has('PM10')?`<td>${ci.pm10}</td>`:''}${rpSel.has('NO₂')?`<td>${ci.no2}</td>`:''}${rpSel.has('SO₂')?`<td>${ci.so2}</td>`:''}</tr>`;}).join('');
+  document.getElementById('reportPreview').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:start;border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:16px">
+      <div><div class="mono" style="font-size:11px;letter-spacing:.14em;color:var(--accent)">VAYU · ${type.toUpperCase()}</div><h2 class="disp" style="font-weight:700;font-size:22px;margin-top:6px">${city==='all'?'Chhattisgarh Regional':CITIES[city].name} Air Quality Report</h2><div style="font-size:12.5px;color:var(--ink-3);margin-top:4px">${range} · generated ${new Date().toLocaleDateString('en-IN',{day:'numeric',month:'long',year:'numeric'})}</div></div>
+      <div style="text-align:center"><div class="disp" style="font-weight:700;font-size:40px;color:${cat(avgAqi).color}">${avgAqi}</div><div style="font-size:11px;color:var(--ink-3)">avg AQI</div></div>
+    </div>
+    <p style="font-size:13px;color:var(--ink-2);line-height:1.65;margin-bottom:18px">During the ${range.toLowerCase()}, ${city==='all'?'the four monitored cities':CITIES[city].name} recorded an average AQI of <b style="color:var(--ink)">${avgAqi} (${cat(avgAqi).label})</b>, driven primarily by PM2.5 and PM10 from industrial and vehicular sources. ${INTERVENTIONS.length} interventions are recommended; the top action alone is modelled to reduce peak AQI by up to ${Math.max(...INTERVENTIONS.map(i=>i.impact))} points.</p>
+    <table style="font-size:12.5px"><thead><tr><th>City</th><th>AQI</th>${rpSel.has('PM2.5')?'<th>PM2.5</th>':''}${rpSel.has('PM10')?'<th>PM10</th>':''}${rpSel.has('NO₂')?'<th>NO₂</th>':''}${rpSel.has('SO₂')?'<th>SO₂</th>':''}</tr></thead><tbody>${rows}</tbody></table>
+    <div style="margin-top:18px;padding:14px;border-radius:12px;background:var(--surface-2);font-size:12px;color:var(--ink-2);line-height:1.6"><b style="color:var(--ink)">Note:</b> Prototype report with simulated data. Figures follow the CPCB National Air Quality Index scale (0–500).</div>`;
+}
+
+/* ============================================================= EXPORT */
+function exportCSV(kind){
+  let csv='',fn='';
+  if(kind==='stations'){fn='vayu-stations.csv';csv='Station ID,Name,City,Status,AQI,PM2.5,Uptime %,Last Reading,Calibrated\n';
+    STATIONS.filter(s=>state.city==='all'||s.city===state.city).forEach(s=>{csv+=`${s.id},${s.name},${s.cityName},${s.status},${s.status==='offline'?'':s.aqi},${s.status==='offline'?'':s.pm25},${s.uptime},${s.last},${s.cal}\n`;});}
+  else{fn='vayu-report.csv';csv='City,AQI,Category,PM2.5,PM10,NO2,SO2,CO,O3,Temp,Humidity,Wind\n';
+    const city=document.getElementById('rpCity')?document.getElementById('rpCity').value:'all';const cs=city==='all'?ORDER:[city];
+    cs.forEach(c=>{const ci=CITIES[c];csv+=`${ci.name},${ci.aqi},${cat(ci.aqi).label},${ci.pm25},${ci.pm10},${ci.no2},${ci.so2},${ci.co},${ci.o3},${ci.temp},${ci.humidity},${ci.wind}\n`;});}
+  const blob=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fn;a.click();
+  toast('✓ '+fn+' downloaded');
+}
+
+/* ============================================================= MAP */
+let map,heatLayer,stationLayer,windLayer,labelLayer,mapReady=false;
+function initMap(){
+  if(mapReady)return;
+  map=L.map('map',{zoomControl:true,attributionControl:true}).setView([21.9,81.9],8);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors',maxZoom:18}).addTo(map);
+  heatLayer=L.layerGroup().addTo(map);stationLayer=L.layerGroup().addTo(map);windLayer=L.layerGroup();labelLayer=L.layerGroup().addTo(map);
+  drawMap();mapReady=true;
+  setTimeout(()=>map.invalidateSize(),200);
+  selectMapCity('korba');
+}
+function metricVal(ci,m){return m==='aqi'?ci.aqi:ci[m];}
+function metricToAqi(ci,m){if(m==='aqi')return ci.aqi;// scale pollutant to an AQI-ish color band
+  const ratios={pm25:ci.aqi/ci.pm25,pm10:ci.aqi/ci.pm10,so2:280/ci.so2*(ci.so2/60),no2:ci.aqi/ci.no2};return ci.aqi;}
+function drawMap(){
+  heatLayer.clearLayers();stationLayer.clearLayers();labelLayer.clearLayers();windLayer.clearLayers();
+  const m=state.mapMetric;
+  ORDER.forEach(key=>{
+    const ci=CITIES[key];const c=cat(ci.aqi);
+    // heat blobs — layered circles
+    const r=rng(ci.seed);
+    const rings=[[26000,0.10],[17000,0.16],[9000,0.26]];
+    rings.forEach(([rad,op])=>{L.circle([ci.lat,ci.lng],{radius:rad,color:'transparent',fillColor:c.color,fillOpacity:op,interactive:false}).addTo(heatLayer);});
+    for(let i=0;i<6;i++){const la=ci.lat+(r()-0.5)*0.14,ln=ci.lng+(r()-0.5)*0.14;const sub=cat(ci.aqi+(r()-0.5)*80);L.circle([la,ln],{radius:4000+r()*4000,color:'transparent',fillColor:sub.color,fillOpacity:0.14,interactive:false}).addTo(heatLayer);}
+    // center marker
+    const big=L.circleMarker([ci.lat,ci.lng],{radius:16,color:'#fff',weight:2,fillColor:c.color,fillOpacity:0.95}).addTo(heatLayer);
+    big.bindTooltip(`${ci.name}: ${metricVal(ci,m)}${m==='aqi'?'':' µg/m³'}`,{permanent:false,direction:'top'});
+    big.on('click',()=>selectMapCity(key));
+    // label
+    const lbl=L.marker([ci.lat,ci.lng],{icon:L.divIcon({className:'',html:`<div style="transform:translate(20px,-10px);font-family:'Space Grotesk';font-weight:600;font-size:13px;color:var(--ink);text-shadow:0 0 6px var(--bg),0 0 6px var(--bg),0 0 3px var(--bg);white-space:nowrap">${ci.name} <span style="color:${c.color}">${ci.aqi}</span></div>`,iconSize:[0,0]})});
+    labelLayer.addLayer(lbl);
+    // wind vector
+    const wr=ci.windDir*Math.PI/180;const wl=0.18;const wlat=ci.lat+Math.cos(wr)*wl,wlng=ci.lng+Math.sin(wr)*wl;
+    L.polyline([[ci.lat,ci.lng],[wlat,wlng]],{color:'var(--accent-2)',weight:2.5,opacity:0.8,dashArray:'2 5'}).addTo(windLayer);
+    L.circleMarker([wlat,wlng],{radius:3,color:'var(--accent-2)',fillColor:'var(--accent-2)',fillOpacity:1}).addTo(windLayer);
+  });
+  // station pins
+  STATIONS.forEach(s=>{if(s.status==='offline')return;const c=cat(s.aqi);
+    const mk=L.circleMarker([s.lat,s.lng],{radius:5,color:'#fff',weight:1.5,fillColor:c.color,fillOpacity:0.9});
+    mk.bindPopup(`<div style="font-family:'IBM Plex Sans';min-width:150px"><b style="font-family:'Space Grotesk';font-size:14px">${s.name}</b><div style="font-size:11px;color:#888;margin-bottom:6px">${s.id} · ${s.cityName}</div><div style="display:flex;gap:14px"><div><div style="font-size:20px;font-weight:700;color:${c.color};font-family:'Space Grotesk'">${s.aqi}</div><div style="font-size:10px;color:#888">AQI · ${c.label}</div></div><div><div style="font-size:20px;font-weight:700;font-family:'Space Grotesk'">${s.pm25}</div><div style="font-size:10px;color:#888">PM2.5</div></div></div><div style="font-size:11px;color:#888;margin-top:6px">Uptime ${s.uptime}% · ${s.last}</div></div>`);
+    mk.addTo(stationLayer);
+  });
+}
+function selectMapCity(key){
+  const ci=CITIES[key];const c=cat(ci.aqi);
+  document.getElementById('cityDetail').innerHTML=`
+    <div style="height:5px;background:${c.color}"></div>
+    <div style="padding:16px">
+      <div style="display:flex;justify-content:space-between;align-items:start"><div><div class="disp" style="font-weight:700;font-size:19px">${ci.name}</div><div style="font-size:12px;color:var(--ink-3)">${ci.tag}</div></div><div style="text-align:right"><div class="disp" style="font-weight:700;font-size:34px;line-height:1;color:${c.color}">${ci.aqi}</div><div style="font-size:11px;color:${c.color};font-weight:600">${c.label}</div></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px">
+        ${[['PM2.5',ci.pm25,'µg/m³'],['PM10',ci.pm10,'µg/m³'],['NO₂',ci.no2,'µg/m³'],['SO₂',ci.so2,'µg/m³']].map(p=>`<div style="background:var(--surface-2);border-radius:10px;padding:9px 11px"><div style="font-size:10.5px;color:var(--ink-3)">${p[0]}</div><b class="mono" style="font-size:15px;color:var(--ink)">${p[1]}</b> <span style="font-size:9px;color:var(--ink-3)">${p[2]}</span></div>`).join('')}
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--ink-2);margin-top:12px;padding-top:12px;border-top:1px solid var(--line)"><span>🌡 ${ci.temp}°C</span><span>💧 ${ci.humidity}%</span><span>🍃 ${ci.wind} km/h</span></div>
+      <button class="btn pri" style="width:100%;justify-content:center;margin-top:13px" onclick="go('forecast')">View 72h forecast →</button>
+    </div>`;
+  map.flyTo([ci.lat,ci.lng],9,{duration:0.8});
+}
+function setMapMetric(m){state.mapMetric=m;drawMap();applyLayers();}
+function toggleLayer(name,elm){state.layers[name]=!state.layers[name];elm.classList.toggle('on');applyLayers();}
+function applyLayers(){
+  const L2={heat:heatLayer,stations:stationLayer,wind:windLayer,labels:labelLayer};
+  for(const k in L2){if(!L2[k])continue;if(state.layers[k]){if(!map.hasLayer(L2[k]))L2[k].addTo(map);}else{if(map.hasLayer(L2[k]))map.removeLayer(L2[k]);}}
+}
+
+/* ============================================================= NAV / THEME */
+const VIEWS={overview:renderOverview,forecast:renderForecast,interventions:renderInterventions,alerts:renderAlerts,network:renderNetwork,reports:renderReportsInit};
+function go(view){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('show'));
+  document.getElementById(view==='map'?'map-view':view).classList.add('show');
+  document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.view===view));
+  document.querySelector('.side').classList.remove('open');
+  document.getElementById('main').scrollTop=0;
+  if(view==='map'){initMap();setTimeout(()=>{map&&map.invalidateSize()},60);}
+  else if(VIEWS[view])VIEWS[view]();
+  location.hash=view;
+}
+function setCity(v){state.city=v;const cur=[...document.querySelectorAll('.section')].find(s=>s.classList.contains('show'));const id=cur?cur.id:'overview';const view=id==='map-view'?'map':id;if(view==='map'){selectMapCity(v==='all'?'korba':v);}else if(VIEWS[view])VIEWS[view]();renderSideAq();}
+function setRange(v){state.range=v;renderOverview();}
+function toggleTheme(){const h=document.documentElement;const dark=h.getAttribute('data-theme')==='dark';h.setAttribute('data-theme',dark?'light':'dark');document.getElementById('themeBtn').textContent=dark?'☾':'☀';try{localStorage.setItem('vayu-theme',dark?'light':'dark');}catch(e){}
+  // re-render current view so chart var() colors refresh
+  const cur=[...document.querySelectorAll('.section')].find(s=>s.classList.contains('show'));if(cur){const v=cur.id==='map-view'?'map':cur.id;if(v==='map'&&mapReady){drawMap();}else if(VIEWS[v])VIEWS[v]();}
+}
+function toast(msg){const t=document.getElementById('toast');t.innerHTML=msg;t.classList.add('show');clearTimeout(window._tt);window._tt=setTimeout(()=>t.classList.remove('show'),2600);}
+
+/* ============================================================= INIT */
+(function(){
+  try{const t=localStorage.getItem('vayu-theme');if(t){document.documentElement.setAttribute('data-theme',t);document.getElementById('themeBtn').textContent=t==='dark'?'☀':'☾';}}catch(e){}
+  renderOverview();
+  const hash=location.hash.slice(1);
+  if(hash&&(document.getElementById(hash)||hash==='map'))go(hash);
+})();
+</script>
+</body>
+</html>
