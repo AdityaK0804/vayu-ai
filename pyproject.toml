@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "airsight"
+version = "0.1.0"
+description = "AirSight — air-quality intelligence backend for Chhattisgarh"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas>=2.0",
+    "numpy>=1.24",
+    "pyyaml>=6.0",
+    "h3>=3.7",
+    "scikit-learn>=1.3",
+    "lightgbm>=4.0",
+    "xarray>=2023.1",
+    "netCDF4>=1.6",
+    "rasterio>=1.3",
+    "geopandas>=0.14",
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "pyarrow>=14.0",
+]
+
+[project.optional-dependencies]
+plot = ["matplotlib>=3.8"]
+dev  = ["pytest>=7.0", "ruff>=0.4"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

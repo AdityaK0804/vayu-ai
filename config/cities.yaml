@@ -1,0 +1,64 @@
+# AirSight — city registry
+# THIS FILE IS THE SCALABILITY STORY.
+# Adding a city = adding ~8 lines here. No code changes anywhere.
+# Show this file to the judges when they ask "does it scale to other cities?"
+
+defaults:
+  # Training window: all sources overlap here.
+  # (Sentinel-5P starts Jul 2018; CPCB you have from 2017 — keep it for the
+  #  pure time-series model, but the FUSED model trains on this window.)
+  start_date: "2021-01-01"
+  end_date: "2024-12-31"
+  h3_resolution: 8      # ~0.74 km2 per cell ≈ the PS's "1km grid"
+  timezone: "Asia/Kolkata"
+
+cities:
+  - id: korba
+    name: "Korba"
+    role: hero                    # full build, live demo
+    lat: 22.3595
+    lon: 82.7501
+    bbox: [82.3, 22.0, 83.1, 22.7]      # [W, S, E, N]
+    has_stations: true
+    notes: "India's power capital. Coal plants + SECL mines. Extreme industrial PM. Few stations = the hard case."
+
+  - id: raipur
+    name: "Raipur"
+    role: validation
+    lat: 21.2514
+    lon: 81.6296
+    bbox: [81.2, 20.9, 82.0, 21.6]
+    has_stations: true
+    notes: "State capital. Most stations. Best-behaved validation city."
+
+  - id: jagdalpur
+    name: "Jagdalpur"
+    role: reveal                  # THE DEMO MOMENT — no ground sensor at all
+    lat: 19.0748
+    lon: 82.0261
+    bbox: [81.7, 18.8, 82.4, 19.4]
+    has_stations: false           # <-- drives the "Predict everywhere" reveal in the UI
+    notes: "NO CPCB station. We forecast it blind from satellite+met. This is the mic-drop."
+
+  # --- Only collect these if Day 5 is green. Nice-to-have validation. ---
+  - id: bhilai
+    name: "Bhilai"
+    role: validation_optional
+    lat: 21.1938
+    lon: 81.3509
+    bbox: [81.0, 20.9, 81.7, 21.5]
+    has_stations: true
+    notes: "Bhilai Steel Plant. Strong industrial signal."
+
+  - id: bilaspur
+    name: "Bilaspur"
+    role: validation_optional
+    lat: 22.0797
+    lon: 82.1409
+    bbox: [81.7, 21.8, 82.5, 22.4]
+    has_stations: true
+
+# State-wide bbox — used for FIRMS fire + EDGAR clipping (one download covers all)
+state:
+  name: "Chhattisgarh"
+  bbox: [80.2, 17.8, 84.4, 24.1]

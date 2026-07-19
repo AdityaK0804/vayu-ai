@@ -1,0 +1,17 @@
+# Data & Datasets
+data/
+
+# Model Outputs & Reports
+outputs/
+
+# Python Cache & Build Artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.venv/
+venv/
+env/
+.idea/
+.vscode/

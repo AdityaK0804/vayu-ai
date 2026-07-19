@@ -1,0 +1,17 @@
+# AirSight data collection
+requests>=2.31
+pyyaml>=6.0
+pandas>=2.0
+h3>=3.7
+
+# OSM (step 02)
+osmnx>=1.9
+geopandas>=0.14
+
+# Earth Engine (step 04) - also run: earthengine authenticate
+earthengine-api>=0.1.380
+
+# EDGAR .nc + WorldPop .tif reading (build phase)
+xarray>=2023.1
+netCDF4>=1.6
+rasterio>=1.3
