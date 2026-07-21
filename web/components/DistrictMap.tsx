@@ -12,7 +12,7 @@ const BASEMAP = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.jso
 
 // Bumped whenever bake_districts.py changes shape. Without this the browser
 // keeps serving a previously cached bake and every new field reads `undefined`.
-const DATA_URL = "/data/cg_districts.json?v=3";
+const DATA_URL = "/data/cg_districts.json?v=4";
 
 export interface DistrictProps {
   name: string;
@@ -42,6 +42,14 @@ export interface DistrictProps {
   wind_speed: number;
   blh_m: number;
   cams_pm25: number;
+  /** measured station values where they exist; null elsewhere */
+  live_pm25: number | null;
+  live_us_aqi: number | null;
+  live_stations: number;
+  /** what the map paints: measured when available, model otherwise */
+  display_pm25: number;
+  display_aqi: number;
+  display_basis: "measured" | "model";
 }
 
 export interface CityPoint {
@@ -62,6 +70,7 @@ export interface DistrictsFC {
   features: { id?: string; type: "Feature"; properties: DistrictProps; geometry: any }[];
   cities?: CityPoint[];
   meta?: Record<string, any>;
+  meta_live?: { origin: string; mode: "live" | "historical" };
 }
 
 export interface IndiaPlace {
@@ -86,7 +95,7 @@ export function useIndiaIndex() {
 
 export function useDistricts() {
   return useQuery({
-    queryKey: ["cg_districts_v3"],
+    queryKey: ["cg_districts_v4"],
     queryFn: async (): Promise<DistrictsFC> => {
       const res = await fetch(DATA_URL, { cache: "no-cache" });
       if (!res.ok) throw new Error(`districts: HTTP ${res.status}`);
@@ -168,7 +177,16 @@ export default function DistrictMap({
     }
     if (focus.kind === "city" && data) {
       const c = data.cities?.find((x) => x.name === focus.name);
-      if (c) m.flyTo({ center: [c.lon, c.lat], zoom: 9.6, duration: 1500, curve: 1.5, essential: true });
+      if (c) {
+        m.flyTo({ center: [c.lon, c.lat], zoom: 9.6, duration: 1500, curve: 1.5, essential: true });
+        // open the detail panel for whichever district the city sits in, so a
+        // city search lands on data rather than just a viewport move
+        const host = data.features.find((f) => {
+          const [[w, s2], [e, n]] = bboxOf(f.geometry);
+          return c.lon >= w && c.lon <= e && c.lat >= s2 && c.lat <= n;
+        });
+        if (host) onSelect(host.properties);
+      }
       return;
     }
     if (focus.kind === "india") {
@@ -195,7 +213,7 @@ export default function DistrictMap({
         filled: true,
         extruded: false, // flat: the extruded walls looked like torn paper at low pitch
         getFillColor: (f: any) => {
-          const c = aqiColor(f.properties.us_aqi);
+          const c = aqiColor(f.properties.display_aqi ?? f.properties.us_aqi);
           const isSel = f.properties.name === selected;
           const isHov = f.properties.name === hover;
           // "pop": brighten + go fully opaque on hover, eased by transitions
@@ -303,16 +321,21 @@ export default function DistrictMap({
             // of its properties — which is where the `undefined`s came from.
             const p = object.properties ?? object;
             if (p?.name == null) return null;
-            const c = aqiColor(p.us_aqi);
+            const pm = p.display_pm25 ?? p.pm25;
+            const aq = p.display_aqi ?? p.us_aqi;
+            const c = aqiColor(aq);
+            const measured = p.display_basis === "measured";
             return {
               html: `<div style="font-family:var(--font-body);font-size:12px;line-height:1.55">
                   <b style="font-size:13px">${p.name}</b><br/>
-                  <span style="font-family:var(--font-mono)">${p.pm25} µg/m³ ·
-                    <span style="color:rgb(${c.join(",")})">AQI ${p.us_aqi}</span></span><br/>
+                  <span style="font-family:var(--font-mono)">${pm} µg/m³ ·
+                    <span style="color:rgb(${c.join(",")})">AQI ${aq}</span></span><br/>
                   <span style="opacity:.72">${
-                    p.n_stations > 0
-                      ? `${p.n_stations} CPCB station${p.n_stations > 1 ? "s" : ""}`
-                      : "no ground sensor — predicted"
+                    measured
+                      ? `live · ${p.live_stations} CPCB station${p.live_stations > 1 ? "s" : ""}`
+                      : p.n_stations > 0
+                        ? `${p.n_stations} station(s) · model`
+                        : "no ground sensor — predicted"
                   }</span>
                 </div>`,
               style: {

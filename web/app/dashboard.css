@@ -233,3 +233,24 @@
   }
   .side.open { transform: none; }
 }
+
+/* close button on the district detail panel — icon, not a word */
+.close-x {
+  width: 30px; height: 30px; flex: none;
+  display: grid; place-items: center;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 13px; line-height: 1; cursor: pointer;
+  transition: background .18s, color .18s, border-color .18s, transform .18s;
+}
+.close-x:hover {
+  background: color-mix(in oklch, var(--aqi-5), transparent 85%);
+  border-color: var(--aqi-5);
+  color: var(--aqi-5);
+  transform: rotate(90deg);
+}
+
+@keyframes vayuTyping { 0%,60%,100% { opacity:.25 } 30% { opacity:1 } }
+.typing { letter-spacing: 2px; font-size: 8px; animation: vayuTyping 1.2s infinite; }

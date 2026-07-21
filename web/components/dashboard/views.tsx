@@ -7,7 +7,7 @@ import AttributionCard from "@/components/AttributionCard";
 import TimeSlider from "@/components/TimeSlider";
 import ShinyButton from "@/components/magicui/shiny-button";
 import { useDistricts, useIndiaIndex, type DistrictProps } from "@/components/DistrictMap";
-import { AQI_BANDS, aqiCss } from "@/lib/aqiScale";
+import { AQI_BANDS, aqiCss, aqiLabel } from "@/lib/aqiScale";
 import type { CityId } from "@/lib/types";
 import { BANDS, SOURCE_LABEL, bandFor } from "@/lib/aqi";
 import {
@@ -562,38 +562,67 @@ export function MapView() {
               <div className="crumb">District</div>
               <b style={{ fontFamily: "var(--font-display)", fontSize: 18 }}>{district.name}</b>
             </div>
-            <button className="chip" onClick={() => setDistrict(null)}>
-              close
+            <button
+              onClick={() => setDistrict(null)}
+              aria-label="Close details"
+              title="Close"
+              className="close-x"
+            >
+              ✕
             </button>
           </div>
 
           {/* headline: predicted concentration + AQI */}
           <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 14 }}>
-            <span className="disp" style={{ fontSize: 34, color: aqiCss(district.us_aqi) }}>
-              {district.pm25}
+            <span className="disp" style={{ fontSize: 38, color: aqiCss(district.display_aqi) }}>
+              {district.display_pm25}
             </span>
             <span className="unit">µg/m³ PM2.5</span>
             <span
               className="pill"
               style={{
                 marginLeft: "auto",
-                background: `color-mix(in oklch, ${aqiCss(district.us_aqi)}, transparent 84%)`,
-                color: aqiCss(district.us_aqi),
+                background: `color-mix(in oklch, ${aqiCss(district.display_aqi)}, transparent 84%)`,
+                color: aqiCss(district.display_aqi),
               }}
             >
-              AQI {district.us_aqi}
+              AQI {district.display_aqi}
+            </span>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 7, marginTop: 8 }}>
+            <span
+              className="pill"
+              style={{
+                background:
+                  district.display_basis === "measured"
+                    ? "color-mix(in oklch, var(--aqi-1), transparent 84%)"
+                    : "color-mix(in oklch, var(--accent), transparent 86%)",
+                color: district.display_basis === "measured" ? "var(--aqi-1)" : "var(--accent)",
+              }}
+            >
+              {district.display_basis === "measured" ? (
+                <>
+                  <span className="live-dot" /> LIVE · {district.live_stations} station
+                  {district.live_stations > 1 ? "s" : ""}
+                </>
+              ) : (
+                <>PREDICTED · no sensor here</>
+              )}
+            </span>
+            <span className="crumb" style={{ fontSize: 9.5 }}>
+              {aqiLabel(district.display_aqi)}
             </span>
           </div>
 
           <div style={{ marginTop: 10 }}>
             <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5 }}>
-              <span style={{ color: "var(--ink-2)" }}>Risk index</span>
-              <span className="figure">{district.risk} / 100</span>
+              <span style={{ color: "var(--ink-2)" }}>Model forecast (this hour)</span>
+              <span className="figure">{district.pm25} µg/m³</span>
             </div>
             <div style={{ height: 6, background: "var(--surface-2)", borderRadius: 3, marginTop: 5 }}>
               <div
                 style={{
-                  width: `${district.risk}%`,
+                  width: `${Math.min(100, (district.display_aqi / 300) * 100)}%`,
                   height: "100%",
                   borderRadius: 3,
                   background: aqiCss(district.us_aqi),
@@ -610,56 +639,6 @@ export function MapView() {
           </dl>
 
           {/* ---- measured pollutants (only where a station exists) ---- */}
-          <Block title="Measured at CPCB stations">
-            {district.n_stations > 0 && Object.keys(district.measured ?? {}).length > 0 ? (
-              <>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
-                  {(
-                    [
-                      ["pm25", "PM2.5", "µg/m³"],
-                      ["pm10", "PM10", "µg/m³"],
-                      ["no2", "NO₂", "µg/m³"],
-                      ["so2", "SO₂", "µg/m³"],
-                      ["co", "CO", "mg/m³"],
-                      ["o3", "O₃", "µg/m³"],
-                    ] as const
-                  )
-                    .filter(([k]) => district.measured[k] != null)
-                    .map(([k, label, unit]) => (
-                      <div
-                        key={k}
-                        style={{
-                          background: "var(--surface-2)",
-                          border: "1px solid var(--line)",
-                          borderRadius: 9,
-                          padding: "7px 9px",
-                        }}
-                      >
-                        <div className="crumb" style={{ fontSize: 9.5 }}>
-                          {label}
-                        </div>
-                        <div className="figure" style={{ fontSize: 14, marginTop: 2 }}>
-                          {district.measured[k] as number}
-                          <span style={{ fontSize: 9, color: "var(--ink-3)" }}> {unit}</span>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-                {district.measured.as_of && (
-                  <div className="crumb" style={{ marginTop: 8, fontSize: 9.5 }}>
-                    as of {String(district.measured.as_of).slice(0, 16)}
-                  </div>
-                )}
-              </>
-            ) : (
-              <p style={{ fontSize: 11.5, lineHeight: 1.6, color: "var(--ink-2)" }}>
-                No ground sensor in this district — every value here is predicted from
-                satellite, meteorology and emissions geography, the same basis the
-                leave-one-station-out test validated.
-              </p>
-            )}
-          </Block>
-
           {/* ---- what the model leaned on (SHAP) ---- */}
           <Block title="Model attribution (SHAP)">
             {(["industry", "traffic", "fire", "dust"] as const).map((k) => {
@@ -746,6 +725,56 @@ export function MapView() {
               <Rowk k="Nearest power plant" v={`${district.gppd_nearest_km} km · ${district.gppd_nearest_mw} MW`} />
               <Rowk k="Capacity ≤25 km" v={`${district.gppd_cap_25km} MW`} />
             </dl>
+          </Block>
+
+          <Block title="Measured at CPCB stations">
+            {district.n_stations > 0 && Object.keys(district.measured ?? {}).length > 0 ? (
+              <>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                  {(
+                    [
+                      ["pm25", "PM2.5", "µg/m³"],
+                      ["pm10", "PM10", "µg/m³"],
+                      ["no2", "NO₂", "µg/m³"],
+                      ["so2", "SO₂", "µg/m³"],
+                      ["co", "CO", "mg/m³"],
+                      ["o3", "O₃", "µg/m³"],
+                    ] as const
+                  )
+                    .filter(([k]) => district.measured[k] != null)
+                    .map(([k, label, unit]) => (
+                      <div
+                        key={k}
+                        style={{
+                          background: "var(--surface-2)",
+                          border: "1px solid var(--line)",
+                          borderRadius: 9,
+                          padding: "7px 9px",
+                        }}
+                      >
+                        <div className="crumb" style={{ fontSize: 9.5 }}>
+                          {label}
+                        </div>
+                        <div className="figure" style={{ fontSize: 14, marginTop: 2 }}>
+                          {district.measured[k] as number}
+                          <span style={{ fontSize: 9, color: "var(--ink-3)" }}> {unit}</span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+                {district.measured.as_of && (
+                  <div className="crumb" style={{ marginTop: 8, fontSize: 9.5 }}>
+                    as of {String(district.measured.as_of).slice(0, 16)}
+                  </div>
+                )}
+              </>
+            ) : (
+              <p style={{ fontSize: 11.5, lineHeight: 1.6, color: "var(--ink-2)" }}>
+                No ground sensor in this district — every value here is predicted from
+                satellite, meteorology and emissions geography, the same basis the
+                leave-one-station-out test validated.
+              </p>
+            )}
           </Block>
 
           {district.n_stations > 0 && (
