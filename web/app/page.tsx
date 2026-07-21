@@ -1,0 +1,277 @@
+"use client";
+
+import Link from "next/link";
+
+import ShinyLink from "@/components/magicui/shiny-link";
+
+import CityIndex from "@/components/landing/CityIndex";
+import SiteShell, { PAD } from "@/components/site/SiteChrome";
+import { FeatureGrid, Section, StepsPanel } from "@/components/site/blocks";
+import { useMetrics } from "@/lib/data";
+
+/* ---------------------------------------------------------------------------
+   VAYU landing — ported from the design's index.dc.html.
+   Layout, type scale, colour and motion follow the design. The NUMBERS do not:
+   the design ships placeholders ("41 sensors", "94.2% accuracy", AQI 312) and
+   its own footer says "data simulated for prototype". Everything numeric here
+   reads from the real pipeline instead.
+--------------------------------------------------------------------------- */
+
+export default function Landing() {
+  const { data: metrics } = useMetrics("korba");
+  const h24 = metrics?.forecast_vs_baselines.find((h) => h.horizon_h === 24);
+
+  const stats = [
+    { v: "72h", k: "forecast horizon" },
+    { v: h24?.model_rmse != null ? `${h24.model_rmse}` : "—", k: "µg/m³ RMSE @24h" },
+    {
+      v:
+        metrics?.zero_station_loso.rmse_satellite_subset != null
+          ? `${metrics.zero_station_loso.rmse_satellite_subset}`
+          : "—",
+      k: "µg/m³ zero-station",
+    },
+    { v: String(metrics?.dataset.stations ?? "—"), k: "ground stations" },
+  ];
+
+  return (
+    <SiteShell>
+      {/* ---------------- hero ---------------- */}
+      <header
+        id="top"
+        style={{
+          position: "relative",
+          zIndex: 1,
+          maxWidth: 1220,
+          margin: "0 auto",
+          padding: `clamp(124px,13vw,156px) ${PAD} 40px`,
+        }}
+      >
+        <div
+          className="figure"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "7px 14px",
+            borderRadius: 100,
+            border: "1px solid var(--line)",
+            background: "var(--surface)",
+            fontSize: 12,
+            color: "var(--ink-2)",
+            animation: "vayuRise .6s both",
+          }}
+        >
+          <span
+            style={{
+              width: 7,
+              height: 7,
+              borderRadius: "50%",
+              background: "var(--aqi-1)",
+              animation: "vayuPulse 1.8s infinite",
+            }}
+          />
+          LIVE · {metrics?.dataset.stations ?? "—"} stations · 9 cities · Chhattisgarh
+        </div>
+
+        <h1
+          className="display"
+          style={{
+            fontWeight: 700,
+            fontSize: "clamp(38px,6.6vw,80px)",
+            lineHeight: 1.02,
+            margin: "22px 0 0",
+            maxWidth: "15ch",
+            animation: "vayuRise .7s .05s both",
+          }}
+        >
+          No sensors.
+          <br />
+          No problem.
+          <br />
+          <span
+            style={{
+              background: "linear-gradient(120deg,var(--accent),var(--accent-2))",
+              WebkitBackgroundClip: "text",
+              backgroundClip: "text",
+              color: "transparent",
+            }}
+          >
+            AI fills the gaps.
+          </span>
+        </h1>
+
+        <p
+          style={{
+            fontSize: "clamp(16px,1.9vw,20px)",
+            lineHeight: 1.6,
+            color: "var(--ink-2)",
+            maxWidth: "56ch",
+            margin: "26px 0 0",
+            animation: "vayuRise .7s .12s both",
+          }}
+        >
+          VAYU fuses CPCB ground stations, satellite columns, meteorology and emissions
+          inventories into one forecasting engine — predicting PM2.5 72 hours out, attributing
+          it to a named source, and ranking where enforcement should go first. Including
+          Jagdalpur, which has no ground sensor at all.
+        </p>
+
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 14,
+            marginTop: 34,
+            animation: "vayuRise .7s .18s both",
+          }}
+        >
+          <ShinyLink
+            href="/dashboard"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 9,
+              padding: "15px 26px",
+              borderRadius: 12,
+              background: "linear-gradient(140deg,var(--accent),var(--accent-2))",
+              color: "#fff",
+              fontWeight: 600,
+              fontSize: 15.5,
+              boxShadow: "0 14px 34px -12px var(--accent)",
+            }}
+          >
+            Launch the platform →
+          </ShinyLink>
+          <ShinyLink
+            href="/dashboard"
+            className="card"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 9,
+              padding: "15px 26px",
+              borderRadius: 12,
+              fontWeight: 600,
+              fontSize: 15.5,
+            }}
+          >
+            Explore the live map
+          </ShinyLink>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 28,
+            marginTop: 52,
+            paddingTop: 30,
+            borderTop: "1px solid var(--line)",
+            animation: "vayuRise .7s .24s both",
+          }}
+        >
+          {stats.map((s) => (
+            <div key={s.k}>
+              <div className="display" style={{ fontWeight: 700, fontSize: 30 }}>
+                {s.v}
+              </div>
+              <div className="figure" style={{ fontSize: 13, color: "var(--ink-3)" }}>
+                {s.k}
+              </div>
+            </div>
+          ))}
+        </div>
+      </header>
+
+      <CityIndex />
+
+      {/* ---------------- platform ---------------- */}
+      <Section id="features" pt={56} pb={56}>
+        <div style={{ maxWidth: "58ch", marginBottom: 34 }}>
+          <div
+            className="figure"
+            style={{ fontSize: 12, letterSpacing: ".18em", color: "var(--accent)", marginBottom: 12 }}
+          >
+            THE PLATFORM
+          </div>
+          <h2 className="display" style={{ fontSize: "clamp(26px,3.6vw,40px)", lineHeight: 1.08 }}>
+            One control room for the air a region breathes
+          </h2>
+        </div>
+        <FeatureGrid />
+      </Section>
+
+      {/* ---------------- how it works ---------------- */}
+      <Section id="how" pt={56} pb={56}>
+        <StepsPanel heading="From raw signal to clean-air action in three steps" />
+      </Section>
+
+      {/* ---------------- CTA ---------------- */}
+      <Section pt={20} pb={70}>
+        <div
+          style={{
+            background: "linear-gradient(140deg,var(--accent),var(--accent-2))",
+            borderRadius: 24,
+            padding: "clamp(30px,5vw,60px)",
+            color: "#fff",
+            textAlign: "center",
+            position: "relative",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            aria-hidden
+            style={{
+              position: "absolute",
+              inset: 0,
+              opacity: 0.18,
+              backgroundImage:
+                "linear-gradient(rgba(255,255,255,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.5) 1px,transparent 1px)",
+              backgroundSize: "40px 40px",
+            }}
+          />
+          <div style={{ position: "relative" }}>
+            <h2
+              className="display"
+              style={{
+                fontWeight: 700,
+                fontSize: "clamp(26px,4vw,44px)",
+                maxWidth: "20ch",
+                margin: "0 auto 14px",
+              }}
+            >
+              Ready to clear the air over your city?
+            </h2>
+            <p
+              style={{
+                fontSize: "clamp(15px,1.8vw,18px)",
+                opacity: 0.92,
+                maxWidth: "52ch",
+                margin: "0 auto 28px",
+              }}
+            >
+              Step into the live command center — no login needed for the demo.
+            </p>
+            <ShinyLink
+              href="/dashboard"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 9,
+                padding: "15px 30px",
+                borderRadius: 12,
+                background: "#fff",
+                color: "#0f1c1a",
+                fontWeight: 700,
+                fontSize: 16,
+              }}
+            >
+              Open the dashboard →
+            </ShinyLink>
+          </div>
+        </div>
+      </Section>
+    </SiteShell>
+  );
+}

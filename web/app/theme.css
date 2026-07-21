@@ -1,0 +1,126 @@
+/* ===========================================================================
+   VAYU — Air Intelligence.
+   Ported from the Claude Design project "AI-Powered Urban Air Quality"
+   (index.dc.html). These tokens ARE the design; components never hard-code a
+   colour. Swapping a design = editing this file only.
+   =========================================================================== */
+
+:root,
+[data-vayu] {
+  --bg: #e9efed;
+  --surface: #ffffff;
+  --surface-2: #f2f6f4;
+  --ink: #0f1c1a;
+  --ink-2: #54615e;
+  --ink-3: #8a9793;
+  --line: #d9e2df;
+  --accent: oklch(0.6 0.11 190);
+  --accent-2: oklch(0.6 0.11 265);
+  --glow: rgba(15, 163, 154, 0.14);
+  --shadow: 0 1px 2px rgba(16, 28, 26, 0.04), 0 12px 32px -12px rgba(16, 28, 26, 0.14);
+
+  /* AQI ramp — CPCB PM2.5 bands, green -> maroon */
+  --aqi-1: #55a84b;
+  --aqi-2: #b89b1f;
+  --aqi-3: #e8cf3f;
+  --aqi-4: #f2933a;
+  --aqi-5: #e6443a;
+  --aqi-6: #8c1d18;
+
+  /* Magic UI components read --primary for their sweep colour */
+  --primary: var(--accent);
+
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+
+[data-vayu][data-theme="dark"] {
+  --primary: var(--accent);
+  --bg: #07110f;
+  --surface: #0e1c19;
+  --surface-2: #13221e;
+  --ink: #e9f2ef;
+  --ink-2: #93a7a2;
+  --ink-3: #5e706b;
+  --line: #1d2e2a;
+  --accent: oklch(0.75 0.12 190);
+  --accent-2: oklch(0.75 0.12 265);
+  --glow: rgba(47, 201, 189, 0.18);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 18px 40px -14px rgba(0, 0, 0, 0.6);
+}
+
+/* --- alias layer -----------------------------------------------------------
+   The dashboard was built against an earlier token set. Mapping the old names
+   onto the VAYU tokens keeps those components working unchanged, so the design
+   import is additive rather than a rewrite. */
+:root,
+[data-vayu] {
+  --carbon: var(--bg);
+  --ink-dim: var(--ink-2);
+  --rule: var(--line);
+  --accent-dim: var(--accent-2);
+  --accent-glow: var(--glow);
+}
+
+/* --- motion (from the design) --------------------------------------------- */
+@keyframes vayuPulse {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.35); }
+}
+@keyframes vayuRise {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* --- shared primitives ---------------------------------------------------- */
+.rule-t { border-top: 1px solid var(--line); }
+.rule-b { border-bottom: 1px solid var(--line); }
+
+.label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.figure {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.gold-rule {
+  height: 1px;
+  background: linear-gradient(to right, var(--accent) 0%, var(--accent-2) 45%, transparent 100%);
+  opacity: 0.5;
+}
+
+.accent-glow { box-shadow: 0 0 0 1px var(--accent-2), 0 0 28px var(--glow); }
+
+.grid-bg {
+  background-image: linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(circle at 50% 30%, #000, transparent 78%);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+}
+
+.thin-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+.thin-scroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
+.thin-scroll::-webkit-scrollbar-track { background: transparent; }

@@ -1,0 +1,1 @@
+{"city":"korba","has_stations":true,"stations":[{"station_id":"korba_01","name":"Rampur, Korba - CECB","lat":22.3682,"lon":82.74643,"latest_pm25":59.2,"latest_time":"2025-12-31 23:00:00","use_in_training":true},{"station_id":"korba_02","name":"Urja Nagar, Korba - CECB","lat":22.34844,"lon":82.54961,"latest_pm25":29.0,"latest_time":"2024-12-31 15:00:00","use_in_training":true}]}
