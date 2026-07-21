@@ -13,6 +13,7 @@ Run:  python scripts/bake/bake_districts.py
 """
 from __future__ import annotations
 
+import argparse
 import importlib.util
 import json
 import sys
@@ -209,9 +210,42 @@ def source_shares(model, feats, X: pd.DataFrame) -> list[dict]:
     return out
 
 
+def live_hourly(city_id: str) -> pd.DataFrame | None:
+    """Current weather + CAMS from the live Open-Meteo pulls (forecast.csv /
+    cams_forecast.csv), which run right up to the present hour. The processed
+    parquets stop at 2025-12-31, so they cannot serve a 'live' map."""
+    md = DATA / "met" / city_id
+    fc, cams = md / "forecast.csv", md / "cams_forecast.csv"
+    if not fc.exists():
+        return None
+    d = pd.read_csv(fc)
+    d["timestamp"] = pd.to_datetime(d["timestamp"], errors="coerce")
+    ren = {"temperature_2m": "temp_c", "relative_humidity_2m": "rh_pct",
+           "dew_point_2m": "dew_point_c", "wind_speed_10m": "wind_speed",
+           "wind_direction_10m": "wind_dir", "surface_pressure": "surface_pressure",
+           "precipitation": "precip_mm", "boundary_layer_height": "blh_m"}
+    d = d.rename(columns={k: v for k, v in ren.items() if k in d.columns})
+    if "wind_dir" in d.columns:
+        rad = np.radians(d["wind_dir"])
+        d["wind_dir_sin"], d["wind_dir_cos"] = np.sin(rad), np.cos(rad)
+    if cams.exists():
+        c = pd.read_csv(cams)
+        c["timestamp"] = pd.to_datetime(c["timestamp"], errors="coerce")
+        if "pm2_5" in c.columns:
+            d = d.merge(c[["timestamp", "pm2_5"]].rename(columns={"pm2_5": "cams_pm25"}),
+                        on="timestamp", how="left")
+    return d.dropna(subset=["timestamp"]).drop_duplicates("timestamp").sort_values("timestamp")
+
+
 def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--live", action="store_true",
+                    help="score at the current hour from live weather/CAMS instead of "
+                         "the historical training window")
+    args = ap.parse_args()
+
     print("=" * 90)
-    print("BAKE CHHATTISGARH DISTRICT RISK MAP")
+    print("BAKE CHHATTISGARH DISTRICT RISK MAP" + ("  [LIVE]" if args.live else ""))
     print("=" * 90)
     if not ADM2.exists():
         warn(f"missing {ADM2.name} — download geoBoundaries IND ADM2 first")
@@ -235,10 +269,23 @@ def main() -> None:
         cols = [x for x in FC.WEATHER if x in d.columns] + ["cams_pm25"]
         hourly[c["id"]] = (c["lat"], c["lon"], d[["timestamp"] + cols].drop_duplicates("timestamp"))
 
-    origin = pd.Timestamp(
-        json.loads((DATA / "processed" / "baseline_metrics.json").read_text())["window"][1]
-    ).floor("h")
-    say(f"scoring at {origin}")
+    if args.live:
+        live = {c["id"]: live_hourly(c["id"]) for c in cities}
+        live = {k: v for k, v in live.items() if v is not None and len(v)}
+        if not live:
+            warn("no live met files — run scripts/live/fetch_live.py first")
+            sys.exit(1)
+        for cid, d in live.items():
+            cla = next(c["lat"] for c in cities if c["id"] == cid)
+            clo = next(c["lon"] for c in cities if c["id"] == cid)
+            hourly[cid] = (cla, clo, d)
+        origin = min(d.timestamp.max() for d in live.values())
+        say(f"LIVE scoring at {origin} (latest hour common to all cities)")
+    else:
+        origin = pd.Timestamp(
+            json.loads((DATA / "processed" / "baseline_metrics.json").read_text())["window"][1]
+        ).floor("h")
+        say(f"scoring at {origin}")
 
     rows = []
     for la, lo in zip(lats, lons):
@@ -347,9 +394,42 @@ def main() -> None:
         })
     say(f"{len(cities_out)} city-level predictions")
 
+    # --- overlay MEASURED live station readings where they exist ---------
+    slp = DATA / "live" / "stations_live.json"
+    live_pm, live_aqi, live_n = [], [], []
+    if slp.exists():
+        sl = json.loads(slp.read_text(encoding="utf-8"))["stations"]
+        pts = [(s_["lat"], s_["lon"], s_) for s_ in sl]
+        for geom in gdf.geometry:
+            got = [s_ for la, lo, s_ in pts if geom.contains(Point(lo, la))]
+            vals = [g["pm25_24h"] for g in got if g.get("pm25_24h")]
+            if vals:
+                pm = round(sum(vals) / len(vals), 1)
+                live_pm.append(pm)
+                live_aqi.append(aqi_from_pm25(pm))
+                live_n.append(len(got))
+            else:
+                live_pm.append(None)
+                live_aqi.append(None)
+                live_n.append(0)
+    else:
+        live_pm = [None] * len(gdf)
+        live_aqi = [None] * len(gdf)
+        live_n = [0] * len(gdf)
+    gdf["live_pm25"] = live_pm
+    gdf["live_us_aqi"] = live_aqi
+    gdf["live_stations"] = live_n
+    # what the UI should actually paint: measured when we have it, model otherwise
+    gdf["display_pm25"] = [lp if lp is not None else mp for lp, mp in zip(live_pm, gdf.pm25)]
+    gdf["display_aqi"] = [la if la is not None else ma for la, ma in zip(live_aqi, gdf.us_aqi)]
+    gdf["display_basis"] = ["measured" if lp is not None else "model" for lp in live_pm]
+    say(f"{sum(1 for x in live_pm if x is not None)} districts painted from MEASURED stations, "
+        f"{sum(1 for x in live_pm if x is None)} from the model")
+
     ensure(OUT.parent)
     gj = json.loads(gdf.to_json())
     gj["cities"] = cities_out
+    gj["meta_live"] = {"origin": str(origin), "mode": "live" if args.live else "historical"}
     gj["meta"] = {
         "generated_for": str(origin),
         "model": "spatial no-lag LightGBM (same basis as the LOSO test)",

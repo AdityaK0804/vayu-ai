@@ -9,16 +9,22 @@ import { aqiCss, aqiLabel } from "@/lib/aqiScale";
 /**
  * VAYU assistant.
  *
- * Deliberately NOT an LLM call. Every answer is looked up from the baked
- * pipeline output already in the browser, so it works with the network off and
- * — more importantly — it cannot invent a number. If it does not have the
- * answer it says so rather than guessing.
+ * Two-tier by design:
+ *  1. If GROQ_API_KEY is set, /api/chat asks Groq — but the model is handed the
+ *     dashboard's real numbers as context and instructed to answer only from
+ *     them, never to estimate.
+ *  2. With no key, no network, or a bad completion, it falls back to the
+ *     deterministic lookups below.
+ *
+ * Either way an answer traces to measured data, and the assistant still works
+ * at a demo with the wifi down.
  */
 
 interface Msg {
   role: "user" | "bot";
   text: string;
   chips?: string[];
+  pending?: boolean;
 }
 
 const GREETING =
@@ -128,13 +134,51 @@ export default function Chatbot() {
     return "I can answer from the baked pipeline data only — try a district name (e.g. Korba, Raigarh, Bastar), \"which district is worst\", \"how accurate is the model\", or \"top enforcement priority\". I'd rather say I don't know than invent a number.";
   }
 
-  function send(text: string) {
+  // Compact snapshot of exactly what is on screen — this is all the LLM may use.
+  function buildContext() {
+    return {
+      generated_at: districts?.meta_live?.origin ?? null,
+      mode: districts?.meta_live?.mode ?? null,
+      districts: (districts?.features ?? []).map((f) => {
+        const p = f.properties;
+        return {
+          name: p.name,
+          pm25: p.display_pm25 ?? p.pm25,
+          us_aqi: p.display_aqi ?? p.us_aqi,
+          basis: p.display_basis,
+          n_stations: p.n_stations,
+          population: p.population,
+          top_source: Object.entries(p.shares ?? {}).sort((a, b) => b[1] - a[1])[0]?.[0],
+        };
+      }),
+      cities: districts?.cities ?? [],
+      live_city_readings: live ?? [],
+      model_metrics: metrics ?? null,
+      top_dossiers: (priority?.dossiers ?? []).slice(0, 3),
+    };
+  }
+
+  async function send(text: string) {
     const t = text.trim();
     if (!t) return;
-    setMsgs((m) => [...m, { role: "user", text: t }]);
+    const history = msgs.slice(-6).map((m) => ({ role: m.role, content: m.text }));
+    setMsgs((m) => [...m, { role: "user", text: t }, { role: "bot", text: "…", pending: true }]);
     setQ("");
-    // tiny delay so the reply feels considered rather than instant
-    setTimeout(() => setMsgs((m) => [...m, { role: "bot", text: answer(t) }]), 260);
+
+    let reply: string | null = null;
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: t, context: buildContext(), history }),
+      });
+      const j = await res.json();
+      if (j?.ok && j.text) reply = j.text as string;
+    } catch {
+      /* fall through to the local answer */
+    }
+    // No key, no network, or a bad completion -> deterministic grounded answer.
+    setMsgs((m) => [...m.filter((x) => !x.pending), { role: "bot", text: reply ?? answer(t) }]);
   }
 
   const render = (t: string) =>
@@ -244,7 +288,7 @@ export default function Chatbot() {
                   lineHeight: 1.6,
                 }}
               >
-                {render(m.text)}
+                {m.pending ? <span className="typing">● ● ●</span> : render(m.text)}
               </div>
               {m.chips && (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 9 }}>
