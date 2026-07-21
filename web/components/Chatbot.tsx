@@ -4,20 +4,19 @@ import { useEffect, useRef, useState } from "react";
 
 import { useDistricts } from "@/components/DistrictMap";
 import { useLive, useMetrics, usePriority } from "@/lib/data";
-import { aqiCss, aqiLabel } from "@/lib/aqiScale";
+import { aqiLabel } from "@/lib/aqiScale";
 
 /**
- * VAYU assistant.
+ * VAYU Assistant — visuals ported 1:1 from the design's initChat() in
+ * index.dc.html (launcher, gradient header, bubble geometry, chips, composer).
  *
- * Two-tier by design:
- *  1. If GROQ_API_KEY is set, /api/chat asks Groq — but the model is handed the
- *     dashboard's real numbers as context and instructed to answer only from
- *     them, never to estimate.
- *  2. With no key, no network, or a bad completion, it falls back to the
- *     deterministic lookups below.
- *
- * Either way an answer traces to measured data, and the assistant still works
- * at a demo with the wifi down.
+ * The design's ANSWERS are hard-coded placeholders ("Korba AQI 312",
+ * "94.2% accuracy", "4 active alerts"). Those are not real, so only the shell
+ * is taken. Replies come from:
+ *   1. Groq via /api/chat when GROQ_API_KEY is set — handed the dashboard's real
+ *      numbers as context and told never to estimate; or
+ *   2. deterministic lookups over the same baked data, when there is no key,
+ *      no network, or a bad completion.
  */
 
 interface Msg {
@@ -28,21 +27,20 @@ interface Msg {
 }
 
 const GREETING =
-  "Hi — I'm the VAYU assistant. Ask me about any Chhattisgarh district or modelled city: air quality, what's driving it, who's exposed, or how the model performs.";
+  "Namaste! 🌱 I'm the <b>VAYU assistant</b>. How can I help with the region's air today?";
 
-const SUGGESTIONS = [
-  "Air quality in Korba",
-  "Which district is worst?",
-  "How accurate is the model?",
-  "Where has no sensor?",
-  "Top enforcement priority",
-];
+const CHIPS = ["Korba AQI", "72h forecast", "Worst district", "Recommend actions"];
+
+const BUBBLE_ICON = (
+  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+);
+const CLOSE_ICON = <path d="M18 6 6 18M6 6l12 12" />;
 
 export default function Chatbot() {
   const [open, setOpen] = useState(false);
-  const [msgs, setMsgs] = useState<Msg[]>([{ role: "bot", text: GREETING, chips: SUGGESTIONS }]);
+  const [msgs, setMsgs] = useState<Msg[]>([]);
   const [q, setQ] = useState("");
-  const endRef = useRef<HTMLDivElement | null>(null);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
 
   const { data: districts } = useDistricts();
   const { data: live } = useLive();
@@ -50,91 +48,90 @@ export default function Chatbot() {
   const { data: priority } = usePriority("korba");
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
   }, [msgs, open]);
 
+  // greet on first open, exactly as the design does
+  useEffect(() => {
+    if (open && msgs.length === 0) {
+      setMsgs([{ role: "bot", text: GREETING, chips: CHIPS }]);
+    }
+  }, [open, msgs.length]);
+
+  /* ----------------------------------------------------- grounded answers */
   function answer(raw: string): string {
     const s = raw.toLowerCase().trim();
     if (!s) return "Ask me about a district, a city, or the model.";
 
-    // --- named place lookup (districts first, then modelled cities) ---
+    if (/^(hi|hello|hey|namaste)/.test(s))
+      return "Namaste! Ask me about air quality in any Chhattisgarh district or city, how the model performs, or where enforcement should go first.";
+
     const d = districts?.features.find((f) => s.includes(f.properties.name.toLowerCase()));
     const c = districts?.cities?.find((x) => s.includes(x.name.toLowerCase()));
-    const lc = live?.find((x) => s.includes(x.name.toLowerCase()));
 
-    if (d || c) {
-      const p = d?.properties;
-      if (p) {
-        const drv = Object.entries(p.shares ?? {}).sort((a, b) => b[1] - a[1])[0];
-        const meas = p.measured?.pm25;
-        return [
-          `**${p.name}** — predicted PM2.5 ${p.pm25} µg/m³ (AQI ${p.us_aqi}, ${aqiLabel(p.us_aqi)}).`,
-          meas != null
-            ? `Its ${p.n_stations} CPCB station${p.n_stations > 1 ? "s" : ""} last measured ${meas} µg/m³.`
-            : `It has no ground sensor — that figure is predicted from satellite, meteorology and emissions geography.`,
-          drv ? `Main driver: ${drv[0]} (${Math.round(drv[1] * 100)}% of the model's source attribution).` : "",
-          `Population in the district: ${p.population.toLocaleString()}.`,
-        ]
-          .filter(Boolean)
-          .join(" ");
-      }
-      if (c) {
-        const l = live?.find((x) => x.city_id === c.id);
-        return [
-          `**${c.name}** — model predicts ${c.pm25} µg/m³ (AQI ${c.us_aqi}).`,
-          l?.measured_pm25_24h != null
-            ? `Live CPCB stations there read ${l.measured_pm25_24h} µg/m³ over the last 24 h (AQI ${l.measured_us_aqi}).`
-            : c.has_stations
-              ? ""
-              : `It has no ground sensor at all — this is the zero-station prediction.`,
-        ]
-          .filter(Boolean)
-          .join(" ");
-      }
+    if (d) {
+      const p = d.properties;
+      const pm = p.display_pm25 ?? p.pm25;
+      const aq = p.display_aqi ?? p.us_aqi;
+      const drv = Object.entries(p.shares ?? {}).sort((a, b) => b[1] - a[1])[0];
+      return [
+        `<b>${p.name}</b> is at <b>${pm} µg/m³ (AQI ${aq}, ${aqiLabel(aq)})</b>.`,
+        p.display_basis === "measured"
+          ? `That is measured live by ${p.live_stations} CPCB station${p.live_stations > 1 ? "s" : ""}.`
+          : `There is no ground sensor here — it is predicted from satellite, meteorology and emissions geography.`,
+        drv ? `Main driver: <b>${drv[0]}</b> (${Math.round(drv[1] * 100)}% of attribution).` : "",
+        `Population ${p.population.toLocaleString()}.`,
+      ]
+        .filter(Boolean)
+        .join(" ");
     }
-    if (lc) {
-      return `**${lc.name}** live: ${lc.measured_pm25_24h ?? lc.current_pm25} µg/m³, AQI ${
-        lc.measured_us_aqi ?? lc.current_us_aqi
-      }${lc.measured ? ` from ${lc.n_stations} CPCB station(s)` : " (CAMS model — no station here)"}.`;
+    if (c) {
+      const l = live?.find((x) => x.city_id === c.id);
+      return [
+        `<b>${c.name}</b> — model predicts <b>${c.pm25} µg/m³ (AQI ${c.us_aqi})</b>.`,
+        l?.measured_pm25_24h != null
+          ? `Live CPCB stations read ${l.measured_pm25_24h} µg/m³ over 24 h (AQI ${l.measured_us_aqi}).`
+          : c.has_stations
+            ? ""
+            : `It has no ground sensor at all — this is the zero-station prediction.`,
+      ]
+        .filter(Boolean)
+        .join(" ");
     }
 
-    // --- superlatives ---
     if (/(worst|highest|most pollut|dangerous)/.test(s) && districts) {
-      const top = [...districts.features].sort((a, b) => b.properties.us_aqi - a.properties.us_aqi)[0];
-      return `Worst right now is **${top.properties.name}** at AQI ${top.properties.us_aqi} (${top.properties.pm25} µg/m³, ${aqiLabel(top.properties.us_aqi)}), affecting ${top.properties.population.toLocaleString()} people.`;
+      const t = [...districts.features].sort(
+        (a, b) => (b.properties.display_aqi ?? 0) - (a.properties.display_aqi ?? 0),
+      )[0].properties;
+      return `Worst right now is <b>${t.name}</b> at <b>AQI ${t.display_aqi}</b> (${t.display_pm25} µg/m³), affecting ${t.population.toLocaleString()} people.`;
     }
     if (/(cleanest|best|lowest)/.test(s) && districts) {
-      const low = [...districts.features].sort((a, b) => a.properties.us_aqi - b.properties.us_aqi)[0];
-      return `Cleanest is **${low.properties.name}** at AQI ${low.properties.us_aqi} (${low.properties.pm25} µg/m³).`;
+      const t = [...districts.features].sort(
+        (a, b) => (a.properties.display_aqi ?? 0) - (b.properties.display_aqi ?? 0),
+      )[0].properties;
+      return `Cleanest is <b>${t.name}</b> at <b>AQI ${t.display_aqi}</b> (${t.display_pm25} µg/m³).`;
     }
-
-    // --- model performance ---
-    if (/(accura|rmse|perform|how good|validat|baseline|cams|benchmark)/.test(s) && metrics) {
+    if (/(forecast|predict|72|tomorrow|accura|rmse|perform)/.test(s) && metrics) {
       const h = metrics.forecast_vs_baselines.find((x) => x.horizon_h === 24);
-      return `At 24 h the model's RMSE is ${h?.model_rmse} µg/m³ — ${h?.vs_persistence_pct}% better than persistence and ${h?.vs_cams_bc_pct}% better than bias-corrected CAMS. Predicting a station it has never seen (leave-one-station-out) it still gets ${metrics.zero_station_loso.rmse_satellite_subset} µg/m³, beating CAMS by ${metrics.zero_station_loso.beats_cams_by_pct}%. Trained on ${metrics.dataset.pooled_target_rows?.toLocaleString()} station-hours from ${metrics.dataset.stations} stations.`;
+      return `The model forecasts <b>72 hours ahead</b>. At 24 h its RMSE is <b>${h?.model_rmse} µg/m³</b> — ${h?.vs_persistence_pct}% better than persistence and ${h?.vs_cams_bc_pct}% better than bias-corrected CAMS. On a station it has never seen it still reaches ${metrics.zero_station_loso.rmse_satellite_subset} µg/m³.`;
     }
-
-    // --- zero-station ---
-    if (/(no sensor|zero.?station|without sensor|unmonitored|jagdalpur)/.test(s) && districts) {
+    if (/(no sensor|zero.?station|unmonitored|jagdalpur)/.test(s) && districts) {
       const none = districts.features.filter((f) => f.properties.n_stations === 0).length;
-      return `${none} of ${districts.features.length} districts have no CPCB station — including Bastar, where Jagdalpur sits. Their air quality is predicted entirely from satellite, weather and emissions geography, and the leave-one-station-out test says that holds up to ${metrics?.zero_station_loso.rmse_satellite_subset ?? "~20"} µg/m³ RMSE.`;
+      return `<b>${none} of ${districts.features.length}</b> districts have no CPCB station — including Bastar, where Jagdalpur sits. Their air quality is predicted entirely from satellite, weather and emissions data.`;
     }
-
-    // --- enforcement ---
-    if (/(enforce|priorit|inspect|action|dossier|ward)/.test(s) && priority?.dossiers?.[0]) {
+    if (/(alert|warning)/.test(s) && priority) {
+      return `<b>${priority.cells_over_threshold.toLocaleString()}</b> of ${priority.cells_scored.toLocaleString()} cells are forecast over the ${priority.threshold_ug_m3} µg/m³ standard in Korba. The Alerts view lists each one.`;
+    }
+    if (/(interven|action|reduce|fix|enforce|priorit|inspect)/.test(s) && priority?.dossiers?.[0]) {
       const t = priority.dossiers[0];
-      return `Top priority is **${t.ward}** — forecast ${t.predicted_pm25} µg/m³, ${t.top_source}-driven, ${t.population_affected.toLocaleString()} residents and ${t.vulnerable_sites} schools/hospitals exposed.${t.named_upwind_source ? ` Nearest upwind source: ${t.named_upwind_source}.` : ""}`;
+      return `Top priority is <b>${t.ward}</b> — forecast ${t.predicted_pm25} µg/m³, ${t.top_source}-driven, ${t.population_affected.toLocaleString()} residents and ${t.vulnerable_sites} schools/hospitals exposed.${t.named_upwind_source ? ` Nearest upwind source: ${t.named_upwind_source}.` : ""}`;
     }
-
-    // --- data provenance ---
     if (/(data|source|where.*from|dataset)/.test(s)) {
-      return "Everything here is measured: CPCB station hours via OpenAQ, Open-Meteo weather + CAMS, Sentinel-5P and MODIS columns, EDGAR v8.1 emissions, WorldPop and the Global Power Plant Database. Nothing on this dashboard is simulated.";
+      return "Everything is measured: CPCB stations via OpenAQ, Open-Meteo weather + CAMS, Sentinel-5P and MODIS, EDGAR v8.1, WorldPop and the Global Power Plant Database. Nothing here is simulated.";
     }
-
-    return "I can answer from the baked pipeline data only — try a district name (e.g. Korba, Raigarh, Bastar), \"which district is worst\", \"how accurate is the model\", or \"top enforcement priority\". I'd rather say I don't know than invent a number.";
+    return 'I can help with live AQI, 72h forecasts, source attribution and enforcement priorities. Try a district like <b>Korba</b> or <b>Raigarh</b>, or ask "which district is worst". I would rather say I do not know than invent a number.';
   }
 
-  // Compact snapshot of exactly what is on screen — this is all the LLM may use.
   function buildContext() {
     return {
       generated_at: districts?.meta_live?.origin ?? null,
@@ -162,7 +159,7 @@ export default function Chatbot() {
     const t = text.trim();
     if (!t) return;
     const history = msgs.slice(-6).map((m) => ({ role: m.role, content: m.text }));
-    setMsgs((m) => [...m, { role: "user", text: t }, { role: "bot", text: "…", pending: true }]);
+    setMsgs((m) => [...m, { role: "user", text: t }, { role: "bot", text: "typing…", pending: true }]);
     setQ("");
 
     let reply: string | null = null;
@@ -173,158 +170,262 @@ export default function Chatbot() {
         body: JSON.stringify({ message: t, context: buildContext(), history }),
       });
       const j = await res.json();
-      if (j?.ok && j.text) reply = j.text as string;
+      if (j?.ok && j.text) reply = String(j.text).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
     } catch {
-      /* fall through to the local answer */
+      /* fall through to the grounded answer */
     }
-    // No key, no network, or a bad completion -> deterministic grounded answer.
     setMsgs((m) => [...m.filter((x) => !x.pending), { role: "bot", text: reply ?? answer(t) }]);
   }
 
-  const render = (t: string) =>
-    t.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
-      part.startsWith("**") ? (
-        <b key={i} style={{ color: "var(--accent)" }}>
-          {part.slice(2, -2)}
-        </b>
-      ) : (
-        <span key={i}>{part}</span>
-      ),
-    );
-
+  /* --------------------------------------------------------------- render */
   return (
     <>
-      {/* launcher */}
       <button
-        onClick={() => setOpen((o) => !o)}
+        id="vayuChatBtn"
         aria-label={open ? "Close assistant" : "Open assistant"}
+        onClick={() => setOpen((o) => !o)}
         style={{
           position: "fixed",
-          right: 22,
-          bottom: 22,
-          zIndex: 60,
-          width: 54,
-          height: 54,
-          borderRadius: "50%",
+          right: 24,
+          bottom: 24,
+          zIndex: 9998,
+          width: 60,
+          height: 60,
           border: 0,
+          borderRadius: "50%",
           cursor: "pointer",
           background: "linear-gradient(140deg,var(--accent),var(--accent-2))",
-          color: "#fff",
-          fontSize: 22,
-          boxShadow: "0 14px 34px -10px var(--accent)",
+          boxShadow:
+            "0 14px 34px -10px var(--accent), 0 0 0 6px color-mix(in oklch,var(--accent),transparent 86%)",
           display: "grid",
           placeItems: "center",
-          transition: "transform .28s cubic-bezier(.34,1.56,.64,1)",
-          transform: open ? "scale(.92) rotate(90deg)" : "scale(1)",
+          transition: "transform .25s cubic-bezier(.34,1.56,.64,1)",
+          transform: open ? "scale(.9)" : "scale(1)",
         }}
       >
-        {open ? "✕" : "◕"}
+        <svg
+          width="26"
+          height="26"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#fff"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          {open ? CLOSE_ICON : BUBBLE_ICON}
+        </svg>
       </button>
 
-      {/* panel */}
       <div
-        className="card"
+        id="vayuChatPanel"
         style={{
           position: "fixed",
-          right: 22,
-          bottom: 88,
-          zIndex: 60,
-          width: "min(380px, calc(100vw - 44px))",
-          height: 500,
+          right: 24,
+          bottom: 96,
+          zIndex: 9998,
+          width: "min(370px, calc(100vw - 32px))",
+          height: "min(520px, calc(100vh - 140px))",
+          background: "var(--surface)",
+          border: "1px solid var(--line)",
+          borderRadius: 20,
+          boxShadow: "0 30px 70px -24px rgba(0,0,0,.55)",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
           transformOrigin: "bottom right",
-          transition: "opacity .26s ease, transform .3s cubic-bezier(.34,1.56,.64,1)",
           opacity: open ? 1 : 0,
-          transform: open ? "scale(1) translateY(0)" : "scale(.9) translateY(14px)",
+          transform: open ? "translateY(0) scale(1)" : "translateY(14px) scale(.94)",
           pointerEvents: open ? "auto" : "none",
+          transition: "opacity .25s ease, transform .25s cubic-bezier(.34,1.56,.64,1)",
         }}
       >
+        {/* gradient header */}
         <div
           style={{
-            padding: "13px 16px",
-            borderBottom: "1px solid var(--line)",
+            padding: "16px 18px",
             display: "flex",
             alignItems: "center",
-            gap: 10,
+            gap: 12,
+            background: "linear-gradient(140deg,var(--accent),var(--accent-2))",
+            color: "#fff",
           }}
         >
-          <span
+          <div
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 11,
+              background: "rgba(255,255,255,.18)",
+              display: "grid",
+              placeItems: "center",
+              fontSize: 18,
+            }}
+          >
+            ✦
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 15 }}>
+              VAYU Assistant
+            </div>
+            <div
+              style={{
+                fontSize: 11.5,
+                opacity: 0.85,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <span
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: "50%",
+                  background: "#7CFFB2",
+                  boxShadow: "0 0 6px #7CFFB2",
+                }}
+              />
+              Online · air quality help
+            </div>
+          </div>
+          <button
+            aria-label="Close"
+            onClick={() => setOpen(false)}
             style={{
               width: 30,
               height: 30,
+              border: 0,
               borderRadius: 9,
-              background: "linear-gradient(140deg,var(--accent),var(--accent-2))",
-              display: "grid",
-              placeItems: "center",
+              background: "rgba(255,255,255,.16)",
               color: "#fff",
-              fontSize: 14,
+              cursor: "pointer",
+              fontSize: 17,
+              lineHeight: 1,
             }}
           >
-            ◕
-          </span>
-          <div>
-            <b style={{ fontFamily: "var(--font-display)", fontSize: 14 }}>VAYU assistant</b>
-            <div className="crumb" style={{ fontSize: 9 }}>
-              answers from measured data only
-            </div>
-          </div>
+            ×
+          </button>
         </div>
 
-        <div className="thin-scroll" style={{ flex: 1, overflowY: "auto", padding: 14 }}>
-          {msgs.map((m, i) => (
-            <div key={i} style={{ marginBottom: 12 }}>
-              <div
-                style={{
-                  maxWidth: "88%",
-                  marginLeft: m.role === "user" ? "auto" : 0,
-                  background: m.role === "user" ? "var(--accent)" : "var(--surface-2)",
-                  color: m.role === "user" ? "#fff" : "var(--ink)",
-                  border: m.role === "user" ? "0" : "1px solid var(--line)",
-                  borderRadius: 12,
-                  padding: "9px 12px",
-                  fontSize: 12.5,
-                  lineHeight: 1.6,
-                }}
-              >
-                {m.pending ? <span className="typing">● ● ●</span> : render(m.text)}
+        {/* messages */}
+        <div
+          ref={bodyRef}
+          className="thin-scroll"
+          style={{
+            flex: 1,
+            overflowY: "auto",
+            padding: 16,
+            display: "flex",
+            flexDirection: "column",
+            gap: 10,
+            fontSize: 13.5,
+          }}
+        >
+          {msgs.map((m, i) => {
+            const me = m.role === "user";
+            return (
+              <div key={i} style={{ display: "contents" }}>
+                <div
+                  style={{
+                    maxWidth: "82%",
+                    padding: "10px 13px",
+                    borderRadius: 14,
+                    lineHeight: 1.5,
+                    alignSelf: me ? "flex-end" : "flex-start",
+                    background: me ? "var(--ink)" : "var(--surface-2)",
+                    color: me ? "var(--bg)" : "var(--ink)",
+                    border: me ? "0" : "1px solid var(--line)",
+                    borderBottomRightRadius: me ? 4 : 14,
+                    borderBottomLeftRadius: me ? 14 : 4,
+                    opacity: m.pending ? 0.6 : 1,
+                  }}
+                  dangerouslySetInnerHTML={{ __html: m.text }}
+                />
+                {m.chips && (
+                  <div
+                    style={{ display: "flex", flexWrap: "wrap", gap: 7, alignSelf: "flex-start" }}
+                  >
+                    {m.chips.map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => send(t)}
+                        style={{
+                          padding: "7px 12px",
+                          borderRadius: 100,
+                          border: "1px solid color-mix(in oklch,var(--accent),transparent 60%)",
+                          background: "color-mix(in oklch,var(--accent),transparent 90%)",
+                          color: "var(--accent)",
+                          fontFamily: "inherit",
+                          fontSize: 12,
+                          fontWeight: 500,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-              {m.chips && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 9 }}>
-                  {m.chips.map((c) => (
-                    <button key={c} className="chip" style={{ fontSize: 11 }} onClick={() => send(c)}>
-                      {c}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-          <div ref={endRef} />
+            );
+          })}
         </div>
 
-        <div style={{ padding: 12, borderTop: "1px solid var(--line)", display: "flex", gap: 8 }}>
+        {/* composer */}
+        <div
+          style={{
+            padding: 10,
+            borderTop: "1px solid var(--line)",
+            display: "flex",
+            gap: 8,
+            background: "var(--surface)",
+          }}
+        >
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send(q)}
-            placeholder="Ask about a district or the model…"
+            placeholder="Ask about AQI, alerts, cities…"
             aria-label="Ask the assistant"
             style={{
               flex: 1,
-              padding: "9px 12px",
-              borderRadius: 10,
+              padding: "11px 13px",
+              borderRadius: 11,
               border: "1px solid var(--line)",
               background: "var(--surface-2)",
               color: "var(--ink)",
               fontFamily: "inherit",
-              fontSize: 12.5,
+              fontSize: 13.5,
               outline: "none",
             }}
           />
-          <button className="btn pri" style={{ padding: "9px 14px" }} onClick={() => send(q)}>
-            ↑
+          <button
+            aria-label="Send"
+            onClick={() => send(q)}
+            style={{
+              width: 42,
+              border: 0,
+              borderRadius: 11,
+              background: "var(--ink)",
+              color: "var(--bg)",
+              cursor: "pointer",
+              display: "grid",
+              placeItems: "center",
+            }}
+          >
+            <svg
+              width="17"
+              height="17"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z" />
+            </svg>
           </button>
         </div>
       </div>

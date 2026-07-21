@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { AnimatedThemeToggler } from "@/components/magicui/animated-theme-toggler";
 import { Particles } from "@/components/magicui/particles";
 import ShinyLink from "@/components/magicui/shiny-link";
+import Chatbot from "@/components/Chatbot";
 import { bandFor } from "@/lib/aqi";
 import { useLive, usePriority } from "@/lib/data";
 import { useApp } from "@/lib/store";
@@ -444,6 +445,8 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
       <AlertTicker />
       {children}
       <SiteFooter />
+      {/* the design mounts the assistant on the marketing pages too */}
+      <Chatbot />
     </div>
   );
 }
