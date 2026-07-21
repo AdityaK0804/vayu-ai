@@ -6,7 +6,7 @@ import dynamic from "next/dynamic";
 import AttributionCard from "@/components/AttributionCard";
 import TimeSlider from "@/components/TimeSlider";
 import ShinyButton from "@/components/magicui/shiny-button";
-import { useDistricts, type DistrictProps } from "@/components/DistrictMap";
+import { useDistricts, useIndiaIndex, type DistrictProps } from "@/components/DistrictMap";
 import { AQI_BANDS, aqiCss } from "@/lib/aqiScale";
 import type { CityId } from "@/lib/types";
 import { BANDS, SOURCE_LABEL, bandFor } from "@/lib/aqi";
@@ -258,28 +258,56 @@ export function MapView() {
   const [mode, setMode] = useState<MapMode>("districts");
   const [district, setDistrict] = useState<DistrictProps | null>(null);
   const [q, setQ] = useState("");
-  const [focus, setFocus] = useState<{ kind: "district" | "city"; name: string; nonce: number } | null>(
-    null,
-  );
+  const { data: india } = useIndiaIndex();
+  const [focus, setFocus] = useState<
+    | {
+        kind: "district" | "city" | "india";
+        name: string;
+        nonce: number;
+        bb?: [number, number, number, number];
+        lat?: number;
+        lon?: number;
+      }
+    | null
+  >(null);
+  const [welcome, setWelcome] = useState<string | null>(null);
 
   // search across both districts and modelled cities
-  const results = useMemo(() => {
+  type Hit = {
+    kind: "district" | "city" | "india";
+    name: string;
+    aqi?: number | null;
+    bb?: [number, number, number, number];
+    lat?: number;
+    lon?: number;
+    note?: string;
+  };
+
+  const results = useMemo<Hit[]>(() => {
     const s = q.trim().toLowerCase();
     if (!s) return [];
-    const d = (districts?.features ?? [])
-      .filter((f) => f.properties.name.toLowerCase().includes(s))
-      .slice(0, 6)
-      .map((f) => ({ kind: "district" as const, name: f.properties.name, aqi: f.properties.us_aqi }));
-    const c = (districts?.cities ?? [])
+    const cgNames = new Set((districts?.features ?? []).map((f) => f.properties.name));
+    const c: Hit[] = (districts?.cities ?? [])
       .filter((x) => x.name.toLowerCase().includes(s))
       .slice(0, 4)
-      .map((x) => ({ kind: "city" as const, name: x.name, aqi: x.us_aqi }));
-    return [...c, ...d].slice(0, 8);
-  }, [q, districts]);
+      .map((x) => ({ kind: "city", name: x.name, aqi: x.us_aqi, note: "modelled city" }));
+    const d: Hit[] = (districts?.features ?? [])
+      .filter((f) => f.properties.name.toLowerCase().includes(s))
+      .slice(0, 5)
+      .map((f) => ({ kind: "district", name: f.properties.name, aqi: f.properties.us_aqi, note: "Chhattisgarh" }));
+    // anywhere else in India — no prediction there, we just travel to it
+    const i: Hit[] = (india?.districts ?? [])
+      .filter((x) => x.n.toLowerCase().includes(s) && !cgNames.has(x.n))
+      .slice(0, 5)
+      .map((x) => ({ kind: "india", name: x.n, bb: x.bb, lat: x.lat, lon: x.lon, note: "India" }));
+    return [...c, ...d, ...i].slice(0, 9);
+  }, [q, districts, india]);
 
-  const go = (kind: "district" | "city", name: string) => {
-    setFocus({ kind, name, nonce: Date.now() });
+  const go = (h: Hit) => {
+    setFocus({ kind: h.kind, name: h.name, nonce: Date.now(), bb: h.bb, lat: h.lat, lon: h.lon });
     setQ("");
+    setWelcome(h.name);
+    window.setTimeout(() => setWelcome(null), 3200);
   };
 
   return (
@@ -332,7 +360,7 @@ export function MapView() {
                 placeholder="Search district or city…"
                 aria-label="Search district or city"
                 onKeyDown={(e) => {
-                  if (e.key === "Enter" && results[0]) go(results[0].kind, results[0].name);
+                  if (e.key === "Enter" && results[0]) go(results[0]);
                   if (e.key === "Escape") setQ("");
                 }}
               />
@@ -354,7 +382,7 @@ export function MapView() {
                 {results.map((r) => (
                   <button
                     key={`${r.kind}-${r.name}`}
-                    onClick={() => go(r.kind, r.name)}
+                    onClick={() => go(r)}
                     style={{
                       display: "flex",
                       width: "100%",
@@ -381,11 +409,13 @@ export function MapView() {
                     />
                     <span style={{ flex: 1 }}>{r.name}</span>
                     <span className="crumb" style={{ fontSize: 9.5 }}>
-                      {r.kind}
+                      {r.note ?? r.kind}
                     </span>
-                    <span className="figure" style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                      {r.aqi}
-                    </span>
+                    {r.aqi != null && (
+                      <span className="figure" style={{ fontSize: 11, color: "var(--ink-3)" }}>
+                        {r.aqi}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -396,7 +426,12 @@ export function MapView() {
           <div className="field" style={{ flex: "0 0 auto" }}>
             <select
               value={city}
-              onChange={(e) => setCity(e.target.value as CityId)}
+              onChange={(e) => {
+                const id = e.target.value as CityId;
+                setCity(id);
+                const c = districts?.cities?.find((x) => x.id === id);
+                if (c) go({ kind: "city", name: c.name, aqi: c.us_aqi });
+              }}
               aria-label="Modelled city"
               style={{ padding: "8px 10px", fontSize: 12.5 }}
             >
@@ -485,6 +520,29 @@ export function MapView() {
           )}
         </div>
       </div>
+
+      {welcome && (
+        <div
+          className="card"
+          style={{
+            position: "absolute",
+            top: 118,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 30,
+            padding: "10px 18px",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            animation: "vayuRise .45s both",
+          }}
+        >
+          <span style={{ color: "var(--accent)" }}>◉</span>
+          <span style={{ fontSize: 13 }}>
+            Welcome to <b style={{ fontFamily: "var(--font-display)" }}>{welcome}</b>
+          </span>
+        </div>
+      )}
 
       {/* ---- clicked district: everything the model actually consumed ---- */}
       {mode === "districts" && district && (

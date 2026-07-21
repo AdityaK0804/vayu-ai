@@ -12,6 +12,7 @@ import {
   OverviewView,
   ReportsView,
 } from "@/components/dashboard/views";
+import Chatbot from "@/components/Chatbot";
 import { AnimatedThemeToggler } from "@/components/magicui/animated-theme-toggler";
 import { useLive, usePriority } from "@/lib/data";
 import { useApp } from "@/lib/store";
@@ -91,7 +92,11 @@ export default function Dashboard() {
               className="pill hidden lg:inline-flex"
               style={{ background: "var(--surface-2)", color: "var(--ink-2)" }}
             >
-              <span className="live-dot" /> AQI {cityLive.current_us_aqi}
+              <span className="live-dot" />
+              AQI {cityLive.measured_us_aqi ?? cityLive.current_us_aqi}
+              <span style={{ opacity: 0.6, fontSize: 10 }}>
+                {cityLive.measured ? `· ${cityLive.n_stations} stn` : "· model"}
+              </span>
             </span>
           )}
           <AnimatedThemeToggler className="icon-btn" />
@@ -138,6 +143,8 @@ export default function Dashboard() {
         {view === "network" && <NetworkView />}
         {view === "reports" && <ReportsView />}
       </main>
+
+      <Chatbot />
     </div>
   );
 }

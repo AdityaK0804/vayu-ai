@@ -173,4 +173,9 @@ export interface LiveCity {
   current_us_aqi: number | null;
   updated: string;
   stale?: boolean;
+  /** measured CPCB values (24h mean) — present only where a station exists */
+  measured?: boolean;
+  measured_pm25_24h?: number | null;
+  measured_us_aqi?: number | null;
+  n_stations?: number;
 }

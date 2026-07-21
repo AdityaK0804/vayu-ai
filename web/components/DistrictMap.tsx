@@ -64,6 +64,26 @@ export interface DistrictsFC {
   meta?: Record<string, any>;
 }
 
+export interface IndiaPlace {
+  n: string;
+  lat: number;
+  lon: number;
+  bb: [number, number, number, number];
+}
+
+/** All 735 Indian districts — lets the search box reach beyond Chhattisgarh. */
+export function useIndiaIndex() {
+  return useQuery({
+    queryKey: ["india_index"],
+    queryFn: async (): Promise<{ n: number; districts: IndiaPlace[] }> => {
+      const res = await fetch("/data/india_districts_index.json", { cache: "force-cache" });
+      if (!res.ok) throw new Error(`india index: HTTP ${res.status}`);
+      return res.json();
+    },
+    staleTime: Infinity,
+  });
+}
+
 export function useDistricts() {
   return useQuery({
     queryKey: ["cg_districts_v3"],
@@ -106,7 +126,14 @@ export default function DistrictMap({
   selected: string | null;
   onSelect: (d: DistrictProps | null) => void;
   /** name of a district or city to fly to (from the search box) */
-  focus?: { kind: "district" | "city"; name: string; nonce: number } | null;
+  focus?: {
+    kind: "district" | "city" | "india";
+    name: string;
+    nonce: number;
+    bb?: [number, number, number, number];
+    lat?: number;
+    lon?: number;
+  } | null;
   showCities?: boolean;
 }) {
   const mapRef = useRef<MapRef | null>(null);
@@ -114,23 +141,48 @@ export default function DistrictMap({
   const { data } = useDistricts();
 
   const flyToFeature = useCallback((f: any) => {
-    mapRef.current?.fitBounds(bboxOf(f.geometry), { padding: 90, duration: 850 });
+    mapRef.current?.fitBounds(bboxOf(f.geometry), {
+      padding: 90,
+      duration: 1200,
+      essential: true,
+    });
   }, []);
 
   // search-driven focus
+  // One easing curve for every kind of navigation — search, dropdown, click —
+  // so arriving somewhere always feels the same.
+  const EASE = (t: number) => 1 - Math.pow(1 - t, 3);
+
   useEffect(() => {
-    if (!focus || !data) return;
-    if (focus.kind === "district") {
+    if (!focus) return;
+    const m = mapRef.current;
+    if (!m) return;
+
+    if (focus.kind === "district" && data) {
       const f = data.features.find((x) => x.properties.name === focus.name);
       if (f) {
         onSelect(f.properties);
-        flyToFeature(f);
+        m.fitBounds(bboxOf(f.geometry), { padding: 90, duration: 1400, essential: true });
       }
-    } else {
-      const c = data.cities?.find((x) => x.name === focus.name);
-      if (c) mapRef.current?.flyTo({ center: [c.lon, c.lat], zoom: 9.4, duration: 850 });
+      return;
     }
-  }, [focus, data, flyToFeature, onSelect]);
+    if (focus.kind === "city" && data) {
+      const c = data.cities?.find((x) => x.name === focus.name);
+      if (c) m.flyTo({ center: [c.lon, c.lat], zoom: 9.6, duration: 1500, curve: 1.5, essential: true });
+      return;
+    }
+    if (focus.kind === "india") {
+      if (focus.bb) {
+        m.fitBounds([[focus.bb[0], focus.bb[1]], [focus.bb[2], focus.bb[3]]], {
+          padding: 90,
+          duration: 1600,
+          essential: true,
+        });
+      } else if (focus.lat != null && focus.lon != null) {
+        m.flyTo({ center: [focus.lon, focus.lat], zoom: 9, duration: 1600, curve: 1.5, essential: true });
+      }
+    }
+  }, [focus, data, onSelect]);
 
   const layers = useMemo(() => {
     if (!data) return [];
