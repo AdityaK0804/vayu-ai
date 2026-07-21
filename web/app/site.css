@@ -1,0 +1,151 @@
+/* ===========================================================================
+   VAYU marketing-site chrome — ported from the design's shared page shell
+   (index / live-cities / platform / how-ai-works all use this).
+   =========================================================================== */
+
+@keyframes vayuTicker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes vayuShine {
+  0% { left: -160%; }
+  60%, 100% { left: 160%; }
+}
+
+/* shimmer sweep on primary CTAs */
+.vshiny { position: relative; overflow: hidden; isolation: isolate; }
+.vshiny::after {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0; left: -160%;
+  width: 55%;
+  background: linear-gradient(120deg, transparent 0, rgba(255, 255, 255, 0.5) 50%, transparent 100%);
+  transform: skewX(-20deg);
+  animation: vayuShine 4s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+.vshiny:hover::after { animation-duration: 1.4s; }
+
+#vayuTicker:hover .vayu-track { animation-play-state: paused; }
+.vayu-track {
+  /* width:max-content is load-bearing. The track is position:absolute, so
+     without it the box shrink-to-fits and is CLAMPED to the parent's width —
+     the nowrap children then overflow instead of widening the box, and
+     translateX(-50%) slides by half the CONTAINER, not half the CONTENT.
+     That reads as a ticker that barely moves. */
+  width: max-content;
+  animation: vayuTicker 48s linear infinite;
+  will-change: transform;
+}
+/* children must never shrink, or the two copies stop being identical */
+.vayu-track > span { flex: 0 0 auto; }
+
+/* diagonal hatch backdrop */
+.hatch {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0, transparent 9px,
+    color-mix(in oklch, var(--line), transparent 25%) 9px,
+    color-mix(in oklch, var(--line), transparent 25%) 10px
+  );
+  mask-image: radial-gradient(560px circle at 50% 26%, #000, transparent 72%);
+  -webkit-mask-image: radial-gradient(560px circle at 50% 26%, #000, transparent 72%);
+}
+
+/* springy card lift used by every card on the marketing pages */
+.lift {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease,
+    border-color 0.3s ease;
+}
+.lift:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 24px 50px -18px rgba(0, 0, 0, 0.45);
+  border-color: color-mix(in oklch, var(--accent), transparent 55%);
+}
+
+
+/* ---------------------------------------------------------------------------
+   AnimatedThemeToggler: the circular reveal is driven by the View Transitions
+   API. Default cross-fade must be off or it fights the clip-path animation.
+--------------------------------------------------------------------------- */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) { z-index: 1; }
+::view-transition-new(root) { z-index: 2147483646; }
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) { animation: none !important; }
+}
+
+/* AnimatedThemeToggler.
+   Transparent by design: a solid --surface fill read as a bright chip sitting
+   on top of the dark nav pill. Letting the nav show through means it blends in
+   BOTH themes and in both the transparent and scrolled-pill nav states. */
+.nav-theme {
+  width: 38px; height: 38px; border-radius: 10px;
+  border: 1px solid color-mix(in oklch, var(--ink-2), transparent 78%);
+  background: transparent;
+  color: var(--ink-2);
+  display: grid; place-items: center;
+  cursor: pointer;
+  transition: color .2s, border-color .2s, background .2s;
+}
+.nav-theme:hover {
+  border-color: color-mix(in oklch, var(--accent), transparent 45%);
+  color: var(--accent);
+  background: color-mix(in oklch, var(--accent), transparent 92%);
+}
+
+/* ---------------------------------------------------------------------------
+   Card hover: pop-in on enter (slight overshoot), smooth pop-out on leave.
+   Applies to every .card in the app — marketing cards, KPI tiles, dashboard
+   panels — so hover behaviour is consistent everywhere.
+--------------------------------------------------------------------------- */
+.card,
+.lift {
+  transition:
+    transform 0.34s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.34s ease,
+    border-color 0.34s ease;
+}
+.card:hover,
+.lift:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 24px 50px -18px rgba(0, 0, 0, 0.45);
+  border-color: color-mix(in oklch, var(--accent), transparent 55%);
+}
+.card:active,
+.lift:active { transform: translateY(-2px) scale(0.995); transition-duration: 0.12s; }
+
+/* Anchored map chrome must stay put — popping a legend or floating panel
+   away from the thing it labels is disorienting, not delightful. */
+.card.legend:hover,
+.card.map-panel:hover,
+.map-panel:hover {
+  transform: none;
+  box-shadow: var(--shadow);
+  border-color: var(--line);
+}
+
+/* ---------------------------------------------------------------------------
+   Reduced-motion overrides. Must stay LAST in this file: same-specificity
+   rules later in the sheet win, so declaring these earlier let the normal
+   hover/animation rules silently override them.
+--------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  /* The ticker is deliberately NOT stopped — a news ticker that does not
+     scroll is broken rather than calm. It is slowed instead. */
+  .vayu-track { animation-duration: 90s; }
+  .vshiny::after { animation: none !important; opacity: 0; }
+  .card:hover,
+  .lift:hover { transform: none !important; }
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) { animation: none !important; }
+}

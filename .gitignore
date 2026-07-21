@@ -1,5 +1,5 @@
-# Data & Datasets
-data/
+# Data & Datasets (root dataset dir only — web/public/data must ship)
+/data/
 
 # Model Outputs & Reports
 outputs/
@@ -15,3 +15,7 @@ venv/
 env/
 .idea/
 .vscode/
+
+# large scratch download
+scratch_ind_adm2.geojson
+app_served.css
