@@ -19,3 +19,8 @@ env/
 # large scratch download
 scratch_ind_adm2.geojson
 app_served.css
+
+# Secrets — never commit. GitHub push protection blocked these once already.
+.env
+.env.*
+!.env.example
