@@ -279,6 +279,17 @@ const HI: Dict = {
   "This city has no CPCB station. Its value is predicted from satellite, meteorology and emissions geography — the basis the leave-one-station-out test validated.":
     "इस शहर में कोई CPCB स्टेशन नहीं है। इसका मान उपग्रह, मौसम और उत्सर्जन भूगोल से अनुमानित है — वही आधार जिसे leave-one-station-out परीक्षण ने सत्यापित किया।",
 
+
+  /* ---- selection bar / preview / alerts ---- */
+  Selection: "चयन",
+  "Pick a city on the left or a district on the map to see its conditions.":
+    "स्थिति देखने के लिए बाएँ से शहर या मानचित्र से ज़िला चुनें।",
+  Category: "श्रेणी",
+  "View all": "सभी देखें",
+  "BILINGUAL ALERTS": "द्विभाषी चेतावनियाँ",
+  "Every alert goes out in English or Hindi — on whichever channel reaches that official fastest. Built from the live reading, not a template.":
+    "हर चेतावनी अंग्रेज़ी या हिन्दी में जाती है — उसी माध्यम से जो अधिकारी तक सबसे तेज़ पहुँचे। लाइव रीडिंग से बनी, किसी साँचे से नहीं।",
+
   /* ---- chatbot ---- */
   "VAYU Assistant": "VAYU सहायक",
   "Online · air quality help": "ऑनलाइन · वायु गुणवत्ता सहायता",

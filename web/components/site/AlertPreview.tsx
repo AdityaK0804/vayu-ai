@@ -21,7 +21,7 @@ import { PAD } from "./SiteChrome";
  */
 
 type Channel = "sms" | "whatsapp" | "ivr";
-type AlertLang = "hi" | "cg" | "en";
+type AlertLang = "hi" | "en";
 
 const CHANNELS: { key: Channel; label: string; icon: string }[] = [
   { key: "sms", label: "SMS", icon: "▤" },
@@ -30,9 +30,8 @@ const CHANNELS: { key: Channel; label: string; icon: string }[] = [
 ];
 
 const LANGS: { key: AlertLang; label: string; tag: string }[] = [
-  { key: "hi", label: "हिंदी", tag: "IN" },
-  { key: "cg", label: "छत्तीसगढ़ी", tag: "CG" },
   { key: "en", label: "English", tag: "EN" },
+  { key: "hi", label: "हिंदी", tag: "IN" },
 ];
 
 interface Facts {
@@ -52,18 +51,10 @@ const SRC_HI: Record<string, string> = {
   fire: "आग/बायोमास",
   dust: "धूल",
 };
-const SRC_CG: Record<string, string> = {
-  industry: "कारखाना",
-  traffic: "गाड़ी",
-  fire: "आगी/खेत जलाई",
-  dust: "धुर्रा",
-};
 
 function build(f: Facts, ch: Channel, lang: AlertLang) {
   const basisHi =
     f.basis === "measured" ? `${f.stations} CPCB स्टेशन से मापा गया` : "मॉडल से अनुमानित";
-  const basisCg =
-    f.basis === "measured" ? `${f.stations} CPCB स्टेशन ले नापे गे` : "मॉडल ले अंदाजा";
   const basisEn =
     f.basis === "measured" ? `measured at ${f.stations} CPCB station(s)` : "model estimate";
 
@@ -73,12 +64,6 @@ function build(f: Facts, ch: Channel, lang: AlertLang) {
         header: "⚠️ VAYU वायु चेतावनी",
         body: `${f.place}: AQI ${f.aqi} (${f.band}), PM2.5 ${f.pm25} µg/m³। मुख्य स्रोत ${SRC_HI[f.source] ?? f.source}। ${f.people} लोग प्रभावित। बाहरी काम सीमित करें।`,
         footer: "जवाब दें: 1=स्वीकार 2=अनदेखा",
-      };
-    if (lang === "cg")
-      return {
-        header: "⚠️ VAYU हवा चेतावनी",
-        body: `${f.place}: AQI ${f.aqi} (${f.band}) हवय, PM2.5 ${f.pm25} µg/m³। मुख्य कारन ${SRC_CG[f.source] ?? f.source}। ${f.people} मनखे प्रभावित। बाहिर के काम कम करव।`,
-        footer: "जवाब देव: 1=मंजूर 2=छोड़व",
       };
     return {
       header: "⚠️ VAYU Air Alert",
@@ -94,12 +79,6 @@ function build(f: Facts, ch: Channel, lang: AlertLang) {
         body: `📍 ${f.place}, छत्तीसगढ़\n🌫️ AQI: ${f.aqi} (${f.band})\n📊 PM2.5: ${f.pm25} µg/m³\n🏭 मुख्य स्रोत: ${SRC_HI[f.source] ?? f.source}\n👥 प्रभावित: ${f.people} लोग\n🔎 आधार: ${basisHi}\n\n✅ सुझाई गई कार्रवाई:\n1. उद्योग निरीक्षण भेजें\n2. स्कूलों में बाहरी गतिविधि रोकें\n3. सड़कों पर पानी छिड़कें`,
         footer: "VAYU · वायु बुद्धिमत्ता",
       };
-    if (lang === "cg")
-      return {
-        header: "🔴 हवा के गुणवत्ता चेतावनी",
-        body: `📍 ${f.place}, छत्तीसगढ़\n🌫️ AQI: ${f.aqi} (${f.band})\n📊 PM2.5: ${f.pm25} µg/m³\n🏭 मुख्य कारन: ${SRC_CG[f.source] ?? f.source}\n👥 परभावित: ${f.people} मनखे\n🔎 आधार: ${basisCg}\n\n✅ का करे के हवय:\n1. कारखाना के जाँच करावव\n2. स्कूल म बाहिर के खेल बंद करव\n3. सड़क म पानी छिड़कव`,
-        footer: "VAYU · हवा के जानकारी",
-      };
     return {
       header: "🔴 Air Quality Alert",
       body: `📍 ${f.place}, Chhattisgarh\n🌫️ AQI: ${f.aqi} (${f.band})\n📊 PM2.5: ${f.pm25} µg/m³\n🏭 Dominant source: ${f.source}\n👥 Affected: ${f.people} residents\n🔎 Basis: ${basisEn}\n\n✅ Recommended actions:\n1. Dispatch industrial inspection\n2. Pause outdoor activity in schools\n3. Begin road water-spraying`,
@@ -112,12 +91,6 @@ function build(f: Facts, ch: Channel, lang: AlertLang) {
       header: "📞 IVR कॉल — हिंदी",
       body: `"नमस्ते। यह VAYU की ओर से वायु गुणवत्ता चेतावनी है। ${f.place} में वायु गुणवत्ता सूचकांक ${f.aqi} है, जो ${f.band} श्रेणी में आता है। मुख्य स्रोत ${SRC_HI[f.source] ?? f.source} है। कृपया बाहरी गतिविधियाँ सीमित करें। स्वीकार करने के लिए 1 दबाएँ।"`,
       footer: "अवधि ~16 सेकंड · auto-retry 3x",
-    };
-  if (lang === "cg")
-    return {
-      header: "📞 IVR कॉल — छत्तीसगढ़ी",
-      body: `"जोहार। ये VAYU कोती ले हवा के चेतावनी हवय। ${f.place} म हवा के इंडेक्स ${f.aqi} हवय, जउन ${f.band} श्रेणी म आथे। मुख्य कारन ${SRC_CG[f.source] ?? f.source} हरे। बाहिर के काम कम करव। मंजूर करे बर 1 दबाव।"`,
-      footer: "अवधि ~18 सेकंड · auto-retry 3x",
     };
   return {
     header: "📞 IVR Call — English",
@@ -179,7 +152,7 @@ export default function AlertPreview() {
           className="figure"
           style={{ fontSize: 12, letterSpacing: ".18em", color: "var(--accent)", marginBottom: 12 }}
         >
-          {t("MULTILINGUAL ALERTS")}
+          {t("BILINGUAL ALERTS")}
         </div>
         <h2
           className="display"
@@ -197,7 +170,7 @@ export default function AlertPreview() {
           }}
         >
           {t(
-            "Every alert goes out in Hindi, Chhattisgarhi or English — on whichever channel reaches that official fastest. Built from the live reading, not a template.",
+            "Every alert goes out in English or Hindi — on whichever channel reaches that official fastest. Built from the live reading, not a template.",
           )}
         </p>
       </div>
@@ -243,7 +216,7 @@ export default function AlertPreview() {
 
           <div className="alert-stats">
             {[
-              { v: "3", k: t("Alert languages") },
+              { v: "2", k: t("Alert languages") },
               { v: "3", k: t("Delivery channels") },
               { v: facts.aqi ? `${facts.aqi}` : "—", k: t("Live worst AQI") },
               { v: "3x", k: t("Auto-retry on no ACK") },
@@ -266,15 +239,18 @@ export default function AlertPreview() {
 
         {/* ---- phone ---- */}
         <div style={{ display: "grid", placeItems: "center" }}>
-          <Iphone width={330} height={672}>
+          <Iphone width={264} height={538}>
             <div
               style={{
-                padding: "58px 14px 18px",
+                padding: "52px 12px 16px",
                 minHeight: "100%",
+                // fixed palette: the phone always renders its own dark screen,
+                // so the message stays legible in BOTH site themes
                 background:
                   channel === "whatsapp"
-                    ? "linear-gradient(180deg, #0b1f1a, #071411)"
-                    : "var(--surface-2)",
+                    ? "linear-gradient(180deg,#0b1f1a,#071411)"
+                    : "linear-gradient(180deg,#141a19,#0d1211)",
+                color: "#e9f2ef",
               }}
             >
               {/* app row */}
@@ -295,8 +271,8 @@ export default function AlertPreview() {
                   ◉
                 </span>
                 <div style={{ lineHeight: 1.25 }}>
-                  <div style={{ fontSize: 12.5, fontWeight: 600 }}>VAYU</div>
-                  <div style={{ fontSize: 9.5, color: "var(--ink-3)" }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: "#f2f7f5" }}>Vayu AI</div>
+                  <div style={{ fontSize: 9.5, color: "#93a7a2" }}>
                     {channel === "ivr" ? t("incoming call") : t("just now")}
                   </div>
                 </div>
@@ -308,8 +284,8 @@ export default function AlertPreview() {
                   borderRadius: 14,
                   borderTopLeftRadius: 4,
                   padding: "11px 13px",
-                  background: channel === "whatsapp" ? "#10312a" : "var(--surface)",
-                  border: `1px solid ${channel === "whatsapp" ? "#1c4d42" : "var(--line)"}`,
+                  background: channel === "whatsapp" ? "#10312a" : "#1a2321",
+                  border: `1px solid ${channel === "whatsapp" ? "#1c4d42" : "#2a3634"}`,
                   boxShadow: "0 8px 22px -12px rgba(0,0,0,.6)",
                 }}
               >
@@ -328,7 +304,7 @@ export default function AlertPreview() {
                   style={{
                     fontSize: 11.5,
                     lineHeight: 1.62,
-                    color: "var(--ink)",
+                    color: "#e9f2ef",
                     whiteSpace: "pre-line",
                   }}
                 >
@@ -337,10 +313,10 @@ export default function AlertPreview() {
                 <div
                   style={{
                     fontSize: 9.5,
-                    color: "var(--ink-3)",
+                    color: "#8fa39e",
                     marginTop: 10,
                     paddingTop: 8,
-                    borderTop: "1px solid var(--line)",
+                    borderTop: "1px solid #2a3634",
                   }}
                 >
                   {msg.footer}
@@ -367,8 +343,8 @@ export default function AlertPreview() {
                         placeItems: "center",
                         fontSize: 15,
                         color: "#fff",
-                        background: i === 0 ? "var(--aqi-1)" : "var(--surface)",
-                        border: i === 0 ? "0" : "1px solid var(--line)",
+                        background: i === 0 ? "#00b96b" : "#1a2321",
+                        border: i === 0 ? "0" : "1px solid #2a3634",
                       }}
                     >
                       {k}

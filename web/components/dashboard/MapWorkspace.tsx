@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 
 import { useDistricts, type CityPoint, type DistrictProps } from "@/components/DistrictMap";
 import CityDetail from "@/components/dashboard/CityDetail";
+import DistrictDetail from "@/components/dashboard/DistrictDetail";
 import { AQI_BANDS, aqiCss, aqiLabel } from "@/lib/aqiScale";
 import { useLive, usePriority } from "@/lib/data";
 import { useT } from "@/lib/i18n";
@@ -47,7 +48,7 @@ export default function MapWorkspace({
   setOpenCity: (c: CityPoint | null) => void;
 }) {
   const { t } = useT();
-  const { city, setCity } = useApp();
+  const { city, setCity, setView } = useApp();
   const { data: districts } = useDistricts();
   const { data: live } = useLive();
   const { data: priority } = usePriority(city);
@@ -170,12 +171,6 @@ export default function MapWorkspace({
             openCityOnFocus={false}
           />
 
-          {openCity && (
-            <div className="card mapws-detail">
-              <CityDetail city={openCity} onClose={() => setOpenCity(null)} />
-            </div>
-          )}
-
           <div className="mapws-legend card">
             <div className="crumb" style={{ marginBottom: 6 }}>
               {t("US AQI")}
@@ -197,7 +192,19 @@ export default function MapWorkspace({
         </div>
       </section>
 
-      {/* ---------------- right: live alerts ---------------- */}
+      {/* ---------------- right: detail, else live alerts ----------------
+          The detail panel used to float over the risk map, hiding the very
+          thing it described. It now takes the right column instead — closing
+          it reveals the alerts underneath, and the map is never covered. */}
+      {openCity || selected ? (
+        <aside className="card mapws-col">
+          {openCity ? (
+            <CityDetail city={openCity} onClose={() => setOpenCity(null)} />
+          ) : (
+            <DistrictDetail district={selected!} onClose={() => onSelectDistrict(null)} />
+          )}
+        </aside>
+      ) : (
       <aside className="card mapws-col">
         <div className="mapws-head">
           <span style={{ color: alerts.length ? "var(--aqi-4)" : "var(--ink-3)" }}>◔</span>
@@ -212,6 +219,13 @@ export default function MapWorkspace({
           >
             {alerts.length}
           </span>
+          <button
+            className="chip"
+            style={{ padding: "4px 9px", fontSize: 10.5 }}
+            onClick={() => setView("alerts")}
+          >
+            {t("View all")}
+          </button>
         </div>
 
         <div className="thin-scroll mapws-list">
@@ -283,6 +297,7 @@ export default function MapWorkspace({
           </div>
         )}
       </aside>
+      )}
     </div>
   );
 }

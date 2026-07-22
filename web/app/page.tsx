@@ -9,6 +9,7 @@ import SiteShell, { PAD } from "@/components/site/SiteChrome";
 import { FeatureGrid, Section } from "@/components/site/blocks";
 import FlowSteps from "@/components/site/FlowSteps";
 import AlertPreview from "@/components/site/AlertPreview";
+import DashboardPreview from "@/components/site/DashboardPreview";
 import { useMetrics } from "@/lib/data";
 import { useT } from "@/lib/i18n";
 
@@ -186,6 +187,11 @@ export default function Landing() {
           ))}
         </div>
       </header>
+
+      {/* live dashboard preview — hover lifts it, click opens the real thing */}
+      <Section pt={0} pb={20}>
+        <DashboardPreview />
+      </Section>
 
       <CityIndex />
 

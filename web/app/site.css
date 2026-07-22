@@ -222,3 +222,27 @@
   .alert-preview { grid-template-columns: 1fr; }
   .alert-preview > div:last-child { order: -1; }
 }
+
+/* hero-side live dashboard preview */
+.dash-preview { display: block; padding: 0; overflow: hidden; max-width: 520px; margin-left: auto; }
+.dash-preview-bar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 13px; border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+}
+.dash-preview-body {
+  display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 14px; padding: 13px;
+}
+.dash-preview-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 5px 8px; border-radius: 7px; background: var(--surface-2);
+}
+.dash-preview-stat {
+  padding: 7px 9px; border-radius: 8px;
+  background: var(--surface-2); border: 1px solid var(--line);
+}
+.dash-preview-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; padding: 10px 13px; border-top: 1px solid var(--line);
+}
