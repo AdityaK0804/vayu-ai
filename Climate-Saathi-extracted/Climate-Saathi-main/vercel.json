@@ -1,0 +1,15 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "npx prisma generate && next build",
+  "regions": ["bom1"],
+  "crons": [
+    {
+      "path": "/api/cron/escalate-alerts",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/score-risks",
+      "schedule": "0 2 * * *"
+    }
+  ]
+}

@@ -126,9 +126,7 @@ export async function POST(req: Request) {
   for (let i = 0; i < keys.length; i++) {
     const currentKey = keys[(startIdx + i) % keys.length];
 
-    const modelsToTry = isGemini
-      ? ["gemini-3.6-flash", "gemini-3.5-flash", "gemini-2.0-flash"]
-      : [model];
+    const modelsToTry = [model];
 
     for (const mTarget of modelsToTry) {
       try {

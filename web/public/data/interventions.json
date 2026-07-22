@@ -1,0 +1,273 @@
+{
+  "version": "v1",
+  "generated_note": "Multi-city interventions. Demo episodes used when live air is clean (monsoon).",
+  "aqi_scale": "CPCB National AQI (PM2.5 24-hr breakpoints from Index Report)",
+  "pm25_breakpoints": [
+    {
+      "category": "Good",
+      "pm25": "0-30",
+      "aqi": "0-50"
+    },
+    {
+      "category": "Satisfactory",
+      "pm25": "31-60",
+      "aqi": "51-100"
+    },
+    {
+      "category": "Moderate",
+      "pm25": "61-90",
+      "aqi": "101-200"
+    },
+    {
+      "category": "Poor",
+      "pm25": "91-120",
+      "aqi": "201-300"
+    },
+    {
+      "category": "Very Poor",
+      "pm25": "121-250",
+      "aqi": "301-400"
+    },
+    {
+      "category": "Severe",
+      "pm25": "250+",
+      "aqi": "401-500"
+    }
+  ],
+  "n_items": 3,
+  "cities_with_action": [
+    "korba",
+    "raipur",
+    "bhilai"
+  ],
+  "items": [
+    {
+      "rank": 1,
+      "city_id": "korba",
+      "city_name": "Korba",
+      "ward": "korba-a3cd6df",
+      "pm25": 168,
+      "cpcb_category": "Very Poor",
+      "cpcb_aqi_range": "301-400",
+      "category_hex": "#9333ea",
+      "severity": 4,
+      "top_source": "industry",
+      "reason": "Industrial / thermal cluster upwind under low mixing (demo winter-type episode)",
+      "urgency": "immediate",
+      "demo_episode": true,
+      "affected_schools": [
+        {
+          "name": "BLOCK EDUCATION OFFICER, PALI(55030000308)",
+          "block": "PALI",
+          "district": "KORBA"
+        },
+        {
+          "name": "GOVT PRIMARY SCHOOL CHHOTE NAVAPARA(22050802706)",
+          "block": "KARTALA",
+          "district": "KORBA"
+        },
+        {
+          "name": "GOVT PRIMARY SCHOOL NAVA PARA(22050802703)",
+          "block": "KARTALA",
+          "district": "KORBA"
+        },
+        {
+          "name": "GOVT PRIMARY SCHOOL GITARI(22050805101)",
+          "block": "KARTALA",
+          "district": "KORBA"
+        },
+        {
+          "name": "GOVT PRIMARY SCHOOL KOTHARI(22050805201)",
+          "block": "KARTALA",
+          "district": "KORBA"
+        },
+        {
+          "name": "GOVT MIDDLE SCHOOL NAWAPARA (ROG)(22050805202)",
+          "block": "KARTALA",
+          "district": "KORBA"
+        }
+      ],
+      "n_schools_district": 2428,
+      "remedies": [
+        {
+          "type": "city",
+          "action": "Dispatch industrial stack / consent inspection to named upwind plant"
+        },
+        {
+          "type": "city",
+          "action": "Enforce night-time emission limits; request continuous emission monitoring logs"
+        },
+        {
+          "type": "city",
+          "action": "Municipal water-spraying on industrial access roads (fugitive dust)"
+        },
+        {
+          "type": "school",
+          "action": "Suspend all outdoor school activity; staggered dismissal indoors"
+        },
+        {
+          "type": "school",
+          "action": "Consider short-day / hybrid for primary grades"
+        },
+        {
+          "type": "school",
+          "action": "Coordinate with nearby hospitals for surge support"
+        }
+      ],
+      "threshold_ug_m3": 60,
+      "standard_note": "CPCB NAAQS PM2.5 24h = 60 µg/m³ · categories from National AQI Index Report"
+    },
+    {
+      "rank": 2,
+      "city_id": "raipur",
+      "city_name": "Raipur",
+      "ward": "raipur-central",
+      "pm25": 112,
+      "cpcb_category": "Poor",
+      "cpcb_aqi_range": "201-300",
+      "category_hex": "#e11d48",
+      "severity": 3,
+      "top_source": "traffic",
+      "reason": "Rush-hour traffic + urban canyon trapping (demo peak episode)",
+      "urgency": "high",
+      "demo_episode": true,
+      "affected_schools": [
+        {
+          "name": "BLOCK EDUCATION OFFICER ABHANPUR(55030000546)",
+          "block": "ABHANPUR",
+          "district": "RAIPUR"
+        },
+        {
+          "name": "GOVT P.S. CHANGORABHATA(22110400102)",
+          "block": "DHARSHIWA",
+          "district": "RAIPUR"
+        },
+        {
+          "name": "PVT. ASHADEEP VIDYALAYA(22110400103)",
+          "block": "DHARSHIWA",
+          "district": "RAIPUR"
+        },
+        {
+          "name": "GOVT. PS. SOUTH EAST CHANGORA BHATA(22110400104)",
+          "block": "DHARSHIWA",
+          "district": "RAIPUR"
+        },
+        {
+          "name": "GOVT. PS. SOUTH WEST CHANGORA BHATA(22110400105)",
+          "block": "DHARSHIWA",
+          "district": "RAIPUR"
+        },
+        {
+          "name": "PVT GYAN AMRIT SCHOOL(22110400106)",
+          "block": "DHARSHIWA",
+          "district": "RAIPUR"
+        }
+      ],
+      "n_schools_district": 2343,
+      "remedies": [
+        {
+          "type": "city",
+          "action": "Deploy traffic police for peak-hour congestion & idling control near schools"
+        },
+        {
+          "type": "city",
+          "action": "Temporary diversions around school zones 7–9am and 1–3pm"
+        },
+        {
+          "type": "city",
+          "action": "Increase bus frequency; discourage private vehicle pick-up queues"
+        },
+        {
+          "type": "school",
+          "action": "Cancel outdoor sports and morning assembly outdoors"
+        },
+        {
+          "type": "school",
+          "action": "Issue parent SMS: limit outdoor play after school"
+        },
+        {
+          "type": "school",
+          "action": "Nurse room ready for respiratory complaints"
+        }
+      ],
+      "threshold_ug_m3": 60,
+      "standard_note": "CPCB NAAQS PM2.5 24h = 60 µg/m³ · categories from National AQI Index Report"
+    },
+    {
+      "rank": 3,
+      "city_id": "bhilai",
+      "city_name": "Bhilai",
+      "ward": "bhilai-central",
+      "pm25": 95,
+      "cpcb_category": "Poor",
+      "cpcb_aqi_range": "201-300",
+      "category_hex": "#e11d48",
+      "severity": 3,
+      "top_source": "industry",
+      "reason": "Steel-plant industrial plume contribution (demo)",
+      "urgency": "elevated",
+      "demo_episode": true,
+      "affected_schools": [
+        {
+          "name": "GOVT NAVIN PS SENERIYA(22100603102)",
+          "block": "DHAMDHA",
+          "district": "DURG"
+        },
+        {
+          "name": "GOVT PS KHASADIH (22100609101)",
+          "block": "DHAMDHA",
+          "district": "DURG"
+        },
+        {
+          "name": "GOVT MS AHIWARA(22100609203)",
+          "block": "DHAMDHA",
+          "district": "DURG"
+        },
+        {
+          "name": "(PVT) NEHRU MS AHIWARA(22100609204)",
+          "block": "DHAMDHA",
+          "district": "DURG"
+        },
+        {
+          "name": "(PVT) SARSVATI SHISHU MANDIR(22100609205)",
+          "block": "DHAMDHA",
+          "district": "DURG"
+        },
+        {
+          "name": "GOVT GIRLS PS AHIWARA(22100609206)",
+          "block": "DHAMDHA",
+          "district": "DURG"
+        }
+      ],
+      "n_schools_district": 1654,
+      "remedies": [
+        {
+          "type": "city",
+          "action": "Dispatch industrial stack / consent inspection to named upwind plant"
+        },
+        {
+          "type": "city",
+          "action": "Enforce night-time emission limits; request continuous emission monitoring logs"
+        },
+        {
+          "type": "city",
+          "action": "Municipal water-spraying on industrial access roads (fugitive dust)"
+        },
+        {
+          "type": "school",
+          "action": "Cancel outdoor sports and morning assembly outdoors"
+        },
+        {
+          "type": "school",
+          "action": "Issue parent SMS: limit outdoor play after school"
+        },
+        {
+          "type": "school",
+          "action": "Nurse room ready for respiratory complaints"
+        }
+      ],
+      "threshold_ug_m3": 60,
+      "standard_note": "CPCB NAAQS PM2.5 24h = 60 µg/m³ · categories from National AQI Index Report"
+    }
+  ]
+}

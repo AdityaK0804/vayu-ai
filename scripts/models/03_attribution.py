@@ -41,18 +41,34 @@ WIND_CONE_DEG = 35.0     # half-angle tolerance around the upwind bearing
 
 # Feature -> source bucket. Anything not listed is a modulator, not a source.
 SOURCE_MAP = {
-    "traffic":  ["road_density_km_km2", "road_length_km", "edgar_share_tro"],
+    "traffic":  ["road_density_km_km2", "road_length_km", "edgar_share_tro",
+                 "traffic_index", "congestion"],
     "industry": ["edgar_share_ind", "edgar_share_ref_trf", "edgar_share_ene",
                  "edgar_pm25_total", "gppd_nearest_km", "gppd_nearest_mw",
-                 "gppd_cap_25km", "gppd_inv_dist_mw", "sat_so2", "sat_no2"],
+                 "gppd_cap_25km", "gppd_inv_dist_mw", "sat_so2", "sat_no2",
+                 "cams_so2_t", "cams_so2_now", "cams_no2_t", "cams_no2_now"],
     "fire":     ["edgar_share_awb", "edgar_share_ags", "edgar_share_rco", "fire_frp"],
-    "dust":     ["sat_aod"],
+    "dust":     ["sat_aod", "cams_dust_t", "cams_dust_now", "cams_aod_t", "cams_aod_now"],
 }
-METEO = ["temp_c", "rh_pct", "wind_speed", "wind_dir", "wind_dir_sin",
-         "wind_dir_cos", "blh_m", "surface_pressure", "precip_mm"]
-PERSISTENCE = ["pm25_lag0", "pm25_lag1", "pm25_lag3", "pm25_lag6", "pm25_lag24",
-               "cams_now", "cams_target", "population", "hour_t", "dow_t",
-               "month_t", "is_weekend_t"]
+# v2 feature names (now/t suffixes) + legacy names for older models
+METEO = [
+    "temp_c", "rh_pct", "wind_speed", "wind_dir", "wind_dir_sin", "wind_dir_cos",
+    "blh_m", "surface_pressure", "precip_mm",
+    "temp_c_now", "temp_c_t", "rh_pct_now", "rh_pct_t", "wind_speed_now", "wind_speed_t",
+    "wind_dir_now", "wind_dir_t", "wind_dir_sin_now", "wind_dir_sin_t",
+    "wind_dir_cos_now", "wind_dir_cos_t", "blh_m_now", "blh_m_t",
+    "surface_pressure_now", "surface_pressure_t", "precip_mm_now", "precip_mm_t",
+    "blh_m_delta", "wind_speed_delta", "temp_c_delta", "trap_index_t",
+    "wind_u_t", "wind_v_t",
+]
+PERSISTENCE = [
+    "pm25_lag0", "pm25_lag1", "pm25_lag3", "pm25_lag6", "pm25_lag12",
+    "pm25_lag24", "pm25_lag48", "pm25_lag72", "pm25_lag168",
+    "pm25_roll6_mean", "pm25_roll24_mean", "pm25_roll24_std", "pm25_roll168_mean",
+    "pm25_delta_1", "pm25_delta_24", "pm25_cams_resid", "cams_delta",
+    "cams_now", "cams_target", "population", "hour_t", "dow_t",
+    "month_t", "is_weekend_t",
+]
 
 # EDGAR sector shares mapped to the same anthropogenic buckets (no dust: EDGAR is
 # an anthropogenic inventory and has no windblown-dust sector).
@@ -74,6 +90,14 @@ def _load_forecast_module():
 FC = _load_forecast_module()
 _BUNDLE = joblib.load(MODEL_PATH)
 _MODEL, _FEATS = _BUNDLE["model"], _BUNDLE["features"]
+_TARGET_MODE = _BUNDLE.get("target_mode", "raw")  # v2.1 deploy uses log1p
+
+
+def _decode_pm25(raw: float) -> float:
+    if _TARGET_MODE == "log1p":
+        return float(np.clip(np.expm1(raw), 0, None))
+    return float(np.clip(raw, 0, None))
+
 
 import shap  # noqa: E402
 _EXPLAINER = shap.TreeExplainer(_MODEL)
@@ -106,7 +130,20 @@ def _samples(city_id: str) -> pd.DataFrame:
     if city_id not in _SAMPLE_CACHE:
         pool, sat = _pool()
         sub = pool[pool.city_id == city_id]
-        df = FC.build_samples(sub, sat, 24)
+        # Prefer v2 feature builder with traffic curve when available
+        try:
+            import importlib.util
+            _ff = Path(__file__).parent / "forecast_features.py"
+            spec = importlib.util.spec_from_file_location("ff_attr", _ff)
+            ffm = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(ffm)
+            curve = ffm.build_congestion_curve()
+            df = ffm.build_samples(sub, sat, 24, traffic_curve=curve)
+        except Exception:
+            try:
+                df = FC.build_samples(sub, sat, 24)
+            except TypeError:
+                df = FC.build_samples(sub, sat, 24)
         # build_samples keys on station_id; re-attach the H3 cell so callers can
         # address a location by cell (one station == one cell in this data).
         df["cell_id"] = df.station_id.map(_station_cell_map())
@@ -191,8 +228,11 @@ def get_attribution(city: str, cell: str, time) -> dict:
         row = cand.iloc[[(cand.timestamp - ts).abs().argmin()]]
         ts = row.timestamp.iloc[0]
 
-    X = row[_FEATS].astype(float)
-    pred = float(np.clip(_MODEL.predict(X, num_iteration=_MODEL.best_iteration)[0], 0, None))
+    # Features may be missing on older sample rows after v2 upgrade — fill NaN
+    present = [c for c in _FEATS if c in row.columns]
+    X = row.reindex(columns=_FEATS).astype(float)
+    raw_pred = float(_MODEL.predict(X, num_iteration=_MODEL.best_iteration)[0])
+    pred = _decode_pm25(raw_pred)
     sv = _EXPLAINER.shap_values(X)
     sv = sv[0] if isinstance(sv, list) else sv
     shap_row = pd.Series(np.ravel(sv)[:len(_FEATS)], index=_FEATS)
@@ -209,7 +249,14 @@ def get_attribution(city: str, cell: str, time) -> dict:
 
     # --- wind-cone boost ---
     lat, lon = h3.cell_to_latlng(cell)
-    wd = row.wind_dir.iloc[0] if "wind_dir" in row.columns else np.nan
+    if "wind_dir_t" in row.columns and pd.notna(row["wind_dir_t"].iloc[0]):
+        wd = row["wind_dir_t"].iloc[0]
+    elif "wind_dir_now" in row.columns:
+        wd = row["wind_dir_now"].iloc[0]
+    elif "wind_dir" in row.columns:
+        wd = row["wind_dir"].iloc[0]
+    else:
+        wd = np.nan
     cone = wind_cone(lat, lon, wd)
     boosted = dict(shares)
     if cone["checked"] and cone["upwind"]:

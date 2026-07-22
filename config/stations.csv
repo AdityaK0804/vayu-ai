@@ -1,11 +1,15 @@
-station_id,station_name,city_id,latitude,longitude,source_file
-korba_01,"Rampur, Korba - CECB",korba,22.368195,82.746431,cpcb_korba_rampur_2021_2024.csv
-korba_02,"Urja Nagar, Korba - CECB",korba,22.348441,82.549611,cpcb_korba_urja_nagar_2021_2024.csv
-bhilai_01,"Hathkhoj, Bhilai - CECB",bhilai,21.224231,81.408350,cpcb_bhilai_hathkhoj_2021_2024.csv
-bhilai_02,"32 Bungalows, Bhilai - CECB",bhilai,21.194815,81.31477,cpcb_bhilai_32_bungalows_2021_2024.csv
-bhilai_03,"Civic Center, Bhilai - BSP",bhilai,21.185571,81.343175,cpcb_bhilai_civic_center_2021_2024.csv
-raipur_01,"AIIMS, Raipur - CECB",raipur,21.258815,81.578979,cpcb_raipur_aiims_2021_2024.csv
-raipur_02,"Bhatagaon New ISBT, Raipur - CECB",raipur,21.219665,81.630094,cpcb_raipur_bhatagaon_2021_2024.csv
-raipur_03,"Krishak Nagar, Raipur - CECB",raipur,21.237755,81.705301,cpcb_raipur_krishak_nagar_2021_2024.csv
-raipur_04,"Siltara Phase-II, Raipur - CECB",raipur,21.371751,81.664929,cpcb_raipur_siltara_2021_2024.csv
-bilaspur_01,"Mangala, Bilaspur - NTPC",bilaspur,22.08815,82.13736999999999,cpcb_bilaspur_mangala_2021_2024.csv
+station_id,station_name,city_id,latitude,longitude,source_file,use_in_training
+korba_01,"Rampur, Korba - CECB",korba,22.368195,82.746431,cpcb_korba_rampur_2021_2025.csv,True
+korba_02,"Urja Nagar, Korba - CECB",korba,22.348441,82.549611,cpcb_korba_urja_nagar_2021_2025.csv,True
+raipur_01,"AIIMS, Raipur - CECB",raipur,21.258815,81.578979,cpcb_raipur_aiims_2021_2025.csv,True
+raipur_02,"Bhatagaon New ISBT, Raipur - CECB",raipur,21.219665,81.630094,cpcb_raipur_bhatagaon_2021_2025.csv,True
+raipur_03,"Krishak Nagar, Raipur - CECB",raipur,21.237755,81.705301,cpcb_raipur_krishak_nagar_2021_2025.csv,True
+raipur_04,"Siltara Phase-II, Raipur - CECB",raipur,21.371751,81.664929,cpcb_raipur_siltara_2021_2025.csv,True
+bhilai_01,"Hathkhoj, Bhilai - CECB",bhilai,21.224231,81.40835,cpcb_bhilai_hathkhoj_2022_2025.csv,True
+bhilai_02,"32 Bungalows, Bhilai - CECB",bhilai,21.194815,81.31477,cpcb_bhilai_32_bungalows_2021_2025.csv,True
+bhilai_03,"Civic Center, Bhilai - BSP",bhilai,21.185571,81.343175,cpcb_bhilai_civic_center_2021_2025.csv,True
+bilaspur_01,"Mangala, Bilaspur - NTPC",bilaspur,22.08815,82.13736999999999,cpcb_bilaspur_mangala_2021_2025.csv,True
+tumidih_01,"OP Jindal Industrial Park, Tumidih - CECB",tumidih,22.06631475,83.33820077,cpcb_tumidih_tumidih_2021_2025.csv,True
+milupara_01,"Govt. Higher Secondary School, Milupara - CECB",milupara,22.1910172,83.5197009,cpcb_milupara_milupara_2021_2025.csv,True
+chhal_01,"Nawapara SECL Colony, Chhal - CECB",chhal,22.118125,83.140608,cpcb_chhal_chhal_2021_2025.csv,True
+kunjemara_01,"OP Jindal School, Kunjemura - CECB",kunjemara,22.12665,83.483212,cpcb_kunjemara_kunjemara_2021_2025.csv,True

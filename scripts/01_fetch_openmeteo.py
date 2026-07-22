@@ -15,6 +15,7 @@ OUTPUT: data/met/<city>/archive.csv, forecast.csv, cams.csv (+ raw .json)
 """
 import argparse
 import json
+import shutil
 import time
 
 import pandas as pd
@@ -138,14 +139,30 @@ def main():
                     help="city ids, e.g. --cities korba jagdalpur")
     ap.add_argument("--skip-cams-history", action="store_true",
                     help="CAMS history can be slow/limited; skip if it stalls")
+    ap.add_argument("--start", help="override start_date (default: cities.yaml)")
+    ap.add_argument("--end", help="override end_date (default: cities.yaml)")
     args = ap.parse_args()
 
     print("\n=== STEP 1: Open-Meteo (no signup needed) ===\n")
 
     for city in get_cities(only=args.cities):
         cid = city["id"]
+        # The archive write is a full overwrite. cities.yaml's start_date is the
+        # TRAINING window (2022-10-01), which is narrower than the archive we
+        # already hold - fetching on it would silently truncate 2021-2022 off
+        # every file. Overrides let the archive stay wider than the window.
+        if args.start:
+            city = {**city, "start_date": args.start}
+        if args.end:
+            city = {**city, "end_date": args.end}
         out = ensure(DATA / "met" / cid)
         print(f"\n--- {city['name']} ({cid}) ---")
+        say(f"fetch window {city['start_date']} .. {city['end_date']}")
+        for fn in ("archive.csv", "cams_archive.csv"):
+            src = out / fn
+            if src.exists():
+                shutil.copy2(src, src.with_suffix(".csv.bak"))
+                say(f"backed up {fn} -> {fn}.bak ({sum(1 for _ in open(src)) - 1:,} rows)")
 
         # 1. historical met -> training features
         df, blh_ok = fetch_met_archive(city)

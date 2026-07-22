@@ -1,0 +1,225 @@
+# Codebase Structure
+
+**Analysis Date:** 2026-03-08
+
+## Directory Layout
+
+```
+climate-saathi-next/
+├── app/                           # Next.js App Router (all pages, layouts, API routes)
+│   ├── (marketing)/               # Public landing page route group (no auth required)
+│   │   ├── layout.tsx             # Marketing layout (ThemeProvider wrapper)
+│   │   ├── page.tsx               # Landing page at / (stub: design pending)
+│   │   └── _components/           # Marketing-only components (not yet populated)
+│   ├── (app)/                     # Authenticated app route group (auth checked)
+│   │   ├── layout.tsx             # App layout (ThemeProvider wrapper)
+│   │   ├── dashboard/
+│   │   │   └── page.tsx           # /dashboard — KPI bar, map, alert feed
+│   │   ├── facilities/
+│   │   │   ├── page.tsx           # /facilities — facilities list
+│   │   │   └── [id]/
+│   │   │       └── page.tsx       # /facilities/[id] — facility detail with sensors, SHAP, forecasts
+│   │   ├── alerts/
+│   │   │   └── page.tsx           # /alerts — filterable alert table + detail sheet
+│   │   ├── analytics/
+│   │   │   └── page.tsx           # /analytics — aggregate charts (stub)
+│   │   └── admin/
+│   │       └── page.tsx           # /admin — CRUD forms (ADMIN role only)
+│   ├── api/                       # HTTP API handlers
+│   │   ├── auth/[...nextauth]/
+│   │   │   └── route.ts           # NextAuth authentication handler
+│   │   └── trpc/[...trpc]/
+│   │       └── route.ts           # tRPC HTTP handler
+│   ├── layout.tsx                 # Root layout (fonts Sora + DM Sans, Toaster)
+│   └── globals.css                # CSS variables + base styles + Tailwind theme
+├── components/                    # Reusable React components
+│   ├── ui/                        # shadcn components (auto-generated)
+│   │   ├── badge.tsx
+│   │   ├── button.tsx
+│   │   ├── card.tsx
+│   │   ├── dialog.tsx
+│   │   ├── input.tsx
+│   │   ├── label.tsx
+│   │   ├── sheet.tsx
+│   │   ├── table.tsx
+│   │   ├── tabs.tsx
+│   │   └── [other shadcn components]
+│   ├── ui-custom/                 # Custom domain-specific components
+│   │   ├── AlertItem.tsx          # Alert card for alert feed
+│   │   ├── CustomSelect.tsx       # Dropdown select (styled)
+│   │   ├── PulseDot.tsx           # Live indicator with animation
+│   │   └── [other domain components]
+│   ├── Navigation.tsx             # Fixed top nav (with theme toggle, responsive menu)
+│   ├── ThemeProvider.tsx          # Next.js theme context setup
+│   └── ThemeToggle.tsx            # Light/dark mode toggle button
+├── server/                        # Backend logic (tRPC routers)
+│   ├── trpc.ts                    # tRPC initialization, procedure definitions (publicProcedure, protectedProcedure, adminProcedure)
+│   └── routers/
+│       ├── index.ts               # Composed appRouter (exports all routers)
+│       ├── facilities.ts          # facilities.list, facilities.byId
+│       ├── sensors.ts            # sensors.byFacility, sensors.latest
+│       ├── alerts.ts             # alerts.list, alerts.acknowledge, alerts.resolve
+│       ├── risk.ts               # risk.getScore, risk.getForecast
+│       ├── analytics.ts          # analytics.summaryStats, analytics.trends
+│       └── admin.ts              # admin.createUser, admin.deleteUser, admin.updateRole (ADMIN only)
+├── lib/                          # Utilities and service initialization
+│   ├── prisma.ts                 # Prisma Client singleton (prevents re-instantiation in dev)
+│   ├── auth.ts                   # NextAuth configuration (Google OAuth, credentials provider, callbacks)
+│   ├── trpc.ts                   # tRPC React client (for 'use client' components)
+│   ├── supabase.ts               # Supabase client (for realtime subscriptions)
+│   └── utils.ts                  # General utilities (shadcn cn() utility)
+├── store/                        # Zustand global state (client-side only)
+│   └── useDashboardStore.ts      # Dashboard state: selectedDistrict, selectedFacility, alertFilters, mapView
+├── types/                        # TypeScript interfaces and type definitions
+│   └── index.ts                  # Facility, Alert, Sensor, RiskForecast, District, etc.
+├── data/                         # Mock data for development
+│   └── mockData.ts               # districts[], facilities[], alerts[], kpiMetrics
+├── prisma/                       # Database schema and migrations
+│   ├── schema.prisma             # Prisma data model (9 tables: Facility, SensorReading, RiskScore, Forecast, Alert, AlertChannel, ShapValue, User, Intervention)
+│   └── migrations/               # Database migration files (auto-generated by `prisma migrate`)
+├── public/                       # Static assets (images, favicon, etc.)
+├── .planning/                    # GSD planning documents
+│   └── codebase/
+│       └── [ARCHITECTURE.md, STRUCTURE.md, ...]
+├── package.json                  # NPM dependencies
+├── next.config.ts                # Next.js configuration (currently minimal)
+├── tsconfig.json                 # TypeScript configuration
+├── postcss.config.js             # PostCSS configuration (for Tailwind CSS)
+├── .env.local                    # Environment variables (local, not committed)
+└── .gitignore                    # Git ignore rules
+```
+
+## Directory Purposes
+
+**app/** - All pages, layouts, API routes using App Router
+- `(marketing)/` — Public landing page with shared marketing layout (no auth)
+- `(app)/` — Authenticated dashboard, facilities, alerts, analytics with shared app layout
+- `api/` — HTTP handlers for tRPC and NextAuth
+
+**components/** - Reusable React component library
+- `ui/` — shadcn pre-built components (buttons, cards, tables, dialogs, etc.)
+- `ui-custom/` — Domain-specific components (AlertItem, PulseDot, CustomSelect)
+- Root level: Navigation, ThemeProvider, ThemeToggle
+
+**server/** - Backend business logic
+- `trpc.ts` — tRPC context + procedure types (publicProcedure, protectedProcedure, adminProcedure)
+- `routers/` — Domain routers (facilities, sensors, alerts, risk, analytics, admin)
+
+**lib/** - Service initialization and utilities
+- `prisma.ts` — Prisma singleton for database
+- `auth.ts` — NextAuth configuration with providers and callbacks
+- `trpc.ts` — tRPC React client setup
+- `supabase.ts` — Supabase realtime client
+- `utils.ts` — Utility functions (shadcn cn() helper)
+
+**store/** - Client-side global state (Zustand)
+- `useDashboardStore.ts` — Dashboard selection state (district, facility, filters, map view)
+
+**types/** — TypeScript interfaces
+- `index.ts` — Facility, Sensor, Alert, District, RiskForecast, KpiMetrics, etc.
+
+**data/** — Mock data for development
+- `mockData.ts` — districts, facilities, alerts, kpiMetrics (used until DB populated)
+
+**prisma/** — Database schema and migrations
+- `schema.prisma` — 9-table Prisma model (PostgreSQL)
+- `migrations/` — Version-controlled migration files
+
+**public/** — Static assets
+- favicon, images, etc.
+
+## Key File Locations
+
+**Entry Points:**
+- `app/layout.tsx` — Root layout (loads fonts, Toaster)
+- `app/(marketing)/layout.tsx` — Marketing layout wrapper
+- `app/(marketing)/page.tsx` — Landing page at /
+- `app/(app)/layout.tsx` — App layout wrapper
+- `app/(app)/dashboard/page.tsx` — Dashboard at /dashboard
+
+**Configuration:**
+- `next.config.ts` — Next.js build config (currently empty)
+- `tsconfig.json` — TypeScript config
+- `postcss.config.js` — PostCSS + Tailwind
+- `.env.local` — Environment variables (DATABASE_URL, NEXTAUTH_SECRET, etc.)
+
+**Core Logic:**
+- `server/trpc.ts` — tRPC initialization and procedure definitions
+- `server/routers/index.ts` — Root appRouter composition
+- `lib/prisma.ts` — Database client singleton
+- `lib/auth.ts` — Authentication configuration
+- `lib/trpc.ts` — tRPC React Query client
+
+**Testing:**
+- No test files present yet (Jest/Vitest setup pending)
+
+## Naming Conventions
+
+**Files:**
+- Route files: `page.tsx`, `layout.tsx`, `route.ts` (App Router)
+- Components: PascalCase, e.g., `Navigation.tsx`, `AlertItem.tsx`
+- Utilities/hooks: camelCase, e.g., `useDashboardStore.ts`, `prisma.ts`
+- Server routers: kebab-case file names (conventions), e.g., `facilities.ts`, `alerts.ts`
+
+**Directories:**
+- Route groups: parentheses, e.g., `(marketing)`, `(app)`
+- Components: `ui/` for shadcn, `ui-custom/` for domain components
+- Server logic: `routers/` for tRPC endpoint definitions
+- Infrastructure: `lib/` for client/server utilities
+
+**Functions/Exports:**
+- Component names match file name, e.g., `Navigation.tsx` exports `Navigation`
+- tRPC routers use flat structure: `facilitiesRouter`, `sensorsRouter`
+- Zustand stores: `useDashboardStore` pattern (use*)
+- Procedures: CRUD verbs (list, byId, create, update, delete, acknowledge, resolve)
+
+## Where to Add New Code
+
+**New Feature (Page):**
+- Primary code: `app/(app)/[feature]/page.tsx`
+- Tests: `app/(app)/[feature]/page.test.tsx` (when testing framework added)
+- Types: Add types to `types/index.ts` if needed
+- Router: Add new router to `server/routers/[feature].ts` and include in `server/routers/index.ts`
+- Store: Add Zustand slice to `store/useDashboardStore.ts` if state needed
+- Styling: Use Tailwind classes; add custom CSS to `app/globals.css` if needed
+
+**New Component/Module:**
+- Implementation: `components/ui-custom/[ComponentName].tsx` or `components/[ComponentName].tsx`
+- Import pattern: `import { ComponentName } from '@/components/ui-custom/[ComponentName]'`
+- Use `'use client'` directive if component uses hooks, event handlers, or client-side libraries
+
+**Utilities/Helpers:**
+- Shared helpers: `lib/[utility].ts`
+- Domain-specific hooks: Create `app/(app)/_hooks/[hookName].ts` or `app/(marketing)/_hooks/[hookName].ts`
+- Export from barrel files: `lib/index.ts` (if library pattern preferred)
+
+**New API Route:**
+- Extend tRPC router: Add procedure to `server/routers/[name].ts`
+- Do NOT create raw `route.ts` files (use tRPC instead)
+- Exception: Auth and tRPC handlers in `app/api/`
+
+**Database Schema Changes:**
+- Edit `prisma/schema.prisma`
+- Run: `npx prisma migrate dev --name [description]`
+- Migration file auto-generated in `prisma/migrations/`
+- Never modify migration files manually
+
+## Special Directories
+
+**node_modules/** — NPM packages (generated, not committed)
+
+**prisma/migrations/** — Database migration history (committed to git)
+- Auto-generated by `prisma migrate dev`
+- Manual edits not recommended
+
+ths/** — Build artifacts (generated, not committed)
+- Delete with `rm -rf .next` to force rebuild
+
+**.git/** — Git version control (not part of project logic)
+
+**.planning/codebase/** — GSD analysis documents (auto-generated)
+- ARCHITECTURE.md, STRUCTURE.md, CONVENTIONS.md, TESTING.md, CONCERNS.md, STACK.md, INTEGRATIONS.md
+
+---
+
+*Structure analysis: 2026-03-08*

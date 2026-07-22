@@ -266,8 +266,8 @@ const HI: Dict = {
   "From raw signal to clean-air action.": "कच्चे संकेत से स्वच्छ-वायु कार्रवाई तक।",
   "VAYU fuses CPCB stations, satellite columns, meteorology and emissions inventories, forecasts PM2.5 72 hours ahead, and turns that into ranked, evidence-backed interventions.":
     "VAYU, CPCB स्टेशनों, उपग्रह स्तंभों, मौसम और उत्सर्जन सूचियों को जोड़कर 72 घंटे आगे का PM2.5 पूर्वानुमान लगाता है, और उसे प्रमाण-आधारित क्रमबद्ध हस्तक्षेपों में बदलता है।",
-  "VAYU fuses CPCB ground stations, satellite columns, meteorology and emissions inventories into one forecasting engine — predicting PM2.5 72 hours out, attributing it to a named source, and ranking where enforcement should go first. Including Jagdalpur, which has no ground sensor at all.":
-    "VAYU, CPCB ज़मीनी स्टेशनों, उपग्रह स्तंभों, मौसम और उत्सर्जन सूचियों को एक पूर्वानुमान इंजन में जोड़ता है — 72 घंटे आगे का PM2.5 बताता है, उसे नामित स्रोत से जोड़ता है, और तय करता है कि प्रवर्तन पहले कहाँ जाए। जगदलपुर सहित, जहाँ कोई ज़मीनी सेंसर ही नहीं है।",
+  "VAYU fuses satellite, ground, and emissions data to forecast PM2.5 72 hours out. It pinpoints pollution sources and prioritizes enforcement across the state-even in districts without physical sensors.":
+    "VAYU 72 घंटे पहले PM2.5 का पूर्वानुमान लगाने के लिए उपग्रह, जमीनी और उत्सर्जन डेटा को मिलाता है। यह प्रदूषण के स्रोतों की पहचान करता है और पूरे राज्य में प्रवर्तन को प्राथमिकता देता है—यहां तक ​​कि भौतिक सेंसर रहित जिलों में भी।",
   "workflow slot": "वर्कफ़्लो स्लॉट",
   "This page is ready for the custom workflow you'll define. Tell me what to show here and I'll build it into this space.":
     "यह पृष्ठ आपके तय किए गए कस्टम वर्कफ़्लो के लिए तैयार है। बताइए यहाँ क्या दिखाना है, मैं इसी जगह बना दूँगा।",

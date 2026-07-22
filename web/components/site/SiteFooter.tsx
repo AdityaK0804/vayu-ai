@@ -78,20 +78,24 @@ export default function SiteFooter() {
                 style={{
                   width: 30,
                   height: 30,
-                  borderRadius: 9,
                   display: "grid",
                   placeItems: "center",
-                  background: "linear-gradient(140deg,var(--accent),var(--accent-2))",
+                  position: "relative",
                   flex: "none",
                 }}
               >
-                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#fff" }} />
+                <svg width="30" height="30" viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M 25 45 C 20 45 15 40 15 35 C 15 30 18 26 23 25 C 25 15 33 10 42 12 C 48 5 58 5 63 12 C 72 10 80 15 82 25 C 87 26 90 30 90 35 C 90 40 85 45 80 45 L 25 45 Z" fill="none" stroke="#60a5fa" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" style={{ filter: "drop-shadow(0 0 4px rgba(96,165,250,0.8))" }}></path>
+                  <path d="M 25 45 L 80 45" fill="none" stroke="#60a5fa" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" style={{ filter: "drop-shadow(0 0 4px rgba(96,165,250,0.8))" }}></path>
+                  <path d="M 12 35 L 35 35 L 43 45 L 53 15 L 63 45 L 70 35 L 92 35" fill="none" stroke="#4ade80" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" style={{ filter: "drop-shadow(0 0 4px rgba(74,222,128,0.8))" }}></path>
+                  <circle cx="53" cy="15" r="5" fill="#fbbf24" style={{ filter: "drop-shadow(0 0 4px rgba(251,191,36,0.8))" }}></circle>
+                </svg>
               </span>
               <span
                 className="display"
                 style={{ fontWeight: 700, fontSize: 17, letterSpacing: ".1em" }}
               >
-                Vayu AI
+                Vayu.AI
               </span>
             </Link>
             <p style={{ fontSize: 12.5, lineHeight: 1.6, color: "var(--ink-2)", maxWidth: "34ch" }}>
@@ -164,7 +168,7 @@ export default function SiteFooter() {
             color: "var(--ink-3)",
           }}
         >
-          <span>© {year} Vayu AI · Chhattisgarh</span>
+          <span>© {year} Vayu.AI · Chhattisgarh</span>
           <span className="figure" style={{ textAlign: "right" }}>
             {t("Every figure on this site is measured from the pipeline — nothing is simulated.")}
           </span>

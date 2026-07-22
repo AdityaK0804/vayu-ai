@@ -67,7 +67,7 @@ function LiveMapPanel({ minHeight }: { minHeight: number }) {
   }, []);
 
   return (
-    <div ref={ref} style={{ position: "relative", minHeight, background: "var(--surface-2)" }}>
+    <div ref={ref} style={{ position: "relative", minHeight, minWidth: 0, overflow: "hidden", background: "var(--surface-2)" }}>
       <div
         className="figure"
         style={{
@@ -91,9 +91,11 @@ function LiveMapPanel({ minHeight }: { minHeight: number }) {
         <DistrictMap
           selected={null}
           onSelect={() => {}}
-          showCities
+          showCities={false}
+          showCityLabels={false}
           openCityOnFocus={false}
-          interactive={false}
+          interactive={true}
+          initialZoom={minHeight < 300 ? 2.8 : 5.8}
         />
       ) : (
         <div style={{ display: "grid", placeItems: "center", height: minHeight }}>
@@ -114,7 +116,7 @@ export default function DashboardFrame({ compact = false }: { compact?: boolean 
   const h24 = metrics?.forecast_vs_baselines.find((x) => x.horizon_h === 24);
 
   const s = compact
-    ? { dot: 8, chrome: "8px 11px", url: 9.5, pad: "10px 8px", nav: 10.5, lab: 8.5, map: 236, rows: 5, row: 10.5 }
+    ? { dot: 8, chrome: "8px 11px", url: 9.5, pad: "10px 8px", nav: 10.5, lab: 8.5, map: 340, rows: 8, row: 10.5 }
     : { dot: 10, chrome: "10px 14px", url: 11, pad: "14px 12px", nav: 12.5, lab: 10, map: 380, rows: 9, row: 12.5 };
 
   const rows = (
@@ -232,8 +234,9 @@ export default function DashboardFrame({ compact = false }: { compact?: boolean 
             overflow: "hidden",
           }}
         >
-          <div className="lab" style={{ fontSize: s.lab, letterSpacing: ".14em", marginBottom: 8 }}>
-            {t("Cities")}
+          <div className="lab" style={{ display: "flex", justifyContent: "space-between", fontSize: s.lab, letterSpacing: ".14em", marginBottom: 8 }}>
+            <span>{t("Cities")}</span>
+            <span style={{ paddingRight: 4 }}>{t("AQI")}</span>
           </div>
           {rows.map((c: any) => {
             const aqi = c.measured_us_aqi ?? c.current_us_aqi ?? c.us_aqi ?? null;

@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { motion } from "motion/react";
 import { useMetrics } from "@/lib/data";
 import { useT } from "@/lib/i18n";
 import { PAD } from "./SiteChrome";
@@ -22,7 +24,7 @@ const STEPS = [
     icon: "🛰️",
     title: "Sensors & Satellite",
     body: "14 CPCB reference stations via OpenAQ, Open-Meteo weather and CAMS, Sentinel-5P NO₂/SO₂ and MODIS AOD, EDGAR v8.1 emissions, WorldPop and OSM roads — harmonised onto one H3 grid and hourly clock.",
-    accent: "var(--accent)",
+    accent: "#0fa39a",
   },
   {
     n: "02",
@@ -40,7 +42,7 @@ const STEPS = [
     icon: "🔔",
     title: "Alerts & Actions",
     body: "Wards are ranked by exceedance × population × vulnerability, each with the named upwind plant, schools and hospitals exposed, and a templated inspection order — in English or Hindi.",
-    accent: "var(--accent-2)",
+    accent: "#8b5cf6",
   },
 ];
 
@@ -69,6 +71,110 @@ function Arrow() {
         />
       </svg>
     </div>
+  );
+}
+
+function FlowCard({ s, i }: { s: typeof STEPS[0], i: number }) {
+  const { t } = useT();
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <motion.article
+      className="card flow-card"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      animate={{
+        boxShadow: hovered 
+          ? [
+              `0 10px 40px -10px color-mix(in oklch, ${s.accent}, transparent 40%), var(--shadow)`
+            ]
+          : [
+              `0 0 0px ${s.accent}00, var(--shadow)`,
+              `0 0 28px ${s.accent}40, var(--shadow)`,
+              `0 0 0px ${s.accent}00, var(--shadow)`,
+            ],
+      }}
+      transition={{
+        duration: hovered ? 0.4 : 3,
+        repeat: hovered ? 0 : Infinity,
+        ease: "easeInOut",
+        delay: hovered ? 0 : i * 1, // stagger the pulse
+      }}
+      style={{
+        padding: 22,
+        position: "relative",
+        transition: "transform 0.4s ease",
+        transform: hovered ? "translateY(-4px)" : "translateY(0)",
+      }}
+    >
+      {/* ghost numeral */}
+      <span
+        aria-hidden
+        className="display"
+        style={{
+          position: "absolute",
+          top: -14,
+          right: 6,
+          fontSize: 108,
+          fontWeight: 700,
+          lineHeight: 1,
+          color: hovered ? s.accent : "var(--ink)",
+          opacity: hovered ? 0.15 : 0.05,
+          pointerEvents: "none",
+          transition: "color 0.4s ease, opacity 0.4s ease",
+        }}
+      >
+        {s.n}
+      </span>
+
+      <header
+        style={{
+          display: "flex",
+          alignItems: "baseline",
+          justifyContent: "space-between",
+          gap: 10,
+        }}
+      >
+        <span
+          className="figure"
+          style={{
+            fontSize: 11,
+            letterSpacing: ".16em",
+            color: s.accent,
+            fontWeight: 600,
+          }}
+        >
+          {t(s.step)}
+        </span>
+        <span className="figure" style={{ fontSize: 10.5, color: "var(--ink-3)" }}>
+          {t(s.tag)}
+        </span>
+      </header>
+
+      <div
+        style={{
+          width: 52,
+          height: 52,
+          borderRadius: 15,
+          margin: "18px 0 16px",
+          display: "grid",
+          placeItems: "center",
+          fontSize: 22,
+          background: hovered 
+            ? `color-mix(in oklch, ${s.accent}, transparent 75%)` 
+            : `color-mix(in oklch, ${s.accent}, transparent 88%)`,
+          border: `1px solid color-mix(in oklch, ${s.accent}, transparent 70%)`,
+          transition: "background 0.4s ease",
+        }}
+      >
+        {s.icon}
+      </div>
+
+      <h3 className="display" style={{ fontSize: 19, marginBottom: 9 }}>
+        {t(s.title)}
+      </h3>
+      <p style={{ fontSize: 13.5, lineHeight: 1.65, color: "var(--ink-2)" }}>{t(s.body)}</p>
+    </motion.article>
   );
 }
 
@@ -109,72 +215,7 @@ export default function FlowSteps() {
       <div className="flow-row">
         {STEPS.map((s, i) => (
           <div key={s.n} className="flow-item">
-            <article className="card lift flow-card" style={{ padding: 22 }}>
-              {/* ghost numeral */}
-              <span
-                aria-hidden
-                className="display"
-                style={{
-                  position: "absolute",
-                  top: -14,
-                  right: 6,
-                  fontSize: 108,
-                  fontWeight: 700,
-                  lineHeight: 1,
-                  color: "var(--ink)",
-                  opacity: 0.05,
-                  pointerEvents: "none",
-                }}
-              >
-                {s.n}
-              </span>
-
-              <header
-                style={{
-                  display: "flex",
-                  alignItems: "baseline",
-                  justifyContent: "space-between",
-                  gap: 10,
-                }}
-              >
-                <span
-                  className="figure"
-                  style={{
-                    fontSize: 11,
-                    letterSpacing: ".16em",
-                    color: s.accent,
-                    fontWeight: 600,
-                  }}
-                >
-                  {t(s.step)}
-                </span>
-                <span className="figure" style={{ fontSize: 10.5, color: "var(--ink-3)" }}>
-                  {t(s.tag)}
-                </span>
-              </header>
-
-              <div
-                style={{
-                  width: 52,
-                  height: 52,
-                  borderRadius: 15,
-                  margin: "18px 0 16px",
-                  display: "grid",
-                  placeItems: "center",
-                  fontSize: 22,
-                  background: `color-mix(in oklch, ${s.accent}, transparent 88%)`,
-                  border: `1px solid color-mix(in oklch, ${s.accent}, transparent 70%)`,
-                }}
-              >
-                {s.icon}
-              </div>
-
-              <h3 className="display" style={{ fontSize: 19, marginBottom: 9 }}>
-                {t(s.title)}
-              </h3>
-              <p style={{ fontSize: 13.5, lineHeight: 1.65, color: "var(--ink-2)" }}>{t(s.body)}</p>
-            </article>
-
+            <FlowCard s={s} i={i} />
             {i < STEPS.length - 1 && <Arrow />}
           </div>
         ))}

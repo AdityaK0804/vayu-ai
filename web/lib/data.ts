@@ -174,3 +174,125 @@ export function useAdvisory(city: CityId) {
     ...STATIC,
   });
 }
+
+/* -------------------- multi-city interventions -------------------- */
+export interface InterventionSchool {
+  name: string;
+  block: string;
+  district: string;
+}
+export interface InterventionRemedy {
+  type: "city" | "school";
+  action: string;
+}
+export interface InterventionItem {
+  rank: number;
+  city_id: string;
+  city_name: string;
+  ward: string;
+  pm25: number;
+  cpcb_category: string;
+  cpcb_aqi_range: string;
+  category_hex: string;
+  severity: number;
+  top_source: string;
+  reason: string;
+  urgency: string;
+  demo_episode: boolean;
+  affected_schools: InterventionSchool[];
+  n_schools_district: number;
+  remedies: InterventionRemedy[];
+  threshold_ug_m3: number;
+  standard_note: string;
+}
+export interface InterventionsFile {
+  version: string;
+  generated_note: string;
+  aqi_scale: string;
+  pm25_breakpoints: { category: string; pm25: string; aqi: string }[];
+  n_items: number;
+  cities_with_action: string[];
+  items: InterventionItem[];
+}
+
+export function useInterventions() {
+  return useQuery({
+    queryKey: ["interventions_all"],
+    queryFn: async (): Promise<InterventionsFile> => {
+      const res = await fetch("/data/interventions.json", { cache: "force-cache" });
+      if (!res.ok) throw new Error(`interventions: HTTP ${res.status}`);
+      return res.json();
+    },
+    ...STATIC,
+  });
+}
+
+/* -------------------- multi-city 72h forecasts -------------------- */
+export interface CityHorizonForecast {
+  horizon_h: number;
+  origin?: string | null;
+  valid_time?: string | null;
+  pred_pm25: number;
+  actual_pm25?: number | null;
+  pm25_lag0?: number | null;
+  cams_target?: number | null;
+  p10?: number;
+  p50?: number;
+  p90?: number;
+  cpcb?: { label: string; hex: string };
+  source?: string;
+}
+export interface CityForecastRow {
+  city_id: string;
+  city_name: string;
+  has_stations: boolean;
+  latest_observed_pm25: number | null;
+  latest_observed_time?: string | null;
+  latest_cpcb?: { label: string; hex: string };
+  horizons: Record<string, CityHorizonForecast>;
+  model?: string;
+  n_features?: number | null;
+  note?: string;
+  live?: {
+    pm25?: number | null;
+    us_aqi?: number | null;
+    measured?: boolean;
+    updated?: string;
+    n_stations?: number;
+  };
+}
+export interface Forecasts72hFile {
+  version: string;
+  horizons_h: number[];
+  model_note: string;
+  proof?: {
+    model_version?: string;
+    forecast_vs_baselines?: Metrics["forecast_vs_baselines"];
+    headline?: string;
+  };
+  cities: CityForecastRow[];
+  grid_trajectories?: Record<
+    string,
+    {
+      city_id: string;
+      origin?: string;
+      timestamps: string[];
+      frame_step_hours: number;
+      grid_mean_pm25: (number | null)[];
+      n_cells?: number;
+      threshold_ug_m3?: number;
+    }
+  >;
+}
+
+export function useForecasts72h() {
+  return useQuery({
+    queryKey: ["forecasts_72h"],
+    queryFn: async (): Promise<Forecasts72hFile> => {
+      const res = await fetch("/data/forecasts_72h.json", { cache: "force-cache" });
+      if (!res.ok) throw new Error(`forecasts_72h: HTTP ${res.status}`);
+      return res.json();
+    },
+    ...STATIC,
+  });
+}

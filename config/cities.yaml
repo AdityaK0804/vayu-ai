@@ -4,18 +4,17 @@
 # Show this file to the judges when they ask "does it scale to other cities?"
 
 defaults:
-  # Training window: all sources overlap here.
-  # (Sentinel-5P starts Jul 2018; CPCB you have from 2017 — keep it for the
-  #  pure time-series model, but the FUSED model trains on this window.)
-  start_date: "2021-01-01"
-  end_date: "2024-12-31"
+  # Training window: CPCB pm25 is empty before Oct 2022 regardless of what
+  # the filenames claim, and now runs through 2025.
+  start_date: "2022-10-01"
+  end_date: "2025-12-31"
   h3_resolution: 8      # ~0.74 km2 per cell ≈ the PS's "1km grid"
   timezone: "Asia/Kolkata"
 
 cities:
   - id: korba
     name: "Korba"
-    role: hero                    # full build, live demo
+    role: hero
     lat: 22.3595
     lon: 82.7501
     bbox: [82.3, 22.0, 83.1, 22.7]      # [W, S, E, N]
@@ -27,26 +26,25 @@ cities:
     role: validation
     lat: 21.2514
     lon: 81.6296
-    bbox: [81.2, 20.9, 82.0, 21.6]
+    bbox: [81.2, 20.9, 82.0, 21.6]      # [W, S, E, N]
     has_stations: true
     notes: "State capital. Most stations. Best-behaved validation city."
 
   - id: jagdalpur
     name: "Jagdalpur"
-    role: reveal                  # THE DEMO MOMENT — no ground sensor at all
+    role: reveal
     lat: 19.0748
     lon: 82.0261
-    bbox: [81.7, 18.8, 82.4, 19.4]
-    has_stations: false           # <-- drives the "Predict everywhere" reveal in the UI
+    bbox: [81.7, 18.8, 82.4, 19.4]      # [W, S, E, N]
+    has_stations: false
     notes: "NO CPCB station. We forecast it blind from satellite+met. This is the mic-drop."
 
-  # --- Only collect these if Day 5 is green. Nice-to-have validation. ---
   - id: bhilai
     name: "Bhilai"
     role: validation_optional
     lat: 21.1938
     lon: 81.3509
-    bbox: [81.0, 20.9, 81.7, 21.5]
+    bbox: [81.0, 20.9, 81.7, 21.5]      # [W, S, E, N]
     has_stations: true
     notes: "Bhilai Steel Plant. Strong industrial signal."
 
@@ -55,8 +53,44 @@ cities:
     role: validation_optional
     lat: 22.0797
     lon: 82.1409
-    bbox: [81.7, 21.8, 82.5, 22.4]
+    bbox: [81.7, 21.8, 82.5, 22.4]      # [W, S, E, N]
     has_stations: true
+
+  - id: tumidih
+    name: "Tumidih"
+    role: validation
+    lat: 22.06631475
+    lon: 83.33820077
+    bbox: [83.1382, 21.8663, 83.5382, 22.2663]      # [W, S, E, N]
+    has_stations: true
+    notes: "Industrial station at Tumidih."
+
+  - id: milupara
+    name: "Milupara"
+    role: validation
+    lat: 22.1910172
+    lon: 83.5197009
+    bbox: [83.3197, 21.991, 83.7197, 22.391]      # [W, S, E, N]
+    has_stations: true
+    notes: "Industrial station at Milupara."
+
+  - id: chhal
+    name: "Chhal"
+    role: validation
+    lat: 22.118125
+    lon: 83.140608
+    bbox: [82.9406, 21.9181, 83.3406, 22.3181]      # [W, S, E, N]
+    has_stations: true
+    notes: "Industrial station at Chhal."
+
+  - id: kunjemara
+    name: "Kunjemura"
+    role: validation
+    lat: 22.12665
+    lon: 83.483212
+    bbox: [83.2832, 21.9267, 83.6832, 22.3267]      # [W, S, E, N]
+    has_stations: true
+    notes: "Industrial station at Kunjemara."
 
 # State-wide bbox — used for FIRMS fire + EDGAR clipping (one download covers all)
 state:

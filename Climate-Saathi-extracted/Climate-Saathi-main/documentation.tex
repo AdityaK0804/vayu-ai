@@ -1,0 +1,1244 @@
+% ============================================================
+%  Climate Saathi — Technical Documentation
+%  Expanding, Alert System Integration & Vercel Deployment
+%  Team BioXtreme · NIT Raipur · UNICEF Climatathon 2026
+% ============================================================
+\documentclass[12pt,a4paper]{report}
+
+% ── Packages ─────────────────────────────────────────────────
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{tikz}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{tcolorbox}
+\usepackage{mdframed}
+\usepackage{parskip}
+\usepackage{setspace}
+
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, backgrounds}
+
+% ── Colours ──────────────────────────────────────────────────
+\definecolor{teal}{HTML}{2A9D8F}
+\definecolor{orange}{HTML}{F4A261}
+\definecolor{forest}{HTML}{0e1117}
+\definecolor{coral}{HTML}{E76F51}
+\definecolor{danger}{HTML}{ef4444}
+\definecolor{sage}{HTML}{8b95a8}
+\definecolor{codebg}{HTML}{f5f5f5}
+\definecolor{amber}{HTML}{f59e0b}
+\definecolor{leaf}{HTML}{8DC63F}
+\definecolor{linkblue}{HTML}{2563EB}
+
+% ── Hyperref setup ───────────────────────────────────────────
+\hypersetup{
+  colorlinks=true,
+  linkcolor=teal,
+  urlcolor=linkblue,
+  citecolor=teal,
+  pdftitle={Climate Saathi — Technical Documentation},
+  pdfauthor={Team BioXtreme, NIT Raipur},
+}
+
+% ── Code Listings ────────────────────────────────────────────
+\lstdefinestyle{code}{
+  backgroundcolor=\color{codebg},
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{teal!40},
+  tabsize=2,
+  showstringspaces=false,
+  keywordstyle=\color{teal}\bfseries,
+  commentstyle=\color{gray},
+  stringstyle=\color{orange},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  numbersep=8pt,
+}
+\lstset{style=code}
+
+% ── Headers/Footers ─────────────────────────────────────────
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\textcolor{teal}{\textbf{Climate Saathi}}}
+\fancyhead[R]{\textcolor{gray}{Technical Documentation}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0.2pt}
+
+% ── Section Styling ──────────────────────────────────────────
+\titleformat{\chapter}[display]
+  {\Huge\bfseries\color{teal}}
+  {\chaptertitlename\ \thechapter}{20pt}{\Huge}
+\titleformat{\section}{\Large\bfseries\color{teal!90!black}}{\thesection}{1em}{}
+\titleformat{\subsection}{\large\bfseries\color{forest}}{\thesubsection}{1em}{}
+
+% ── Callout Boxes ────────────────────────────────────────────
+\newtcolorbox{infobox}{colback=teal!5, colframe=teal, title=\textbf{Info}}
+\newtcolorbox{warnbox}{colback=orange!10, colframe=orange, title=\textbf{Warning}}
+\newtcolorbox{critbox}{colback=red!5, colframe=red!70, title=\textbf{Critical}}
+
+% ═════════════════════════════════════════════════════════════
+\begin{document}
+
+% ── Title Page ───────────────────────────────────────────────
+\begin{titlepage}
+\centering
+\vspace*{3cm}
+
+{\Huge\bfseries\textcolor{teal}{Climate Saathi}\par}
+\vspace{0.8cm}
+{\Large\textcolor{forest}{Climate-Resilient Infrastructure Monitoring\\with AI, Digital Twins \& Multilingual Alerts}\par}
+\vspace{1.5cm}
+{\large Technical Documentation \& Deployment Guide\par}
+
+\vspace{3cm}
+
+\begin{tabular}{ll}
+\textbf{Team:}        & BioXtreme, NIT Raipur \\
+\textbf{Event:}       & UNICEF Climatathon 2026 \\
+\textbf{Stack:}       & Next.js 16 $\cdot$ tRPC $\cdot$ Supabase $\cdot$ Groq/Gemini AI $\cdot$ Vercel \\
+\textbf{Date:}        & March 2026 \\
+\textbf{Version:}     & 3.0 \\
+\end{tabular}
+
+\vfill
+\textit{Protecting every child $\cdot$ every clinic $\cdot$ every day}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+% ═════════════════════════════════════════════════════════════
+\chapter{Executive Summary}
+
+Climate Saathi is a \textbf{climate-resilient infrastructure monitoring platform} for Chhattisgarh, India. It monitors 71,139 water, energy, and health facilities across 33 districts using IoT sensors, ML-powered risk scoring (LightGBM + LSTM), physics-based PV anomaly detection, a Digital Twin API, a Gemini AI chatbot with live data tools, and a multi-channel alert system that reaches frontline workers via WhatsApp, in-app notifications, and SMS in Hindi, Chhattisgarhi, and English.
+
+This document covers the complete platform architecture:
+
+\begin{enumerate}
+  \item \textbf{Implemented features} --- Supabase Realtime, ML pipeline, PV anomaly detector, Digital Twin, What-if Simulator, Gemini chatbot, i18n, WhatsApp alerts, district-filtered dashboard
+  \item \textbf{Alert system} --- real-time push, multi-channel dispatch via Twilio, escalation logic, and alert lifecycle management
+  \item \textbf{Deployment to Vercel} --- production configuration, environment variables, cron jobs, and CI/CD
+\end{enumerate}
+
+% ═════════════════════════════════════════════════════════════
+\chapter{Current Architecture Overview}
+
+\section{Technology Stack}
+
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Layer} & \textbf{Technology} \\
+\midrule
+Frontend   & Next.js 16.1.6, React 19.2, Tailwind CSS v4, shadcn/ui v4, Framer Motion 12 \\
+State      & Zustand 5.0, TanStack React Query 5 \\
+API        & tRPC v11.12 (9 routers: facilities, sensors, alerts, risk, analytics, admin, climate, chat, digitalTwin) \\
+Database   & PostgreSQL via Supabase (9 models in Prisma schema, all queries via Supabase JS client) \\
+Auth       & NextAuth v4.24 (Google OAuth + JWT, 7-role RBAC) \\
+Realtime   & Supabase Realtime (postgres\_changes on Alert table) \\
+Caching    & Redis via ioredis 5.10 (optional, graceful fallback) \\
+ML/AI      & FastAPI service (LightGBM risk scorer, LSTM forecaster, physics-based PV anomaly detector) \\
+Chatbot    & Gemini AI with function-calling (5 tools query live Supabase data) \\
+i18n       & Custom Zustand-based system --- English, Hindi, Chhattisgarhi (200+ keys per locale) \\
+WhatsApp   & Twilio WhatsApp Business API (Hindi \& English alert dispatch) \\
+Maps       & Leaflet (imperative API) with CARTO dark basemap + GeoJSON choropleth \\
+Charts     & Recharts v3.8 \\
+\bottomrule
+\end{tabularx}
+
+\section{Database Schema (9 Tables)}
+
+All data access is via the \textbf{Supabase JS client} (\texttt{ctx.supabase}). The Prisma schema serves as the source of truth for table definitions, enums, and TypeScript types.
+
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+\textbf{Model} & \textbf{Category} & \textbf{Purpose} \\
+\midrule
+Facility       & Core entity   & 71,139 facilities --- Schools, PHCs, CHCs, Anganwadis across 33 districts with geolocation + metadata JSON \\
+SensorReading  & Time-series   & 126K+ IoT readings (7 types: water level, solar output, temperature, chlorine, turbidity, humidity, battery) \\
+RiskScore      & ML output     & 200+ composite risk scores per facility (water, energy, sanitation, disease, overall) \\
+ShapValue      & ML explain    & 1,600+ SHAP feature importance values linked to risk scores \\
+Forecast       & Predictions   & 303 forecast records --- 14-day horizon with P10/P50/P90 JSON bands (4 targets) \\
+Alert          & Events        & 289 alerts with type, severity, status lifecycle, confidence score \\
+AlertChannel   & Dispatch      & Multi-channel delivery tracking (SMS, WhatsApp, IVR, IN\_APP, EMAIL) \\
+User           & Auth          & Role-based users (7 roles: ADMIN, STATE\_OFFICER, DISTRICT\_OFFICER, BLOCK\_ENGINEER, HEADMASTER, ANM, VIEWER) \\
+Intervention   & Response log  & Actions taken in response to alerts, with cost tracking \\
+\bottomrule
+\end{tabularx}
+
+\section{Application Routes}
+
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+\textbf{Route} & \textbf{Status} & \textbf{Description} \\
+\midrule
+\texttt{/}               & Done  & Marketing landing page with 15 animated sections, alert ticker, tech architecture diagram \\
+\texttt{/login}          & Done  & NextAuth sign-in page (Google OAuth) \\
+\texttt{/dashboard}      & Done  & Leaflet choropleth risk map + KPI bar + climate strip + district sidebar + district-filtered live alerts \\
+\texttt{/facilities}     & Done  & Searchable facility list with type/district filters, pagination \\
+\texttt{/facilities/[id]}& Done  & Facility detail: sensors, forecasts, SHAP explainer, PV Health Card, What-if Simulator, Digital Twin \\
+\texttt{/alerts}         & Done  & Alert centre with filters, table, detail sheet, CSV export, WhatsApp dispatch \\
+\texttt{/analytics}      & Done  & 4 KPIs + 4 charts + forecast visualization + climate data per district \\
+\texttt{/admin}          & Done  & Admin CRUD panel (ADMIN role gated, bulk import) \\
+\bottomrule
+\end{tabularx}
+
+\section{tRPC API Layer}
+
+Nine routers compose the API surface:
+
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+\textbf{Router} & \textbf{Protection} & \textbf{Endpoints} \\
+\midrule
+\texttt{facilities}  & Public            & \texttt{list}, \texttt{byId}, \texttt{districts} \\
+\texttt{sensors}     & Public            & \texttt{latest}, \texttt{history} \\
+\texttt{alerts}      & Public/Protected  & \texttt{list} (district-filtered), \texttt{acknowledge}, \texttt{resolve}, \texttt{resolveWithIntervention}, \texttt{dismiss}, \texttt{sendWhatsApp} \\
+\texttt{risk}        & Public/Protected  & \texttt{byFacility}, \texttt{dashboard}, \texttt{score} (ML + Redis cache pipeline) \\
+\texttt{analytics}   & Public            & \texttt{summary}, \texttt{kpis}, \texttt{alertsByType}, \texttt{districtRisk}, \texttt{sensorHealthByDay}, \texttt{forecast} \\
+\texttt{admin}       & Admin-only        & User/Facility CRUD, bulk import (facilities, users, sensor readings), \texttt{seedDemoData} \\
+\texttt{climate}     & Public            & \texttt{districts}, \texttt{districtNames}, \texttt{monthlyHistory}, \texttt{yearlyHistory}, \texttt{recentDaily} \\
+\texttt{chat}        & Public            & \texttt{send} --- Gemini AI chatbot with 5 function-calling tools \\
+\texttt{digitalTwin} & Public            & \texttt{state} (unified facility view), \texttt{whatIf} (climate override simulation) \\
+\bottomrule
+\end{tabularx}
+
+The tRPC context injects the NextAuth session, Prisma client (for types), and the Supabase admin client (for all data access):
+
+\begin{lstlisting}[caption={tRPC context and middleware (server/trpc.ts)}]
+export async function createContext() {
+  const session = await getServerSession(authOptions)
+  return { session, prisma, supabase: supabaseAdmin }
+}
+// publicProcedure    -> no auth check
+// protectedProcedure -> requires valid session
+// adminProcedure     -> requires session + role === 'ADMIN'
+\end{lstlisting}
+
+\begin{infobox}
+All routers use \texttt{ctx.supabase} (Supabase JS client) for queries, not Prisma directly. The Prisma schema is retained for type generation, migrations, and as the canonical schema definition.
+\end{infobox}
+
+% ═════════════════════════════════════════════════════════════
+\chapter{Part 1: Implemented Features}
+
+All features from the original roadmap have been completed. This chapter documents the key implementations.
+
+\section{Supabase Realtime Integration}
+
+The dashboard alert feed subscribes to real-time Supabase changes via a custom hook:
+
+\begin{lstlisting}[caption={Realtime alerts hook (hooks/useRealtimeAlerts.ts)}]
+'use client'
+import { useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { supabase } from '@/lib/supabase'
+
+export function useRealtimeAlerts() {
+  const queryClient = useQueryClient()
+  useEffect(() => {
+    const channel = supabase
+      .channel('dashboard-alerts')
+      .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'Alert' },
+        () => {
+          queryClient.invalidateQueries({
+            queryKey: [['alerts', 'list']]
+          })
+        }
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [queryClient])
+}
+\end{lstlisting}
+
+\section{ML Pipeline \& FastAPI Service}
+
+The ML inference server (\texttt{ml/serve.py}) exposes 6 endpoints:
+
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+\textbf{Endpoint} & \textbf{Method} & \textbf{Description} \\
+\midrule
+\texttt{/health}                & GET  & Liveness check with loaded model counts \\
+\texttt{/api/v1/risk/score}     & POST & LightGBM multi-target risk scoring + SHAP top-10 explanation \\
+\texttt{/api/v1/forecast}       & POST & LSTM 14-day forecast with P10/P50/P90 bands (4 targets) \\
+\texttt{/api/v1/pv/health}      & POST & PV anomaly detection via physics model \\
+\texttt{/api/v1/whatif}          & POST & What-if risk re-scoring with climate overrides \\
+\texttt{/api/v1/digital-twin}   & POST & Unified facility state: risk + PV + climate + forecast \\
+\bottomrule
+\end{tabularx}
+
+\subsection{Risk Scoring Pipeline (tRPC)}
+
+The \\texttt{risk.score} mutation follows a 6-step pipeline:
+
+\begin{enumerate}
+  \item \textbf{Cache check} --- Redis lookup with 30-minute time-bucketed TTL keys
+  \item \textbf{Sensor fetch} --- Last 48 hours of readings via Supabase
+  \item \textbf{ML API call} --- POST to \texttt{ML\_API\_URL/api/v1/risk/score} with 10-second timeout
+  \item \textbf{Zod validation} --- Response schema validated before use
+  \item \textbf{DB persistence} --- RiskScore + ShapValues stored via Supabase insert
+  \item \textbf{Graceful fallback} --- On ML failure, returns latest cached score from DB
+\end{enumerate}
+
+\section{PV Anomaly Detector (Physics Model)}
+
+A physics-based solar panel performance model in \texttt{ml/pv\_anomaly.py}:
+
+\begin{equation}
+P = A \cdot \eta \cdot G \cdot (1 + \beta \cdot (T_{\text{cell}} - T_{\text{STC}}))
+\end{equation}
+
+where $T_{\text{cell}} = T_{\text{ambient}} + 0.0256 \cdot G$.
+
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+\textbf{Constant} & \textbf{Value} & \textbf{Meaning} \\
+\midrule
+$A$          & 2.0 m$^2$      & Panel area \\
+$\eta$       & 0.18           & Panel efficiency (18\%) \\
+$\beta$      & $-0.004$/°C   & Temperature coefficient \\
+$T_{\text{STC}}$ & 25°C      & Standard test condition temperature \\
+NOCT factor  & 0.0256         & Nominal operating cell temperature factor \\
+\bottomrule
+\end{tabularx}
+
+\textbf{Exported functions:}
+\begin{itemize}[nosep]
+  \item \texttt{expected\_pv\_output(ghi, t\_ambient)} --- Compute expected PV power (watts)
+  \item \texttt{compute\_derating\_ratio(actual, ghi, t\_ambient)} --- Ratio of actual/expected, capped [0, 2]
+  \item \texttt{detect\_pv\_anomalies(df)} --- Batch processing: adds derating columns + anomaly flags
+  \item \texttt{score\_pv\_health(ghi, ghi\_context, temperature)} --- Returns status (NORMAL/WARNING/CRITICAL) with health metrics
+\end{itemize}
+
+\section{Digital Twin API}
+
+The \texttt{digitalTwin} tRPC router provides two procedures:
+
+\subsection{State Query}
+
+Returns a unified facility view combining:
+\begin{itemize}[nosep]
+  \item Facility metadata (name, type, district, coordinates)
+  \item Latest sensor readings (deduplicated per sensor type)
+  \item Risk scores + SHAP feature importances
+  \item PV health assessment (ML API with local physics fallback)
+  \item 14-day forecasts for all targets
+  \item Active alerts for this facility
+\end{itemize}
+
+\subsection{What-if Mutation}
+
+Accepts climate parameter overrides (temperature, rainfall, humidity, GHI) and re-scores all risk dimensions. Implementation:
+\begin{enumerate}
+  \item Tries ML API (\texttt{/api/v1/whatif}) first
+  \item Falls back to local heuristic: weighted adjustments per risk domain (e.g., temperature $\rightarrow$ disease + energy risk, rainfall $\rightarrow$ water + sanitation risk)
+  \item Returns baseline, simulated, and delta values for all 5 risk dimensions
+\end{enumerate}
+
+\section{What-if Simulator UI}
+
+The \texttt{WhatIfSimulator.tsx} component on the facility detail page:
+
+\begin{itemize}[nosep]
+  \item \textbf{4 sliders}: Temperature (10--50°C), Rainfall (0--80 mm/day), Humidity (10--100\%), Solar GHI (0--8 kWh/m$^2$)
+  \item Calls \texttt{trpc.digitalTwin.whatIf.useMutation()} with overrides
+  \item Displays 5-row result table: Water, Energy, Sanitation, Disease, Overall $\times$ (Baseline / Simulated / Delta)
+  \item Color-coded deltas: coral for risk increase, leaf for decrease
+  \item Reset button and full i18n support (Hindi/English/Chhattisgarhi)
+\end{itemize}
+
+\section{PV Health Card}
+
+The \texttt{PvHealthCard.tsx} component displays:
+\begin{itemize}[nosep]
+  \item Status badge: NORMAL (green), WARNING (amber), CRITICAL (red)
+  \item Derating gauge bar with percentage
+  \item 3-column metrics: Expected kW, Actual kW, Derating ratio
+  \item Only renders when Digital Twin data includes PV health
+\end{itemize}
+
+\section{Gemini AI Chatbot}
+
+The \texttt{chat.send} mutation implements a multi-turn RAG chatbot:
+
+\begin{itemize}[nosep]
+  \item \textbf{AI Provider}: Gemini AI with function-calling capability
+  \item \textbf{Locale-aware}: System instruction forces response in user's language (en/hi/cg)
+  \item \textbf{Tool-use loop}: Up to 3 rounds of function calls per message
+  \item \textbf{5 live tools} that query Supabase in real-time:
+    \begin{enumerate}[nosep]
+      \item \texttt{getAlerts} --- filtered active alerts
+      \item \texttt{getFacilities} --- filtered facility list
+      \item \texttt{getRiskScores} --- latest risk scores
+      \item \texttt{getForecasts} --- latest forecast records
+      \item \texttt{getDistrictSummary} --- aggregated district stats (facility count, alerts, avg risk)
+    \end{enumerate}
+\end{itemize}
+
+\section{Multilingual System (i18n)}
+
+Custom Zustand-based internationalization supporting 3 locales:
+
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+\textbf{Locale} & \textbf{Label} & \textbf{Coverage} \\
+\midrule
+\texttt{en} & English            & 200+ keys --- full platform coverage \\
+\texttt{hi} & Hindi              & 200+ keys --- full platform coverage \\
+\texttt{cg} & छत्तीसगढ़ी         & 200+ keys --- full platform coverage \\
+\bottomrule
+\end{tabularx}
+
+Keys cover: navigation, dashboard, facilities, facility detail, PV health, what-if simulator, sensor types, alerts, analytics, climate data, admin panel, all landing page sections, footer, and common labels.
+
+The \\texttt{LanguageSelector} component in the navigation bar allows users to switch languages with a dropdown showing locale flags.
+
+\section{WhatsApp Alerts (Twilio)}
+
+The \\texttt{alerts.sendWhatsApp} mutation dispatches alerts via Twilio WhatsApp Business API:
+
+\begin{itemize}[nosep]
+  \item Phone normalization to E.164 format with \\texttt{whatsapp:} prefix
+  \item Template-based messages in HINDI or ENGLISH
+  \item \\texttt{AlertChannel} record created for delivery tracking
+  \item Direct REST calls to Twilio API (no SDK dependency)
+  \item Messages include: alert type, severity, facility name, district, timestamp, description
+\end{itemize}
+
+\section{District-Filtered Dashboard}
+
+Clicking a district on the Leaflet choropleth map or selecting from the sidebar filters:
+\begin{itemize}[nosep]
+  \item \textbf{Live alerts panel} --- only shows alerts from facilities in the selected district
+  \item \textbf{Facility risk list} --- filtered to selected district
+  \item \textbf{Climate data strip} --- shows temperature/rainfall/humidity/GHI for selected district
+  \item Alert badge count updates to reflect filtered count
+  \item Selecting ``All Districts'' removes the filter
+\end{itemize}
+
+\section{Leaflet Map Implementation}
+
+The district risk map (\texttt{MapboxDistrictMap.tsx}) uses the imperative Leaflet API for stability:
+
+\begin{itemize}[nosep]
+  \item \textbf{Imperative \\texttt{L.map()}} instead of react-leaflet's declarative components (prevents ``container reused'' errors on HMR/remount)
+  \item CARTO dark basemap tiles
+  \item GeoJSON choropleth from \\texttt{/chhattisgarh-districts.geojson} (33 districts)
+  \item 4-stop color gradient: teal (low risk) $\rightarrow$ amber $\rightarrow$ orange $\rightarrow$ red (high risk)
+  \item Hover tooltips showing district name + risk score
+  \item Click handler propagates to parent \\texttt{setSelectedDistrict}
+  \item Risk level legend overlay
+  \item Proper cleanup via \\texttt{map.remove()} in useEffect return
+\end{itemize}
+
+% ═════════════════════════════════════════════════════════════
+\chapter{Part 2: Connecting the Alert System}
+
+\section{Alert System Architecture}
+
+The alert system is the core value proposition of Climate Saathi. It connects ML-generated risk scores to frontline workers through multiple communication channels.
+
+\begin{center}
+\begin{tikzpicture}[
+  node distance=1.5cm,
+  box/.style={rectangle, draw=teal, fill=teal!10, rounded corners, minimum width=2.8cm, minimum height=1cm, align=center, font=\small},
+  channel/.style={rectangle, draw=orange, fill=orange!10, rounded corners, minimum width=2cm, minimum height=0.8cm, align=center, font=\small},
+  arrow/.style={-{Stealth[length=3mm]}, thick, teal!70}
+]
+  \node[box] (sensor) {Sensor\\Data};
+  \node[box, right=of sensor] (ml) {ML Risk\\Scoring};
+  \node[box, right=of ml] (alert) {Alert\\Generation};
+
+  \node[channel, below left=1.5cm and -0.5cm of alert] (inapp) {IN\_APP};
+  \node[channel, below=1.5cm of alert] (sms) {SMS / WA};
+  \node[channel, below right=1.5cm and -0.5cm of alert] (ivr) {IVR};
+
+  \node[font=\scriptsize\color{gray}, below=0.3cm of inapp] {Supabase\\Realtime};
+  \node[font=\scriptsize\color{gray}, below=0.3cm of sms] {Twilio /\\Gupshup};
+  \node[font=\scriptsize\color{gray}, below=0.3cm of ivr] {Exotel /\\Ozonetel};
+
+  \draw[arrow] (sensor) -- (ml);
+  \draw[arrow] (ml) -- (alert);
+  \draw[arrow] (alert) -- (inapp);
+  \draw[arrow] (alert) -- (sms);
+  \draw[arrow] (alert) -- (ivr);
+\end{tikzpicture}
+\end{center}
+
+\section{Alert Generation Flow}
+
+\subsection{Step 1: Threshold-Based Alert Triggers}
+
+When a new risk score is computed by the ML pipeline, the system checks thresholds and creates alerts automatically:
+
+\begin{lstlisting}[caption={Alert generation logic (added after risk score persistence)}]
+// server/services/alertGenerator.ts
+const THRESHOLDS = {
+  WATER_SHORTAGE: { field: 'waterRisk',   HIGH: 0.7, CRITICAL: 0.9 },
+  SOLAR_FAILURE:  { field: 'energyRisk',  HIGH: 0.7, CRITICAL: 0.9 },
+  HEAT_STRESS:    { field: 'diseaseRisk', HIGH: 0.65, CRITICAL: 0.85 },
+  DISEASE_RISK:   { field: 'diseaseRisk', HIGH: 0.6, CRITICAL: 0.8 },
+  TURBIDITY:      { field: 'sanitationRisk', HIGH: 0.7, CRITICAL: 0.9 },
+}
+
+async function generateAlerts(riskScore, facilityId, prisma) {
+  for (const [alertType, config] of Object.entries(THRESHOLDS)) {
+    const value = riskScore[config.field]
+    let severity = null
+    if (value >= config.CRITICAL) severity = 'CRITICAL'
+    else if (value >= config.HIGH) severity = 'HIGH'
+
+    if (severity) {
+      // Prevent duplicate active alerts
+      const existing = await prisma.alert.findFirst({
+        where: {
+          facilityId,
+          type: alertType,
+          status: { in: ['ACTIVE', 'ACKNOWLEDGED'] },
+        }
+      })
+      if (!existing) {
+        const alert = await prisma.alert.create({
+          data: {
+            facilityId,
+            type: alertType,
+            severity,
+            message: buildMessage(alertType, severity, value),
+            confidence: value,
+          }
+        })
+        // Trigger multi-channel dispatch
+        await dispatchAlert(alert, facilityId, prisma)
+      }
+    }
+  }
+}
+\end{lstlisting}
+
+\subsection{Step 2: Multi-Channel Dispatch}
+
+After an alert is created, it is dispatched through channels based on severity:
+
+\begin{lstlisting}[caption={Channel dispatch configuration}]
+// server/services/alertDispatch.ts
+const DISPATCH_CONFIG = {
+  CRITICAL: ['SMS', 'WHATSAPP', 'IVR', 'IN_APP', 'EMAIL'],
+  HIGH:     ['SMS', 'WHATSAPP', 'IN_APP'],
+  MEDIUM:   ['IN_APP', 'EMAIL'],
+  LOW:      ['IN_APP'],
+}
+
+async function dispatchAlert(alert, facilityId, prisma) {
+  const channels = DISPATCH_CONFIG[alert.severity]
+  const facility = await prisma.facility.findUnique({
+    where: { id: facilityId }
+  })
+
+  // Get recipients for this facility's district/block
+  const recipients = await prisma.user.findMany({
+    where: {
+      OR: [
+        { district: facility.district, block: facility.block },
+        { role: { in: ['STATE_OFFICER', 'ADMIN'] } },
+      ]
+    }
+  })
+
+  for (const channel of channels) {
+    for (const recipient of recipients) {
+      const contactInfo = channel === 'EMAIL'
+        ? recipient.email
+        : recipient.phone
+      if (!contactInfo) continue
+
+      await prisma.alertChannel.create({
+        data: {
+          alertId: alert.id,
+          channel,
+          recipient: contactInfo,
+          language: 'HINDI',  // default
+          status: 'PENDING',
+        }
+      })
+    }
+  }
+}
+\end{lstlisting}
+
+\subsection{Step 3: Channel-Specific Delivery}
+
+\begin{tabularx}{\textwidth}{lllX}
+\toprule
+\textbf{Channel} & \textbf{Provider} & \textbf{Languages} & \textbf{Implementation} \\
+\midrule
+IN\_APP   & Supabase Realtime & All       & Postgres changes trigger WebSocket push $\rightarrow$ React Query invalidation $\rightarrow$ UI refresh \\
+SMS       & Twilio            & Hindi, EN & Template-based SMS via Twilio REST API \\
+WhatsApp  & Twilio            & Hindi, EN & WhatsApp Business API --- implemented via direct REST calls (no SDK) \\
+IVR       & Exotel / Ozonetel & Hindi, CG & Pre-recorded voice alerts with DTMF acknowledgment (planned) \\
+EMAIL     & Resend / SendGrid & English   & HTML email with alert details + action link (planned) \\
+\bottomrule
+\end{tabularx}
+
+\section{Supabase Realtime Setup for Alerts}
+
+\subsection{Database Configuration}
+
+\begin{lstlisting}[caption={Enable Realtime replication (run in Supabase SQL Editor)}]
+-- Enable realtime for the Alert table
+ALTER PUBLICATION supabase_realtime ADD TABLE "Alert";
+
+-- Enable realtime for AlertChannel (delivery tracking)
+ALTER PUBLICATION supabase_realtime ADD TABLE "AlertChannel";
+
+-- Enable realtime for SensorReading (live sensor feeds)
+ALTER PUBLICATION supabase_realtime ADD TABLE "SensorReading";
+\end{lstlisting}
+
+\subsection{Client-Side Integration}
+
+The dashboard alert feed subscribes to real-time changes via the \texttt{useRealtimeAlerts} hook. When a new alert is inserted or updated, the Supabase WebSocket fires an event that invalidates the React Query cache --- the UI refreshes without polling.
+
+The dashboard also supports \textbf{district filtering}: when a user clicks a district on the choropleth map, both the facility risk list and the live alerts panel filter to that district only.
+
+\begin{lstlisting}[caption={Dashboard alert query with district filter}]
+const { data: activeAlertsRaw = [] } =
+  trpc.alerts.list.useQuery({
+    status: 'ACTIVE',
+    limit: 50,
+    ...(selectedDistrict !== 'all' &&
+      { district: selectedDistrict }),
+  })
+\end{lstlisting}
+
+\section{Alert Escalation Logic}
+
+Alerts that are not acknowledged within defined time windows are automatically escalated:
+
+\begin{lstlisting}[caption={Escalation timeline}]
+Escalation Timeline:
+  T+0min:  Alert created -> dispatch to configured channels
+  T+15min: If no ACKNOWLEDGED -> re-send + notify supervisor
+  T+1hr:   If still ACTIVE -> escalate to district officer
+  T+4hr:   If CRITICAL + still ACTIVE -> escalate to state officer
+
+Implementation: Vercel Cron Job running every 15 minutes
+(see Chapter 6, Section 6.4)
+\end{lstlisting}
+
+\section{Alert Lifecycle State Machine}
+
+\begin{center}
+\begin{tikzpicture}[
+  state/.style={rectangle, draw=teal, fill=teal!10, rounded corners, minimum width=2.5cm, minimum height=0.8cm, align=center, font=\small\bfseries},
+  arrow/.style={-{Stealth[length=3mm]}, thick},
+  label/.style={font=\scriptsize, color=gray, align=center}
+]
+  \node[state] (active) {ACTIVE};
+  \node[state, right=3cm of active] (ack) {ACKNOWLEDGED};
+  \node[state, right=3cm of ack] (resolved) {RESOLVED};
+  \node[state, below=1.5cm of active] (dismissed) {DISMISSED};
+
+  \draw[arrow, teal] (active) -- node[above, label] {User clicks\\Acknowledge} (ack);
+  \draw[arrow, teal] (ack) -- node[above, label] {User clicks Resolve\\+ logs intervention} (resolved);
+  \draw[arrow, orange] (active) -- node[right, label] {False\\positive} (dismissed);
+  \draw[arrow, danger, dashed] (active) to[bend right=30] node[below, label] {Auto-escalate\\(cron)} (active);
+\end{tikzpicture}
+\end{center}
+
+\textbf{Transitions:}
+\begin{itemize}[nosep]
+  \item \textbf{ACTIVE $\rightarrow$ ACKNOWLEDGED}: User clicks ``Acknowledge'' (via \texttt{alerts.acknowledge} tRPC mutation)
+  \item \textbf{ACKNOWLEDGED $\rightarrow$ RESOLVED}: User clicks ``Resolve'' and logs an intervention (via \texttt{alerts.resolve} mutation)
+  \item \textbf{ACTIVE $\rightarrow$ DISMISSED}: User marks alert as false positive
+  \item \textbf{Auto-escalation}: Cron job re-dispatches and notifies higher-level officers
+\end{itemize}
+
+% ═════════════════════════════════════════════════════════════
+\chapter{Part 3: Environment Variables}
+
+All environment variables required for the full system:
+
+\begin{lstlisting}[caption={Complete .env.local reference}]
+# ─── Database ───
+DATABASE_URL="postgresql://user:pass@host:5432/climate_saathi
+  ?pgbouncer=true&connection_limit=1"
+
+# ─── Auth (NextAuth) ───
+NEXTAUTH_URL="https://your-domain.vercel.app"
+NEXTAUTH_SECRET="<openssl rand -base64 32>"
+GOOGLE_CLIENT_ID="xxx.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET="GOCSPX-xxx"
+
+# ─── Supabase (Data + Realtime) ───
+NEXT_PUBLIC_SUPABASE_URL="https://xxx.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="eyJhbGciOiJIUz..."
+SUPABASE_SERVICE_ROLE_KEY="eyJhbGciOiJIUz..."
+
+# ─── Maps ───
+NEXT_PUBLIC_MAPBOX_TOKEN="pk.eyJ1..."  # optional
+
+# ─── ML Service ───
+ML_API_URL="https://ml-api.your-domain.com"
+ML_API_KEY="your-ml-api-key"
+
+# ─── Redis (optional) ───
+REDIS_URL="rediss://default:xxx@redis-host:6379"
+RISK_CACHE_TTL_S="1800"
+
+# ─── Cron Security ───
+CRON_SECRET="<openssl rand -base64 32>"
+
+# ─── WhatsApp Alerts (Twilio) ───
+TWILIO_ACCOUNT_SID="ACxxx"
+TWILIO_AUTH_TOKEN="xxx"
+TWILIO_WHATSAPP_FROM="whatsapp:+14155238886"
+
+# ─── AI Chatbot ───
+GEMINI_API_KEY="xxx"
+\end{lstlisting}
+
+\begin{critbox}
+\textbf{Security:} Never commit \texttt{.env.local} to git. Only variables prefixed with \texttt{NEXT\_PUBLIC\_} are exposed to the browser. All others remain server-side only.
+\end{critbox}
+
+% ═════════════════════════════════════════════════════════════
+\chapter{Part 4: Deploying to Vercel}
+
+\section{Prerequisites}
+
+\begin{enumerate}
+  \item A \href{https://vercel.com}{Vercel} account (free Hobby tier works to start)
+  \item A PostgreSQL database (recommended: \href{https://supabase.com}{Supabase} or \href{https://neon.tech}{Neon})
+  \item Git repository pushed to GitHub
+  \item All environment variables from Chapter 5 ready
+  \item (Optional) Redis instance for caching (e.g., Upstash)
+\end{enumerate}
+
+\section{Step-by-Step Deployment}
+
+\subsection{Step 1: Prepare the Repository}
+
+\begin{lstlisting}[language=bash, caption={Local verification before deploy}]
+cd climate-saathi-next
+
+# Verify the build works locally
+npm run build
+
+# Ensure prisma client is generated
+npx prisma generate
+
+# Push to GitHub
+git add .
+git commit -m "prepare for Vercel deployment"
+git push origin main
+\end{lstlisting}
+
+\subsection{Step 2: Connect to Vercel}
+
+\begin{enumerate}
+  \item Navigate to \texttt{vercel.com/new}
+  \item Click ``Import Git Repository'' and select your GitHub repo
+  \item Set the root directory to \texttt{climate-saathi-next}
+  \item Framework preset: \textbf{Next.js} (auto-detected)
+  \item Build command: \texttt{npx prisma generate \&\& next build}
+  \item Output directory: \texttt{.next} (default)
+  \item Click ``Deploy''
+\end{enumerate}
+
+\subsection{Step 3: Configure Environment Variables}
+
+In the Vercel project dashboard:
+\begin{enumerate}
+  \item Go to \textbf{Settings $\rightarrow$ Environment Variables}
+  \item Add all variables from Chapter 5
+  \item Ensure \texttt{DATABASE\_URL} points to your production PostgreSQL
+  \item Set \texttt{NEXTAUTH\_URL} to your Vercel deployment URL
+\end{enumerate}
+
+\begin{critbox}
+\textbf{Critical:} After setting \texttt{NEXTAUTH\_URL}, update your Google OAuth console to add the Vercel URL as an authorized redirect URI: \texttt{https://your-app.vercel.app/api/auth/callback/google}
+\end{critbox}
+
+\subsection{Step 4: Database Migration}
+
+\begin{lstlisting}[language=bash, caption={Run Prisma migrations against production}]
+# Option A: Run locally against production DB
+DATABASE_URL="postgresql://..." npx prisma migrate deploy
+
+# Option B: Use Vercel build command (recommended)
+# Set build command in Vercel to:
+# "npx prisma generate && npx prisma migrate deploy && next build"
+
+# Note: All runtime queries use Supabase JS client,
+# but Prisma schema is the source of truth for
+# migrations and TypeScript type generation.
+\end{lstlisting}
+
+\subsection{Step 5: Configure vercel.json}
+
+\begin{lstlisting}[caption={vercel.json (project root)}]
+{
+  "framework": "nextjs",
+  "buildCommand": "npx prisma generate && next build",
+  "regions": ["bom1"],
+  "crons": [
+    {
+      "path": "/api/cron/escalate-alerts",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/score-risks",
+      "schedule": "0 */6 * * *"
+    }
+  ]
+}
+\end{lstlisting}
+
+\begin{infobox}
+Region \texttt{bom1} is Mumbai, India --- closest Vercel region to Chhattisgarh for lowest latency. All Serverless Functions will execute in this region.
+\end{infobox}
+
+\subsection{Step 6: Deploy}
+
+\begin{lstlisting}[language=bash, caption={Deploy options}]
+# Option A: Vercel CLI
+npm i -g vercel
+vercel --prod
+
+# Option B: Git push (auto-deploys if connected)
+git push origin main
+
+# Option C: Vercel Dashboard
+# Click "Redeploy" in the deployments tab
+\end{lstlisting}
+
+\section{Vercel Cron Jobs}
+
+Two cron jobs are needed for the alert system:
+
+\subsection{Alert Escalation Cron (every 15 minutes)}
+
+\begin{lstlisting}[caption={app/api/cron/escalate-alerts/route.ts}]
+import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+
+export const runtime = 'nodejs'
+export const maxDuration = 30 // seconds
+
+export async function GET(req: Request) {
+  // Verify cron secret (Vercel sends this automatically)
+  const authHeader = req.headers.get('authorization')
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json(
+      { error: 'Unauthorized' }, { status: 401 }
+    )
+  }
+
+  const fifteenMinAgo = new Date(Date.now() - 15 * 60 * 1000)
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000)
+  const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000)
+
+  // Level 1: Re-send after 15 minutes
+  const level1 = await prisma.alert.findMany({
+    where: {
+      status: 'ACTIVE',
+      triggeredAt: { lt: fifteenMinAgo, gt: oneHourAgo },
+    },
+    include: { facility: true },
+  })
+
+  // Level 2: Escalate to district officer after 1 hour
+  const level2 = await prisma.alert.findMany({
+    where: {
+      status: 'ACTIVE',
+      triggeredAt: { lt: oneHourAgo, gt: fourHoursAgo },
+    },
+    include: { facility: true },
+  })
+
+  // Level 3: CRITICAL still active after 4 hours
+  //          -> notify state officer
+  const level3 = await prisma.alert.findMany({
+    where: {
+      status: 'ACTIVE',
+      severity: 'CRITICAL',
+      triggeredAt: { lt: fourHoursAgo },
+    },
+    include: { facility: true },
+  })
+
+  return NextResponse.json({
+    escalated: {
+      level1: level1.length,
+      level2: level2.length,
+      level3: level3.length,
+    }
+  })
+}
+\end{lstlisting}
+
+\subsection{Risk Scoring Cron (every 6 hours)}
+
+\begin{lstlisting}[caption={app/api/cron/score-risks/route.ts}]
+import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+
+export const runtime = 'nodejs'
+export const maxDuration = 60 // seconds
+
+export async function GET(req: Request) {
+  const authHeader = req.headers.get('authorization')
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json(
+      { error: 'Unauthorized' }, { status: 401 }
+    )
+  }
+
+  const facilities = await prisma.facility.findMany({
+    select: { id: true }
+  })
+
+  let scored = 0, failed = 0
+  for (const f of facilities) {
+    try {
+      const since = new Date(Date.now() - 48 * 3600 * 1000)
+      const readings = await prisma.sensorReading.findMany({
+        where: {
+          facilityId: f.id,
+          timestamp: { gte: since }
+        },
+        orderBy: { timestamp: 'desc' },
+      })
+
+      const res = await fetch(
+        `${process.env.ML_API_URL}/api/v1/risk/score`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': process.env.ML_API_KEY ?? '',
+          },
+          body: JSON.stringify({
+            facilityId: f.id, readings
+          }),
+          signal: AbortSignal.timeout(10000),
+        }
+      )
+      if (res.ok) scored++
+      else failed++
+    } catch { failed++ }
+  }
+
+  return NextResponse.json({
+    total: facilities.length, scored, failed
+  })
+}
+\end{lstlisting}
+
+\section{Post-Deployment Checklist}
+
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Check} & \textbf{How to Verify} \\
+\midrule
+Build succeeds          & Green checkmark in Vercel dashboard deployments tab \\
+Database connected      & Visit \texttt{/api/trpc/facilities.list} --- should return JSON \\
+Auth works              & Click ``Sign in with Google'' on \texttt{/login} \\
+Leaflet map loads       & Visit \texttt{/dashboard} --- choropleth map should render with 33 districts \\
+Supabase Realtime       & Open DevTools Network tab --- check for WebSocket connection \\
+ML API reachable        & Score a facility via \texttt{/facilities/[id]} \\
+Digital Twin            & Check PV Health Card appears on facility detail when ML API is up \\
+What-if Simulator       & Adjust sliders on facility detail --- risk deltas should appear \\
+AI Chatbot              & Open chat and ask about a district --- should get live data response \\
+WhatsApp dispatch       & Trigger ``Send WhatsApp'' on an alert --- check Twilio logs \\
+i18n switching           & Use language selector --- all labels should update to Hindi/Chhattisgarhi \\
+Cron jobs registered    & Vercel dashboard $\rightarrow$ Crons tab shows 2 scheduled jobs \\
+HTTPS active            & URL starts with \texttt{https://} \\
+Google OAuth redirect   & Verify redirect URI matches in Google Console \\
+\bottomrule
+\end{tabularx}
+
+\section{Custom Domain Setup}
+
+\begin{enumerate}
+  \item In Vercel: \textbf{Settings $\rightarrow$ Domains $\rightarrow$ Add Domain}
+  \item Enter your domain (e.g., \texttt{climatesaathi.in})
+  \item Add DNS records at your domain registrar:
+  \begin{itemize}
+    \item \texttt{A} record pointing to \texttt{76.76.21.21}
+    \item \texttt{CNAME} for \texttt{www} pointing to \texttt{cname.vercel-dns.com}
+  \end{itemize}
+  \item Vercel auto-provisions an SSL certificate
+  \item Update \texttt{NEXTAUTH\_URL} env var to \texttt{https://climatesaathi.in}
+  \item Update Google OAuth redirect URI to match new domain
+  \item Redeploy for env var changes to take effect
+\end{enumerate}
+
+% ═════════════════════════════════════════════════════════════
+\chapter{Production Considerations}
+
+\section{Performance}
+
+\begin{itemize}
+  \item \textbf{Connection pooling}: Supabase built-in connection pooler (PgBouncer); append \texttt{?pgbouncer=true\&connection\_limit=1} for serverless
+  \item \textbf{Redis caching}: Risk scores cached for 30 minutes via time-bucketed keys to reduce ML API calls
+  \item \textbf{Image optimization}: Use \texttt{next/image} for all images --- Vercel optimizes and serves from edge CDN
+  \item \textbf{Bundle size}: Dynamic imports for Leaflet map, Recharts, and Framer Motion prevent SSR crashes and reduce initial bundle
+  \item \textbf{ISR}: Analytics page can use Incremental Static Regeneration with 5-minute revalidation
+  \item \textbf{Supabase queries}: All data access via Supabase JS client (REST API), avoiding Prisma's connection overhead in serverless
+\end{itemize}
+
+\section{Security}
+
+\begin{itemize}
+  \item All tRPC mutations protected by \texttt{protectedProcedure} or \texttt{adminProcedure} middleware
+  \item Cron endpoints secured with \texttt{CRON\_SECRET} bearer token
+  \item Environment variables: only \texttt{NEXT\_PUBLIC\_*} exposed to browser; all secrets server-side only
+  \item Zod validation on every tRPC input prevents injection attacks
+  \item NextAuth provides CSRF protection and secure session management
+  \item Role-based access: 7 roles from ADMIN to VIEWER with appropriate permissions
+  \item Supabase service-role key used server-side only; anon key for client-side Realtime subscriptions
+  \item WhatsApp dispatch uses Twilio Basic auth with per-request phone normalization
+  \item AI chatbot tools query Supabase with read-only access (no mutations exposed)
+\end{itemize}
+
+\section{Monitoring \& Observability}
+
+\begin{itemize}
+  \item \textbf{Vercel Analytics}: Enable for Core Web Vitals tracking (LCP, FID, CLS)
+  \item \textbf{Vercel Logs}: Real-time serverless function logs in dashboard
+  \item \textbf{Error tracking}: Add \texttt{@sentry/nextjs} for production error monitoring with source maps
+  \item \textbf{Uptime monitoring}: UptimeRobot or Better Uptime for endpoint health checks
+  \item \textbf{Cron monitoring}: Vercel Cron tab shows execution history and failures
+\end{itemize}
+
+\section{Scaling Considerations}
+
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Concern} & \textbf{Solution} \\
+\midrule
+Serverless cold starts   & Mumbai region (\texttt{bom1}) reduces latency; Vercel auto-scales \\
+Database connections      & Supabase built-in PgBouncer; JS client uses REST (no persistent connections) \\
+Sensor data volume        & Supabase indexes on \texttt{(facilityId, timestamp)} for efficient range queries \\
+ML API bottleneck         & Redis cache (30min TTL) + batch scoring via 6-hour cron \\
+Concurrent WebSockets     & Supabase handles 500+ concurrent Realtime connections on free tier \\
+Traffic spikes            & Vercel Edge Network auto-scales; static assets cached globally \\
+AI chatbot rate limits    & Gemini API with per-request tool-calling; max 3 rounds per message \\
+71K+ facilities           & Paginated queries (default 50/page); district filtering reduces working set \\
+\bottomrule
+\end{tabularx}
+
+% ═════════════════════════════════════════════════════════════
+\chapter{CI/CD Pipeline}
+
+\section{Automatic Deployments}
+
+With Vercel connected to GitHub:
+
+\begin{itemize}
+  \item \textbf{Push to \texttt{main}} $\rightarrow$ Production deployment
+  \item \textbf{Push to feature branch} $\rightarrow$ Preview deployment with unique URL
+  \item \textbf{Pull requests} $\rightarrow$ Preview deployment + bot comment with URL
+\end{itemize}
+
+\section{Recommended GitHub Actions}
+
+\begin{lstlisting}[caption={.github/workflows/ci.yml}]
+name: CI
+on: [push, pull_request]
+
+jobs:
+  lint-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path:
+            climate-saathi-next/package-lock.json
+      - run: cd climate-saathi-next && npm ci
+      - run: cd climate-saathi-next && npx prisma generate
+      - run: cd climate-saathi-next && npx tsc --noEmit
+      - run: cd climate-saathi-next && npm run build
+\end{lstlisting}
+
+% ═════════════════════════════════════════════════════════════
+\chapter{Appendix}
+
+\section{Complete File Structure}
+
+\begin{lstlisting}
+climate-saathi-next/
+  app/
+    (marketing)/              # Public landing page
+      layout.tsx
+      page.tsx
+      _components/            # 15 marketing components
+        Nav.tsx, HeroSection.tsx, AlertTicker.tsx,
+        DashboardPreview.tsx, FeaturesStrip.tsx,
+        HowItWorks.tsx, ImpactNumbers.tsx,
+        CoverageMap.tsx, MiniMap.tsx,
+        AIIntelligenceSection.tsx, LiveDataStream.tsx,
+        MultilingualAlertPreview.tsx, BeforeAfter.tsx,
+        TechArchitecture.tsx, CTASection.tsx, Footer.tsx
+      _hooks/
+        useAnimCounter.ts
+    (app)/                    # Authenticated app
+      layout.tsx
+      dashboard/
+        page.tsx              # Map + KPIs + district-filtered alerts
+        _components/MapboxDistrictMap.tsx  # Imperative Leaflet choropleth
+      facilities/
+        page.tsx
+        [id]/page.tsx         # + PvHealthCard + WhatIfSimulator + Digital Twin
+      alerts/page.tsx
+      analytics/page.tsx
+      admin/page.tsx
+    api/
+      trpc/[...trpc]/route.ts
+      auth/[...nextauth]/route.ts
+      cron/                   # Production cron endpoints
+        escalate-alerts/route.ts
+        score-risks/route.ts
+    login/page.tsx
+    layout.tsx                # Root layout (fonts + providers)
+    globals.css               # Design tokens + base styles
+  server/
+    trpc.ts                   # tRPC init + auth middleware (Prisma + Supabase context)
+    routers/
+      index.ts                # App router (9 sub-routers)
+      facilities.ts           # list, byId, districts
+      sensors.ts              # latest, history
+      alerts.ts               # list, acknowledge, resolve, dismiss, sendWhatsApp
+      risk.ts                 # byFacility, dashboard, score (ML + Redis pipeline)
+      analytics.ts            # summary, kpis, alertsByType, districtRisk, sensorHealthByDay, forecast
+      admin.ts                # CRUD + bulk import + seedDemoData
+      climate.ts              # districts, districtNames, monthlyHistory, yearlyHistory, recentDaily
+      chat.ts                 # Gemini AI chatbot with 5 function-calling tools
+      digitalTwin.ts          # state (unified view), whatIf (climate simulation)
+    services/
+      whatsapp.ts             # Twilio WhatsApp dispatch
+      climateData.ts          # File-based climate data service (NASA POWER dataset)
+      gemini.ts               # Gemini AI client with function-calling
+  lib/
+    prisma.ts                 # Prisma singleton (types + schema)
+    trpc.ts                   # tRPC React client
+    auth.ts                   # NextAuth config (Google OAuth)
+    supabase.ts               # Supabase client (anon + admin)
+    redis.ts                  # Redis client (optional, graceful fallback)
+    utils.ts                  # shadcn cn() utility
+    i18n/                     # Internationalization system
+      index.ts                # Barrel exports
+      store.ts                # Zustand language store
+      translations.ts         # 200+ keys x 3 locales (en, hi, cg)
+      useTranslation.ts       # Translation hook
+  hooks/
+    useRealtimeAlerts.ts      # Supabase Realtime subscription
+  store/
+    useDashboardStore.ts      # Zustand global state
+  components/
+    Navigation.tsx            # App navigation bar
+    LanguageSelector.tsx      # Locale switcher dropdown
+    Providers.tsx             # React Query + tRPC + Theme providers
+    ThemeProvider.tsx          # Dark/light mode
+    ThemeToggle.tsx            # Theme toggle button
+    ui/                       # shadcn components (17 components)
+    ui-custom/                # Custom domain components
+      AlertItem.tsx
+      CustomSelect.tsx
+      ForecastChart.tsx
+      PulseDot.tsx
+      RiskBadge.tsx
+      SensorCard.tsx
+      ShapExplainer.tsx
+      WhatIfSimulator.tsx     # Climate parameter sliders + risk simulation
+      PVHealthCard.tsx        # Solar PV health display
+  ml/                         # Python ML service
+    serve.py                  # FastAPI server (6 endpoints)
+    pv_anomaly.py             # Physics-based PV anomaly detector
+    train_forecast_model.py   # LSTM forecast model training
+    train_risk_model.py       # LightGBM risk model training
+    requirements.txt
+    models/                   # Trained model files (.keras, .joblib, .json)
+    utils/                    # ML utilities
+  dataset/                    # Source data (NASA POWER, FIRMS, health)
+  data/                       # GeoJSON paths + mock data
+  prisma/
+    schema.prisma             # 9-model schema (PostgreSQL)
+  public/
+    chhattisgarh-districts.geojson  # 33 districts for choropleth
+  vercel.json                 # Deployment config + crons
+  package.json
+\end{lstlisting}
+
+\section{Key Commands Reference}
+
+\begin{lstlisting}[language=bash]
+# ─── Development ───
+npm run dev                   # Start dev server on :3000
+npm run build                 # Local build test
+
+# ─── Database ───
+npx prisma migrate dev        # Run migrations (development)
+npx prisma migrate deploy     # Run migrations (production)
+npx prisma studio             # Visual database browser
+npx prisma generate           # Regenerate Prisma client
+npx prisma db seed            # Seed database (if seed script exists)
+
+# ─── Deployment ───
+vercel --prod                 # Deploy to production
+vercel env pull .env.local    # Pull env vars locally
+vercel logs                   # View function logs
+
+# ─── Utilities ───
+npx tsc --noEmit              # Type-check without emitting
+npx shadcn@latest add <name>  # Add shadcn component
+\end{lstlisting}
+
+\section{Severity Color Mapping}
+
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+\textbf{Severity} & \textbf{Color Hex} & \textbf{Usage} \\
+\midrule
+LOW      & \texttt{\#0FBF8C} (teal)   & Minor issues, informational \\
+MEDIUM   & \texttt{\#f59e0b} (amber)  & Moderate risk, needs attention \\
+HIGH     & \texttt{\#F5821F} (orange) & Significant risk, action needed \\
+CRITICAL & \texttt{\#ef4444} (red)    & Emergency, immediate action required \\
+\bottomrule
+\end{tabularx}
+
+\vfill
+\begin{center}
+\textcolor{teal}{\rule{0.5\textwidth}{0.5pt}}\\
+\vspace{0.5cm}
+{\large\textbf{Team BioXtreme}} $\cdot$ NIT Raipur $\cdot$ UNICEF Climatathon 2026\\
+\textit{Protecting every child $\cdot$ every clinic $\cdot$ every day}
+\end{center}
+
+\end{document}

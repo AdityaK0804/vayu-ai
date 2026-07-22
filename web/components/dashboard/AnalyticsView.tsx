@@ -10,7 +10,7 @@ import { ChartTooltip } from "@/components/charts/tooltip";
 import { PieWithLegend, type PieData } from "@/components/charts/PieChart";
 import { aqiCss } from "@/lib/aqiScale";
 import { SOURCE_LABEL } from "@/lib/aqi";
-import { useAttribution, useMetrics, usePriority, useStationsLive } from "@/lib/data";
+import { useAttribution, useInterventions, useMetrics, usePriority, useStationsLive } from "@/lib/data";
 import { useDistricts } from "@/lib/districts";
 import { useT } from "@/lib/i18n";
 import { useApp } from "@/lib/store";
@@ -97,6 +97,7 @@ export default function AnalyticsView() {
   const { data: metrics } = useMetrics(city);
   const { data: priority } = usePriority(city);
   const { data: attribution } = useAttribution(city);
+  const { data: interventions } = useInterventions();
   const { data: stationsLive } = useStationsLive();
 
   const props = useMemo(
@@ -452,15 +453,26 @@ export default function AnalyticsView() {
         </div>
       </div>
 
-      {priority && (
-        <div className="card" style={{ marginTop: 16 }}>
-          <div className="card-h">
-            <h3>{t("Enforcement pipeline")}</h3>
-            <span className="sub">
-              {priority.signal_to_dossier_seconds}s {t("signal → dossier")}
-            </span>
-          </div>
-          <div style={{ padding: "14px 18px 18px" }}>
+      {/* Multi-city enforcement — not Korba-only */}
+      <div className="card" style={{ marginTop: 16 }}>
+        <div className="card-h">
+          <h3>{t("Enforcement pipeline")}</h3>
+          <span className="sub">
+            {interventions
+              ? `${interventions.n_items} cities · multi-city · CPCB PM2.5 scale`
+              : t("signal → dossier")}
+          </span>
+        </div>
+        <div style={{ padding: "14px 18px 18px" }}>
+          {(interventions?.items?.length ?? 0) > 0 ? (
+            <Bars
+              rows={(interventions?.items ?? []).map((d) => ({
+                label: d.city_name,
+                value: Math.round(d.pm25),
+                color: d.category_hex,
+              }))}
+            />
+          ) : priority ? (
             <Bars
               rows={priority.dossiers.slice(0, 6).map((d) => ({
                 label: d.ward,
@@ -468,9 +480,11 @@ export default function AnalyticsView() {
                 color: aqiCss(d.predicted_pm25 * 2),
               }))}
             />
-          </div>
+          ) : (
+            <span className="sub">{t("No enforcement rows.")}</span>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

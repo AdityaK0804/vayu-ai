@@ -1,0 +1,19 @@
+{
+  "lookback": 60,
+  "horizon": 14,
+  "feature_cols": [
+    "temperature",
+    "rainfall",
+    "humidity",
+    "ghi",
+    "fire_count",
+    "fire_frp_sum"
+  ],
+  "targets": {
+    "WATER_LEVEL": "rainfall",
+    "SOLAR_OUTPUT": "ghi",
+    "DISEASE_RISK": "heat_humidity_idx",
+    "HEAT_INDEX": "temperature",
+    "FIRE_RISK": "fire_count"
+  }
+}
