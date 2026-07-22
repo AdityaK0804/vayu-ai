@@ -104,6 +104,9 @@ const HI: Dict = {
   "Enforcement pipeline": "प्रवर्तन पाइपलाइन",
   "signal → dossier": "सिग्नल → डोज़ियर",
   "No metrics yet.": "अभी कोई मेट्रिक नहीं।",
+  "time-ordered test split · real CPCB labels": "समय-क्रमित परीक्षण विभाजन · वास्तविक CPCB लेबल",
+  "Persistence repeats the last measured value; CAMS is the bias-corrected Copernicus model. Both are scored on the same held-out hours as ours — the split is time-ordered, never shuffled, so no future data leaks into training.":
+    "पर्सिस्टेंस अंतिम मापे गए मान को दोहराता है; CAMS पूर्वाग्रह-सुधारित कोपरनिकस मॉडल है। दोनों को हमारे ही रोके गए घंटों पर आँका गया है — विभाजन समय-क्रमित है, कभी फेंटा नहीं गया, इसलिए भविष्य का डेटा प्रशिक्षण में नहीं रिसता।",
   coverage: "कवरेज",
   "COMMAND CENTER": "कमांड सेंटर",
   "Search wards, stations, sources…": "वार्ड, स्टेशन, स्रोत खोजें…",

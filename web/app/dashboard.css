@@ -360,3 +360,15 @@
   flex-wrap: wrap; margin-left: auto;
 }
 .card.selbar:hover { transform: none; box-shadow: var(--shadow); border-color: var(--line); }
+
+/* --- chart primitives (components/charts) ---
+   Bars animate from the baseline, so transform-origin is set inline per
+   orientation; these keyframes only supply the scale. */
+@keyframes barGrowV { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes barGrowH { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes barFade  { from { opacity: 0; filter: blur(6px); } to { opacity: 1; filter: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  /* keep the bars — just stop them moving */
+  [style*="barGrow"], [style*="barFade"] { animation: none !important; }
+}

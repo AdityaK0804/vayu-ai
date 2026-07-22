@@ -2,8 +2,16 @@
 
 import { useMemo, useState } from "react";
 
+import {
+  Bar,
+  BarChart,
+  BarLegend,
+  BarXAxis,
+  ChartTooltip,
+  Grid,
+} from "@/components/charts/BarChart";
 import { PieWithLegend, type PieData } from "@/components/charts/PieChart";
-import { AQI_BANDS, aqiCss, aqiLabel } from "@/lib/aqiScale";
+import { aqiCss } from "@/lib/aqiScale";
 import { SOURCE_LABEL } from "@/lib/aqi";
 import { useMetrics, usePriority, useStationsLive } from "@/lib/data";
 import { useDistricts } from "@/lib/districts";
@@ -77,55 +85,12 @@ function Bars({ rows }: { rows: { label: string; value: number; color: string }[
   );
 }
 
-/** Grouped bars comparing our model against each baseline, per horizon. */
-function ModelCompare({
-  rows,
-}: {
-  rows: { h: number; model: number; persistence: number; cams: number }[];
-}) {
-  const max = Math.max(...rows.flatMap((r) => [r.model, r.persistence, r.cams]), 1);
-  const series = [
-    { k: "model" as const, label: "Vayu AI", color: "var(--accent)" },
-    { k: "persistence" as const, label: "Persistence", color: "var(--ink-3)" },
-    { k: "cams" as const, label: "CAMS", color: "var(--accent-2)" },
-  ];
-  return (
-    <div>
-      <div style={{ display: "flex", gap: 16, marginBottom: 14, flexWrap: "wrap" }}>
-        {series.map((s) => (
-          <span key={s.k} style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11 }}>
-            <span style={{ width: 10, height: 10, borderRadius: 3, background: s.color }} />
-            <span style={{ color: "var(--ink-2)" }}>{s.label}</span>
-          </span>
-        ))}
-      </div>
-      <div style={{ display: "flex", gap: 22, alignItems: "flex-end", height: 168 }}>
-        {rows.map((r) => (
-          <div key={r.h} style={{ flex: 1, display: "grid", gap: 6, justifyItems: "center" }}>
-            <div style={{ display: "flex", gap: 5, alignItems: "flex-end", height: 132 }}>
-              {series.map((s) => (
-                <div
-                  key={s.k}
-                  title={`${s.label}: ${r[s.k]}`}
-                  style={{
-                    width: 20,
-                    height: `${(r[s.k] / max) * 100}%`,
-                    background: s.color,
-                    borderRadius: "4px 4px 0 0",
-                    transition: "height .6s cubic-bezier(.34,1.56,.64,1)",
-                  }}
-                />
-              ))}
-            </div>
-            <span className="crumb" style={{ fontSize: 10 }}>
-              +{r.h}h
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+/** Colours for the three forecast series, shared by chart and legend. */
+const MODEL_SERIES = [
+  { key: "model", label: "Vayu AI", fill: "var(--accent)" },
+  { key: "persistence", label: "Persistence", fill: "#94a3b8" },
+  { key: "cams", label: "CAMS", fill: "#818cf8" },
+];
 
 /* ------------------------------------------------------------------- view */
 export default function AnalyticsView() {
@@ -187,29 +152,6 @@ export default function AnalyticsView() {
     [pollutantMix],
   );
 
-  /* ---- districts per AQI category ---- */
-  const byBand = useMemo<PieData[]>(() => {
-    const counts = new Map<string, number>();
-    for (const p of props) {
-      const lbl = aqiLabel(p.display_aqi);
-      counts.set(lbl, (counts.get(lbl) ?? 0) + 1);
-    }
-    return AQI_BANDS.filter((b) => counts.get(b.label)).map((b) => ({
-      label: t(b.label),
-      value: counts.get(b.label) ?? 0,
-      color: b.hex,
-    }));
-  }, [props, t]);
-
-  /* ---- measured vs modelled coverage ---- */
-  const coverage = useMemo<PieData[]>(() => {
-    const m = props.filter((p) => p.display_basis === "measured").length;
-    return [
-      { label: t("measured"), value: m, color: "#34d399" },
-      { label: t("model"), value: props.length - m, color: "#38bdf8" },
-    ].filter((d) => d.value > 0);
-  }, [props, t]);
-
   /* ---- statewide source mix from SHAP, population-weighted ---- */
   const sourceMix = useMemo<PieData[]>(() => {
     const acc: Record<string, number> = { industry: 0, traffic: 0, fire: 0, dust: 0 };
@@ -255,19 +197,10 @@ export default function AnalyticsView() {
     })).filter((d) => d.value > 0);
   }, [props, t]);
 
-  const topDistricts = useMemo(
-    () =>
-      [...props]
-        .sort((a, b) => (b.display_aqi ?? 0) - (a.display_aqi ?? 0))
-        .slice(0, 8)
-        .map((p) => ({ label: p.name, value: p.display_aqi ?? 0, color: aqiCss(p.display_aqi) })),
-    [props],
-  );
-
   const compare = useMemo(
     () =>
       (metrics?.forecast_vs_baselines ?? []).map((h) => ({
-        h: h.horizon_h,
+        horizon: `+${h.horizon_h}h`,
         model: h.model_rmse ?? 0,
         persistence: h.persistence_rmse ?? 0,
         cams: h.cams_bc_rmse ?? 0,
@@ -394,28 +327,8 @@ export default function AnalyticsView() {
         </div>
       </div>
 
-      {/* ---------------- the rest ---------------- */}
-      <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(340px,1fr))" }}>
-        <div className="card">
-          <div className="card-h">
-            <h3>{t("Districts by AQI category")}</h3>
-            <span className="sub">{t("live")}</span>
-          </div>
-          <div style={{ padding: "16px 18px 20px" }}>
-            <PieWithLegend data={byBand} centerLabel={t("districts")} />
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="card-h">
-            <h3>{t("Measured vs modelled")}</h3>
-            <span className="sub">{t("coverage")}</span>
-          </div>
-          <div style={{ padding: "16px 18px 20px" }}>
-            <PieWithLegend data={coverage} centerLabel={t("districts")} />
-          </div>
-        </div>
-
+      {/* ---------------- source + sector pies ---------------- */}
+      <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(400px,1fr))" }}>
         <div className="card">
           <div className="card-h">
             <h3>{t("Source mix")}</h3>
@@ -446,29 +359,46 @@ export default function AnalyticsView() {
             />
           </div>
         </div>
+      </div>
 
-        <div className="card">
-          <div className="card-h">
-            <h3>{t("Most polluted districts")}</h3>
-            <span className="sub">US AQI</span>
-          </div>
-          <div style={{ padding: "16px 18px 20px" }}>
-            <Bars rows={topDistricts} />
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="card-h">
+      {/* ---------------- model vs baselines, full width ---------------- */}
+      <div className="card" style={{ marginTop: 16 }}>
+        <div className="card-h">
+          <div>
             <h3>{t("Model vs baselines")}</h3>
             <span className="sub">{t("RMSE µg/m³ · lower is better")}</span>
           </div>
-          <div style={{ padding: "16px 18px 20px" }}>
-            {compare.length ? (
-              <ModelCompare rows={compare} />
-            ) : (
-              <span className="sub">{t("No metrics yet.")}</span>
-            )}
-          </div>
+          <span className="sub">
+            {t("time-ordered test split · real CPCB labels")}
+          </span>
+        </div>
+        <div style={{ padding: "16px 20px 22px" }}>
+          {compare.length ? (
+            <>
+              <BarLegend series={MODEL_SERIES} />
+              <BarChart
+                data={compare}
+                xDataKey="horizon"
+                height={330}
+                barGap={0.3}
+                margin={{ top: 16, right: 16, bottom: 32, left: 44 }}
+              >
+                <Grid horizontal />
+                {MODEL_SERIES.map((s) => (
+                  <Bar key={s.key} dataKey={s.key} label={s.label} fill={s.fill} lineCap="round" />
+                ))}
+                <BarXAxis showAllLabels />
+                <ChartTooltip formatValue={(v) => v.toFixed(2)} unit=" µg/m³" />
+              </BarChart>
+              <p style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 12, lineHeight: 1.55 }}>
+                {t(
+                  "Persistence repeats the last measured value; CAMS is the bias-corrected Copernicus model. Both are scored on the same held-out hours as ours — the split is time-ordered, never shuffled, so no future data leaks into training.",
+                )}
+              </p>
+            </>
+          ) : (
+            <span className="sub">{t("No metrics yet.")}</span>
+          )}
         </div>
       </div>
 
