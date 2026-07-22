@@ -104,6 +104,22 @@ const HI: Dict = {
   "Enforcement pipeline": "प्रवर्तन पाइपलाइन",
   "signal → dossier": "सिग्नल → डोज़ियर",
   "No metrics yet.": "अभी कोई मेट्रिक नहीं।",
+  Explore: "अन्वेषण",
+  "Data sources": "डेटा स्रोत",
+  "Citizen advisory": "नागरिक सलाह",
+  "LIVE CITY INDEX": "लाइव शहर सूचकांक",
+  "LIVE PLATFORM PREVIEW": "लाइव प्लेटफ़ॉर्म झलक",
+  "Live platform preview": "लाइव प्लेटफ़ॉर्म झलक",
+  "The command centre — live map, not a static mock":
+    "कमांड सेंटर — लाइव मानचित्र, कोई स्थिर नमूना नहीं",
+  "This is a preview only. District colours and city AQI come from the same live feed the dashboard reads. Click Launch to open the full platform.":
+    "यह केवल एक झलक है। ज़िलों के रंग और शहर का AQI उसी लाइव फ़ीड से आते हैं जिसे डैशबोर्ड पढ़ता है। पूरा प्लेटफ़ॉर्म खोलने के लिए Launch दबाएँ।",
+  "Dashboard preview — live map (not clickable)":
+    "डैशबोर्ड झलक — लाइव मानचित्र (क्लिक करने योग्य नहीं)",
+  "Every figure on this site is measured from the pipeline — nothing is simulated.":
+    "इस साइट का हर आँकड़ा पाइपलाइन से मापा गया है — कुछ भी अनुकरण नहीं है।",
+  "Forecast, attribute and act on urban air quality across Chhattisgarh — including cities with no ground sensors.":
+    "छत्तीसगढ़ में शहरी वायु गुणवत्ता का पूर्वानुमान, स्रोत-विश्लेषण और कार्रवाई — उन शहरों सहित जहाँ कोई ज़मीनी सेंसर नहीं है।",
   "Chhattisgarh districts": "छत्तीसगढ़ ज़िले",
   "Loading live map…": "लाइव मानचित्र लोड हो रहा है…",
   "facilities exposed": "प्रभावित सुविधाएँ",

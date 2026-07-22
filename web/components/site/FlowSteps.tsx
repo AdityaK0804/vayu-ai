@@ -3,6 +3,7 @@
 import { useMetrics } from "@/lib/data";
 import { useT } from "@/lib/i18n";
 import { PAD } from "./SiteChrome";
+import { SectionHead } from "./blocks";
 
 /**
  * "How it works" as a left-to-right flow with connecting arrows.
@@ -99,17 +100,11 @@ export default function FlowSteps() {
         padding: `56px ${PAD}`,
       }}
     >
-      <div style={{ maxWidth: "58ch", marginBottom: 30 }}>
-        <div
-          className="figure"
-          style={{ fontSize: 12, letterSpacing: ".18em", color: "var(--accent)", marginBottom: 12 }}
-        >
-          {t("HOW THE MODEL WORKS")}
-        </div>
-        <h2 className="display" style={{ fontSize: "clamp(26px,3.6vw,40px)", lineHeight: 1.08 }}>
-          {t("From raw signal to clean-air action in three steps")}
-        </h2>
-      </div>
+      <SectionHead
+        eyebrow={t("HOW THE MODEL WORKS")}
+        title={t("From raw signal to clean-air action in three steps")}
+        mb={34}
+      />
 
       <div className="flow-row">
         {STEPS.map((s, i) => (
