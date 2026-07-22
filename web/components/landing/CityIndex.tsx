@@ -54,10 +54,10 @@ export default function CityIndex() {
         </h2>
         <span className="figure" style={{ fontSize: 12, color: "var(--ink-3)" }}>
           {isError
-            ? "live feed unavailable — showing nothing rather than stale numbers"
+            ? t("live feed unavailable — showing nothing rather than stale numbers")
             : data?.[0]?.updated
               ? `Open-Meteo CAMS · US AQI · updated ${new Date(data[0].updated).toUTCString().slice(5, 22)} UTC`
-              : "loading…"}
+              : t("loading…")}
         </span>
       </div>
 
@@ -99,7 +99,7 @@ export default function CityIndex() {
                     {c.name}
                   </div>
                   <div style={{ fontSize: 12.5, color: "var(--ink-3)" }}>
-                    {SUBTITLE[c.city_id] ?? ""}
+                    {t(SUBTITLE[c.city_id] ?? "")}
                   </div>
                 </div>
                 {zeroStation && (
@@ -107,7 +107,7 @@ export default function CityIndex() {
                     className="figure"
                     style={{ fontSize: 10, color: "var(--accent)", letterSpacing: ".08em" }}
                   >
-                    PREDICTED
+                    {t("PREDICTED")}
                   </span>
                 )}
               </div>
@@ -119,7 +119,7 @@ export default function CityIndex() {
                 >
                   {c.current_us_aqi ?? "—"}
                 </span>
-                <span style={{ fontSize: 13, color: "var(--ink-2)" }}>AQI</span>
+                <span style={{ fontSize: 13, color: "var(--ink-2)" }}>{t("AQI")}</span>
               </div>
 
               <div
@@ -134,7 +134,7 @@ export default function CityIndex() {
                   color: band.c,
                 }}
               >
-                {band.label} · PM2.5 {c.current_pm25 ?? "—"} µg/m³
+                {t(band.label)} · PM2.5 {c.current_pm25 ?? "—"} µg/m³
               </div>
             </Link>
           );

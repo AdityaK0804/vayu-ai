@@ -113,10 +113,9 @@ export default function Landing() {
             animation: "vayuRise .7s .12s both",
           }}
         >
-          VAYU fuses CPCB ground stations, satellite columns, meteorology and emissions
-          inventories into one forecasting engine — predicting PM2.5 72 hours out, attributing
-          it to a named source, and ranking where enforcement should go first. Including
-          Jagdalpur, which has no ground sensor at all.
+          {t(
+            "VAYU fuses CPCB ground stations, satellite columns, meteorology and emissions inventories into one forecasting engine — predicting PM2.5 72 hours out, attributing it to a named source, and ranking where enforcement should go first. Including Jagdalpur, which has no ground sensor at all.",
+          )}
         </p>
 
         <div

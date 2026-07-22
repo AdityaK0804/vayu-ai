@@ -368,6 +368,7 @@ function SiteNav() {
 
 /* ---------------------------------------------------------------- footer */
 export function SiteFooter() {
+  const { t } = useT();
   return (
     <footer
       style={{
@@ -398,7 +399,7 @@ export function SiteFooter() {
         <span className="display" style={{ fontWeight: 700, letterSpacing: ".14em" }}>
           VAYU
         </span>
-        <span style={{ fontSize: 13, color: "var(--ink-3)" }}>Urban Air Quality Intelligence</span>
+        <span style={{ fontSize: 13, color: "var(--ink-3)" }}>{t("Urban Air Quality Intelligence")}</span>
       </div>
       <div className="figure" style={{ fontSize: 12, color: "var(--ink-3)", maxWidth: "62ch" }}>
         Real data · CPCB stations · Open-Meteo &amp; CAMS · Sentinel-5P / MODIS · EDGAR v8.1 ·
@@ -465,6 +466,7 @@ export function PageHero({
   title: React.ReactNode;
   sub: string;
 }) {
+  const { t } = useT();
   return (
     <header
       style={{
@@ -485,7 +487,7 @@ export function PageHero({
           animation: "vayuRise .6s both",
         }}
       >
-        {eyebrow}
+        {t(eyebrow)}
       </div>
       <h1
         className="display"
@@ -497,7 +499,7 @@ export function PageHero({
           animation: "vayuRise .7s .05s both",
         }}
       >
-        {title}
+        {typeof title === "string" ? t(title) : title}
       </h1>
       <p
         style={{
@@ -509,7 +511,7 @@ export function PageHero({
           animation: "vayuRise .7s .12s both",
         }}
       >
-        {sub}
+        {t(sub)}
       </p>
     </header>
   );
@@ -517,6 +519,7 @@ export function PageHero({
 
 /** The design's dashed "workflow slot" — kept as the intentional placeholder. */
 export function WorkflowSlot({ label }: { label: string }) {
+  const { t } = useT();
   return (
     <section
       style={{ position: "relative", zIndex: 1, maxWidth: 1220, margin: "0 auto", padding: `20px ${PAD} 40px` }}
@@ -546,11 +549,12 @@ export function WorkflowSlot({ label }: { label: string }) {
           🧩
         </div>
         <h3 className="display" style={{ fontSize: 20, marginBottom: 8 }}>
-          {label} workflow slot
+          {t(label)} {t("workflow slot")}
         </h3>
         <p style={{ fontSize: 14, lineHeight: 1.6, color: "var(--ink-2)", maxWidth: "52ch", margin: "0 auto" }}>
-          This page is ready for the custom workflow you&apos;ll define. Tell me what to show here
-          and I&apos;ll build it into this space.
+          {t(
+            "This page is ready for the custom workflow you'll define. Tell me what to show here and I'll build it into this space.",
+          )}
         </p>
       </div>
     </section>

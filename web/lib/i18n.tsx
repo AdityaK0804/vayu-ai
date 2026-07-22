@@ -147,6 +147,74 @@ const HI: Dict = {
   measured: "मापा गया",
   Frames: "फ़्रेम",
 
+
+  /* ---- city cards ---- */
+  "Coal & power belt": "कोयला और बिजली क्षेत्र",
+  "Steel corridor": "इस्पात गलियारा",
+  "State capital": "राज्य की राजधानी",
+  "Rail & commerce": "रेल और वाणिज्य",
+  "No ground sensor": "कोई ज़मीनी सेंसर नहीं",
+  PREDICTED: "पूर्वानुमानित",
+  AQI: "AQI",
+  "No data": "डेटा नहीं",
+  "Very poor": "बहुत ख़राब",
+  Severe: "गंभीर",
+  "live feed unavailable — showing nothing rather than stale numbers":
+    "लाइव फ़ीड उपलब्ध नहीं — पुराने आँकड़े दिखाने के बजाय कुछ नहीं दिखाया जा रहा",
+  "loading…": "लोड हो रहा है…",
+
+  /* ---- feature cards ---- */
+  "Live PM2.5 surface": "लाइव PM2.5 सतह",
+  "An H3 hex grid rendered over real geography — 8,360 cells for Korba alone — with ground stations, ranked wards and a 72-hour scrubber.":
+    "वास्तविक भूगोल पर H3 हेक्स ग्रिड — अकेले कोरबा के लिए 8,360 कोशिकाएँ — ज़मीनी स्टेशनों, क्रमबद्ध वार्डों और 72-घंटे स्लाइडर के साथ।",
+  "Measured, not claimed": "मापा गया, दावा नहीं",
+  "Every number is benchmarked against persistence and bias-corrected CAMS on a time-ordered split. The proof panel ships with the app.":
+    "हर आँकड़ा समय-क्रम विभाजन पर persistence और सुधारित CAMS के मुक़ाबले जाँचा गया है। प्रमाण पैनल ऐप के साथ ही आता है।",
+  "72-hour forecasting": "72-घंटे का पूर्वानुमान",
+  "A gradient-boosted spatio-temporal model (one regressor per horizon) trained on 285,522 station-hours across 14 stations.":
+    "14 स्टेशनों के 285,522 स्टेशन-घंटों पर प्रशिक्षित ग्रेडिएंट-बूस्टेड स्थानिक-कालिक मॉडल (हर अवधि के लिए अलग रिग्रेसर)।",
+  "Source attribution": "स्रोत विश्लेषण",
+  "SHAP over source features splits each cell into industry / traffic / fire / dust, cross-checked against the EDGAR emissions inventory.":
+    "SHAP हर कोशिका को उद्योग / यातायात / आग / धूल में बाँटता है, और EDGAR उत्सर्जन सूची से मिलान करता है।",
+  "Zero-station prediction": "बिना-सेंसर पूर्वानुमान",
+  "Leave-one-station-out validation proves a never-seen location can be predicted from satellite, weather and emissions geography alone.":
+    "Leave-one-station-out सत्यापन सिद्ध करता है कि कभी न देखी गई जगह का अनुमान केवल उपग्रह, मौसम और उत्सर्जन भूगोल से लगाया जा सकता है।",
+  "Enforcement dossiers": "प्रवर्तन फ़ाइलें",
+  "Ranked wards with population and school/hospital exposure, the named upwind plant, and a templated inspection action — in seconds.":
+    "क्रमबद्ध वार्ड — जनसंख्या, स्कूल/अस्पताल जोखिम, नामित अपवात संयंत्र और तैयार निरीक्षण कार्रवाई के साथ — कुछ ही सेकंड में।",
+
+  /* ---- steps ---- */
+  "01 — INGEST": "01 — संग्रहण",
+  "02 — PREDICT": "02 — पूर्वानुमान",
+  "03 — INTERVENE": "03 — हस्तक्षेप",
+  "Fuse every signal": "हर संकेत को जोड़ें",
+  "CPCB station hours, Open-Meteo weather and CAMS, Sentinel-5P and MODIS columns, EDGAR emissions, WorldPop and OSM roads — harmonised onto one H3 grid and hourly clock.":
+    "CPCB स्टेशन-घंटे, Open-Meteo मौसम और CAMS, Sentinel-5P व MODIS स्तंभ, EDGAR उत्सर्जन, WorldPop और OSM सड़कें — सब एक H3 ग्रिड और प्रति-घंटा घड़ी पर एकीकृत।",
+  "Model the plume": "प्रदूषण-प्रवाह का मॉडल",
+  "Gradient-boosted models forecast PM2.5 at +24/48/72h from lagged observations, meteorology and CAMS; a no-lag spatial model covers cells with no sensor history.":
+    "ग्रेडिएंट-बूस्टेड मॉडल पिछले अवलोकनों, मौसम और CAMS से +24/48/72घं का PM2.5 पूर्वानुमान लगाते हैं; बिना-लैग स्थानिक मॉडल उन कोशिकाओं को कवर करता है जिनका कोई सेंसर इतिहास नहीं।",
+  "Attribute & rank": "स्रोत पहचानें और क्रम दें",
+  "SHAP attribution plus an upwind wind-cone names the likely source, then wards are ranked by exceedance × population × vulnerability into an action list.":
+    "SHAP विश्लेषण और अपवात पवन-शंकु संभावित स्रोत बताते हैं, फिर वार्ड अतिक्रमण × जनसंख्या × संवेदनशीलता के आधार पर कार्रवाई सूची में क्रमबद्ध होते हैं।",
+
+  /* ---- page heroes ---- */
+  "LIVE CITIES · CHHATTISGARH": "लाइव शहर · छत्तीसगढ़",
+  "Five cities. One live view of the air.": "पाँच शहर। हवा का एक लाइव दृश्य।",
+  "Real-time PM2.5, US AQI and category for Korba, Bhilai, Raipur, Bilaspur — and Jagdalpur, which has no ground sensor and is predicted outright. Tap any city to open it on the live map.":
+    "कोरबा, भिलाई, रायपुर, बिलासपुर के लिए वास्तविक-समय PM2.5, US AQI और श्रेणी — और जगदलपुर, जिसका कोई ज़मीनी सेंसर नहीं और जो पूरी तरह पूर्वानुमानित है। किसी भी शहर पर टैप करके लाइव मानचित्र खोलें।",
+  "One control room for a region's air.": "पूरे क्षेत्र की हवा के लिए एक नियंत्रण कक्ष।",
+  "From live hex-grid heatmaps to 72-hour forecasting and a ranked enforcement engine — everything a smart-city team needs to see, predict and act on urban air quality.":
+    "लाइव हेक्स-ग्रिड हीटमैप से लेकर 72-घंटे पूर्वानुमान और क्रमबद्ध प्रवर्तन इंजन तक — शहरी वायु गुणवत्ता देखने, अनुमान लगाने और कार्रवाई करने के लिए ज़रूरी सब कुछ।",
+  "HOW THE AI WORKS": "AI कैसे काम करता है",
+  "From raw signal to clean-air action.": "कच्चे संकेत से स्वच्छ-वायु कार्रवाई तक।",
+  "VAYU fuses CPCB stations, satellite columns, meteorology and emissions inventories, forecasts PM2.5 72 hours ahead, and turns that into ranked, evidence-backed interventions.":
+    "VAYU, CPCB स्टेशनों, उपग्रह स्तंभों, मौसम और उत्सर्जन सूचियों को जोड़कर 72 घंटे आगे का PM2.5 पूर्वानुमान लगाता है, और उसे प्रमाण-आधारित क्रमबद्ध हस्तक्षेपों में बदलता है।",
+  "VAYU fuses CPCB ground stations, satellite columns, meteorology and emissions inventories into one forecasting engine — predicting PM2.5 72 hours out, attributing it to a named source, and ranking where enforcement should go first. Including Jagdalpur, which has no ground sensor at all.":
+    "VAYU, CPCB ज़मीनी स्टेशनों, उपग्रह स्तंभों, मौसम और उत्सर्जन सूचियों को एक पूर्वानुमान इंजन में जोड़ता है — 72 घंटे आगे का PM2.5 बताता है, उसे नामित स्रोत से जोड़ता है, और तय करता है कि प्रवर्तन पहले कहाँ जाए। जगदलपुर सहित, जहाँ कोई ज़मीनी सेंसर ही नहीं है।",
+  "workflow slot": "वर्कफ़्लो स्लॉट",
+  "This page is ready for the custom workflow you'll define. Tell me what to show here and I'll build it into this space.":
+    "यह पृष्ठ आपके तय किए गए कस्टम वर्कफ़्लो के लिए तैयार है। बताइए यहाँ क्या दिखाना है, मैं इसी जगह बना दूँगा।",
+
   /* ---- chatbot ---- */
   "VAYU Assistant": "VAYU सहायक",
   "Online · air quality help": "ऑनलाइन · वायु गुणवत्ता सहायता",
