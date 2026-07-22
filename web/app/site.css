@@ -172,8 +172,16 @@
      scroll is broken rather than calm. It is slowed instead. */
   .vayu-track { animation-duration: 90s; }
   .vshiny::after { animation: none !important; opacity: 0; }
+  /* Cards still pop under reduced motion — just gentler and quicker. Killing
+     it outright made the whole site feel dead on machines with the OS setting
+     enabled, which is the same trap the ticker fell into. */
   .card:hover,
-  .lift:hover { transform: none !important; }
+  .lift:hover,
+  .kpi:hover,
+  .feature-card:hover {
+    transform: translateY(-2px) scale(1.005);
+    transition-duration: 0.12s;
+  }
   ::view-transition-group(*),
   ::view-transition-old(*),
   ::view-transition-new(*) { animation: none !important; }

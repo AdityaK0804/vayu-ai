@@ -1,6 +1,7 @@
 "use client";
 
 import { PAD } from "./SiteChrome";
+import { useT } from "@/lib/i18n";
 
 export const FEATURES = [
   {
@@ -63,6 +64,7 @@ export const STEPS = [
 ];
 
 export function FeatureGrid() {
+  const { t } = useT();
   return (
     <div
       style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 20 }}
@@ -85,9 +87,9 @@ export function FeatureGrid() {
             {f.icon}
           </div>
           <h3 className="display" style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>
-            {f.title}
+            {t(f.title)}
           </h3>
-          <p style={{ fontSize: 14, lineHeight: 1.6, color: "var(--ink-2)" }}>{f.body}</p>
+          <p style={{ fontSize: 14, lineHeight: 1.6, color: "var(--ink-2)" }}>{t(f.body)}</p>
         </div>
       ))}
     </div>
@@ -95,6 +97,7 @@ export function FeatureGrid() {
 }
 
 export function StepsPanel({ heading }: { heading?: string }) {
+  const { t } = useT();
   return (
     <div style={{ position: "relative" }}>
       {heading && (
@@ -206,9 +209,9 @@ export function StepsPanel({ heading }: { heading?: string }) {
                 {s.icon}
               </div>
               <h3 className="display" style={{ fontSize: 20, fontWeight: 600, marginBottom: 10 }}>
-                {s.title}
+                {t(s.title)}
               </h3>
-              <p style={{ fontSize: 14, lineHeight: 1.6, color: "var(--ink-2)" }}>{s.body}</p>
+              <p style={{ fontSize: 14, lineHeight: 1.6, color: "var(--ink-2)" }}>{t(s.body)}</p>
             </div>
           </div>
         ))}
