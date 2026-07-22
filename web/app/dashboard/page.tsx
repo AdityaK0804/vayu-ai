@@ -12,6 +12,7 @@ import {
   OverviewView,
   ReportsView,
 } from "@/components/dashboard/views";
+import AnalyticsView from "@/components/dashboard/AnalyticsView";
 import Chatbot from "@/components/Chatbot";
 import LangToggle from "@/components/LangToggle";
 import { useT } from "@/lib/i18n";
@@ -28,8 +29,9 @@ const NAV: {
   {
     group: "MONITOR",
     items: [
-      { id: "overview", label: "Overview", ico: "◫" },
       { id: "map", label: "Live Map", ico: "◍" },
+      { id: "analytics", label: "Analytics", ico: "◑" },
+      { id: "overview", label: "Overview", ico: "◫" },
       { id: "forecast", label: "AI Forecast", ico: "◈", badge: "72h" },
     ],
   },
@@ -50,7 +52,8 @@ const NAV: {
 ];
 
 export default function Dashboard() {
-  const { city, setCity, view, setView, sideOpen, toggleSide } = useApp();
+  const { city, setCity, view, setView, sideOpen, toggleSide, sideCollapsed, toggleCollapse } =
+    useApp();
   const { t } = useT();
   // city selection now lives inside the Risk Map card (Live Map view)
   const { data: priority } = usePriority(city);
@@ -68,7 +71,7 @@ export default function Dashboard() {
   const cityLive = live?.find((l) => l.city_id === city);
 
   return (
-    <div className="app">
+    <div className={`app${sideCollapsed ? " rail" : ""}`}>
       {/* ---------------- topbar ---------------- */}
       <header className="topbar">
         <button className="icon-btn md:hidden" onClick={toggleSide} aria-label="Menu">
@@ -108,20 +111,21 @@ export default function Dashboard() {
       </header>
 
       {/* ---------------- sidebar ---------------- */}
-      <aside className={`side${sideOpen ? " open" : ""}`}>
+      <aside className={`side${sideOpen ? " open" : ""}${sideCollapsed ? " rail" : ""}`}>
         {NAV.map((grp) => (
           <div key={grp.group}>
-            <div className="grp">{t(grp.group)}</div>
+            <div className="grp">{sideCollapsed ? t(grp.group).slice(0, 3) : t(grp.group)}</div>
             {grp.items.map((it) => {
               const val = badgeVal(it.badge);
               return (
                 <button
                   key={it.id}
-                  className={`nav${view === it.id ? " active" : ""}`}
+                  className={`nav${view === it.id ? " active" : ""}${val ? " has-badge" : ""}`}
                   onClick={() => setView(it.id)}
+                  title={t(it.label)}
                 >
                   <span className="ico">{it.ico}</span>
-                  {t(it.label)}
+                  <span className="lab">{t(it.label)}</span>
                   {val && <span className="n-badge">{val}</span>}
                 </button>
               );
@@ -135,12 +139,22 @@ export default function Dashboard() {
           <br />
           EDGAR v8.1 · WorldPop · GPPD
         </div>
+        <button
+          className="side-collapse"
+          onClick={toggleCollapse}
+          title={sideCollapsed ? t("Expand sidebar") : t("Collapse sidebar")}
+          aria-expanded={!sideCollapsed}
+        >
+          <span className="chev">«</span>
+          <span className="lab">{t("Collapse sidebar")}</span>
+        </button>
       </aside>
 
       {/* ---------------- main ---------------- */}
       <main className="main">
-        {view === "overview" && <OverviewView />}
         {view === "map" && <MapView />}
+        {view === "analytics" && <AnalyticsView />}
+        {view === "overview" && <OverviewView />}
         {view === "forecast" && <ForecastView />}
         {view === "interventions" && <InterventionsView />}
         {view === "alerts" && <AlertsView />}

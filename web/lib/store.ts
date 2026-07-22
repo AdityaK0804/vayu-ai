@@ -6,7 +6,7 @@ import type { CityId } from "./types";
 export type LayerKind = "forecast" | "priority";
 export type Theme = "light" | "dark";
 export type ViewId =
-  | "overview" | "map" | "forecast"
+  | "map" | "overview" | "analytics" | "forecast"
   | "interventions" | "alerts" | "network" | "reports";
 
 /**
@@ -21,7 +21,8 @@ interface AppState {
   selectedCell: string | null;
   revealed: boolean; // jagdalpur: false = "no stations", true = full grid
   view: ViewId;
-  sideOpen: boolean;
+  sideOpen: boolean;      // mobile drawer
+  sideCollapsed: boolean; // desktop: collapse the sidebar to an icon rail
   theme: Theme;      // in-memory ONLY — the source design persisted this to
                      // localStorage, which the build brief forbids
 
@@ -34,6 +35,7 @@ interface AppState {
   setRevealed: (r: boolean) => void;
   setView: (v: ViewId) => void;
   toggleSide: () => void;
+  toggleCollapse: () => void;
   toggleTheme: () => void;
 }
 
@@ -44,8 +46,9 @@ export const useApp = create<AppState>((set) => ({
   playing: false,
   selectedCell: null,
   revealed: false,
-  view: "overview",
+  view: "map", // the map is the product — open on it, not on a summary page
   sideOpen: false,
+  sideCollapsed: false,
   theme: "dark", // site opens in dark mode; toggle switches to light
 
   // switching city resets the scrub + selection; reveal re-arms for jagdalpur
@@ -59,5 +62,6 @@ export const useApp = create<AppState>((set) => ({
   setRevealed: (revealed) => set({ revealed }),
   setView: (view) => set({ view, sideOpen: false }),
   toggleSide: () => set((s) => ({ sideOpen: !s.sideOpen })),
+  toggleCollapse: () => set((s) => ({ sideCollapsed: !s.sideCollapsed })),
   toggleTheme: () => set((s) => ({ theme: s.theme === "dark" ? "light" : "dark" })),
 }));
