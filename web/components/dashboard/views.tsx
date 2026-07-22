@@ -7,6 +7,7 @@ import AttributionCard from "@/components/AttributionCard";
 import TimeSlider from "@/components/TimeSlider";
 import ShinyButton from "@/components/magicui/shiny-button";
 import { useDistricts, useIndiaIndex, type DistrictProps } from "@/components/DistrictMap";
+import MapWorkspace from "@/components/dashboard/MapWorkspace";
 import { AQI_BANDS, aqiCss, aqiLabel } from "@/lib/aqiScale";
 import type { CityId } from "@/lib/types";
 import { BANDS, SOURCE_LABEL, bandFor } from "@/lib/aqi";
@@ -314,214 +315,46 @@ export function MapView() {
   };
 
   return (
-    <div className="section map-wrap">
+    <div className="section" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {mode === "districts" ? (
-        <DistrictMap
-          selected={district?.name ?? null}
-          onSelect={setDistrict}
-          focus={focus}
-        />
+        <MapWorkspace selected={district} onSelectDistrict={setDistrict} />
       ) : (
-        <MapCanvas />
+        <div className="map-wrap" style={{ position: "relative", height: "calc(100vh - 150px)" }}>
+          <MapCanvas />
+          <div
+            className="map-panel"
+            style={{ top: 16, right: 18, width: 340, maxHeight: "calc(100% - 120px)", overflowY: "auto" }}
+          >
+            <AttributionCard />
+          </div>
+          <div className="map-panel" style={{ bottom: 0, left: 0, right: 0, borderRadius: 0, border: 0 }}>
+            <TimeSlider />
+          </div>
+        </div>
       )}
 
-      {/* ---- one card at the top: title, search, city, mode, legend ---- */}
-      <div
-        className="map-panel"
-        style={{ top: 16, left: 18, right: 18, padding: "13px 16px" }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-          <span
-            style={{
-              display: "grid",
-              placeItems: "center",
-              width: 30,
-              height: 30,
-              borderRadius: 9,
-              background: "color-mix(in oklch,var(--accent),transparent 85%)",
-              color: "var(--accent)",
-              flex: "none",
-            }}
-          >
-            ◉
-          </span>
-          <b style={{ fontFamily: "var(--font-display)", fontSize: 16 }}>{t("Risk Map")}</b>
-          <span className="sub" style={{ margin: 0 }}>
-            Chhattisgarh ·{" "}
-            {mode === "districts"
-              ? `${districts?.meta?.n_districts ?? 28} districts`
-              : `${forecast?.n_cells.toLocaleString() ?? "—"} H3 cells`}
-          </span>
-
-          {/* search */}
-          <div style={{ position: "relative", flex: "1 1 220px", maxWidth: 320, minWidth: 180 }}>
-            <div className="search" style={{ maxWidth: "none", width: "100%" }}>
-              <span>⌕</span>
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder={t("Search district or city…")}
-                aria-label="Search district or city"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && results[0]) go(results[0]);
-                  if (e.key === "Escape") setQ("");
-                }}
-              />
-            </div>
-            {results.length > 0 && (
-              <div
-                className="card thin-scroll"
-                style={{
-                  position: "absolute",
-                  top: "calc(100% + 6px)",
-                  left: 0,
-                  right: 0,
-                  zIndex: 40,
-                  maxHeight: 244,
-                  overflowY: "auto",
-                  padding: 4,
-                }}
-              >
-                {results.map((r) => (
-                  <button
-                    key={`${r.kind}-${r.name}`}
-                    onClick={() => go(r)}
-                    style={{
-                      display: "flex",
-                      width: "100%",
-                      alignItems: "center",
-                      gap: 8,
-                      padding: "8px 10px",
-                      borderRadius: 8,
-                      border: 0,
-                      background: "transparent",
-                      color: "var(--ink)",
-                      cursor: "pointer",
-                      textAlign: "left",
-                      fontSize: 12.5,
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: "50%",
-                        background: aqiCss(r.aqi),
-                        flex: "none",
-                      }}
-                    />
-                    <span style={{ flex: 1 }}>{r.name}</span>
-                    <span className="crumb" style={{ fontSize: 9.5 }}>
-                      {r.note ?? r.kind}
-                    </span>
-                    {r.aqi != null && (
-                      <span className="figure" style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                        {r.aqi}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* city selector — moved here from the top nav */}
-          <div className="field" style={{ flex: "0 0 auto" }}>
-            <select
-              value={city}
-              onChange={(e) => {
-                const id = e.target.value as CityId;
-                setCity(id);
-                const c = districts?.cities?.find((x) => x.id === id);
-                if (c) go({ kind: "city", name: c.name, aqi: c.us_aqi });
-              }}
-              aria-label="Modelled city"
-              style={{ padding: "8px 10px", fontSize: 12.5 }}
-            >
-              {(districts?.cities ?? []).map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                  {c.has_stations ? "" : " · no sensor"}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="seg" style={{ marginLeft: "auto" }}>
-            <button className={mode === "districts" ? "on" : ""} onClick={() => setMode("districts")}>
-              Districts
-            </button>
-            <button className={mode === "grid" ? "on" : ""} onClick={() => setMode("grid")}>
-              Forecast grid
-            </button>
-          </div>
-
-          {mode === "grid" && (
-            <div className="seg">
-              {(["forecast", "priority"] as const).map((l) => (
-                <button key={l} className={layer === l ? "on" : ""} onClick={() => setLayer(l)}>
-                  {l === "forecast" ? "PM2.5" : "Wards"}
-                </button>
-              ))}
-            </div>
-          )}
+      <div className="card" style={{ padding: "10px 14px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <span className="crumb">{t("View")}</span>
+        <div className="seg">
+          <button className={mode === "districts" ? "on" : ""} onClick={() => setMode("districts")}>
+            {t("Districts")}
+          </button>
+          <button className={mode === "grid" ? "on" : ""} onClick={() => setMode("grid")}>
+            {t("Forecast grid")}
+          </button>
         </div>
-
-        {/* legend lives inside the same card — no floating box */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            flexWrap: "wrap",
-            marginTop: 11,
-            paddingTop: 11,
-            borderTop: "1px solid var(--line)",
-          }}
-        >
-          <span className="crumb">{mode === "districts" ? "US AQI" : "PM2.5 µg/m³"}</span>
-          {mode === "districts"
-            ? AQI_BANDS.map((b) => (
-                <span
-                  key={b.label}
-                  style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11 }}
-                >
-                  <span
-                    style={{ width: 16, height: 9, borderRadius: 3, background: b.hex, flex: "none" }}
-                  />
-                  <span style={{ color: "var(--ink-2)" }}>{b.label}</span>
-                  <span className="figure" style={{ color: "var(--ink-3)", fontSize: 10 }}>
-                    {b.short}
-                  </span>
-                </span>
-              ))
-            : BANDS.map((b) => (
-                <span
-                  key={b.label}
-                  style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11 }}
-                >
-                  <span
-                    style={{ width: 16, height: 9, borderRadius: 3, background: b.hex, flex: "none" }}
-                  />
-                  <span style={{ color: "var(--ink-2)" }}>{b.label}</span>
-                </span>
-              ))}
-          {mode === "districts" && (
-            <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11 }}>
-              <span
-                style={{
-                  width: 10,
-                  height: 10,
-                  borderRadius: "50%",
-                  background: "#fff",
-                  border: "2px solid var(--accent)",
-                  flex: "none",
-                }}
-              />
-              <span style={{ color: "var(--ink-2)" }}>city · ring = no sensor</span>
-            </span>
-          )}
-        </div>
+        {mode === "grid" && (
+          <div className="seg">
+            {(["forecast", "priority"] as const).map((l) => (
+              <button key={l} className={layer === l ? "on" : ""} onClick={() => setLayer(l)}>
+                {l === "forecast" ? "PM2.5" : t("Wards")}
+              </button>
+            ))}
+          </div>
+        )}
+        <span className="sub" style={{ margin: 0, marginLeft: "auto", fontSize: 11 }}>
+          {forecast?.n_cells?.toLocaleString() ?? "—"} H3 cells · {districts?.meta?.n_districts ?? 28} {t("districts")}
+        </span>
       </div>
 
       {welcome && (

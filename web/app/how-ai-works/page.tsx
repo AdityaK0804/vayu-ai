@@ -1,7 +1,7 @@
 "use client";
 
 import SiteShell, { PageHero, WorkflowSlot } from "@/components/site/SiteChrome";
-import { Section, StepsPanel } from "@/components/site/blocks";
+import FlowSteps from "@/components/site/FlowSteps";
 
 export default function HowAiWorksPage() {
   return (
@@ -11,9 +11,7 @@ export default function HowAiWorksPage() {
         title="From raw signal to clean-air action."
         sub="VAYU fuses CPCB stations, satellite columns, meteorology and emissions inventories, forecasts PM2.5 72 hours ahead, and turns that into ranked, evidence-backed interventions."
       />
-      <Section pt={20} pb={20}>
-        <StepsPanel />
-      </Section>
+      <FlowSteps />
       <WorkflowSlot label="How AI Works" />
     </SiteShell>
   );

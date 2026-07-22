@@ -6,7 +6,8 @@ import ShinyLink from "@/components/magicui/shiny-link";
 
 import CityIndex from "@/components/landing/CityIndex";
 import SiteShell, { PAD } from "@/components/site/SiteChrome";
-import { FeatureGrid, Section, StepsPanel } from "@/components/site/blocks";
+import { FeatureGrid, Section } from "@/components/site/blocks";
+import FlowSteps from "@/components/site/FlowSteps";
 import { useMetrics } from "@/lib/data";
 import { useT } from "@/lib/i18n";
 
@@ -204,9 +205,7 @@ export default function Landing() {
       </Section>
 
       {/* ---------------- how it works ---------------- */}
-      <Section id="how" pt={56} pb={56}>
-        <StepsPanel heading={t("From raw signal to clean-air action in three steps")} />
-      </Section>
+      <FlowSteps />
 
       {/* ---------------- CTA ---------------- */}
       <Section pt={20} pb={70}>
