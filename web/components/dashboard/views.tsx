@@ -3,8 +3,6 @@
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 
-import AttributionCard from "@/components/AttributionCard";
-import TimeSlider from "@/components/TimeSlider";
 import ShinyButton from "@/components/magicui/shiny-button";
 import { useDistricts, useIndiaIndex, type DistrictProps } from "@/lib/districts";
 import MapWorkspace from "@/components/dashboard/MapWorkspace";
@@ -30,15 +28,6 @@ const DistrictMap = dynamic(() => import("@/components/DistrictMap"), {
   loading: () => (
     <div className="grid h-full place-items-center">
       <span className="label">Loading districts…</span>
-    </div>
-  ),
-});
-
-const MapCanvas = dynamic(() => import("@/components/MapCanvas"), {
-  ssr: false,
-  loading: () => (
-    <div className="grid h-full place-items-center">
-      <span className="label">Rendering grid…</span>
     </div>
   ),
 });
@@ -254,14 +243,9 @@ export function OverviewView() {
 }
 
 /* --------------------------------------------------------------- LIVE MAP */
-type MapMode = "districts" | "grid";
-
 export function MapView() {
   const { t } = useT();
-  const { layer, setLayer, city, setCity } = useApp();
-  const { data: forecast } = useForecast(city);
   const { data: districts } = useDistricts();
-  const [mode, setMode] = useState<MapMode>("districts");
   const [district, setDistrict] = useState<DistrictProps | null>(null);
   const [openCity, setOpenCity] = useState<CityPoint | null>(null);
   const [q, setQ] = useState("");
@@ -319,53 +303,15 @@ export function MapView() {
 
   return (
     <div className="section" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {mode === "districts" && <SelectionBar city={openCity} district={district} />}
+      <SelectionBar city={openCity} district={district} />
 
-      {mode === "districts" ? (
-        <MapWorkspace
-          selected={district}
-          onSelectDistrict={setDistrict}
-          openCity={openCity}
-          setOpenCity={setOpenCity}
-        />
-      ) : (
-        <div className="map-wrap" style={{ position: "relative", height: "calc(100vh - 150px)" }}>
-          <MapCanvas />
-          <div
-            className="map-panel"
-            style={{ top: 16, right: 18, width: 340, maxHeight: "calc(100% - 120px)", overflowY: "auto" }}
-          >
-            <AttributionCard />
-          </div>
-          <div className="map-panel" style={{ bottom: 0, left: 0, right: 0, borderRadius: 0, border: 0 }}>
-            <TimeSlider />
-          </div>
-        </div>
-      )}
+      <MapWorkspace
+        selected={district}
+        onSelectDistrict={setDistrict}
+        openCity={openCity}
+        setOpenCity={setOpenCity}
+      />
 
-      <div className="card" style={{ padding: "10px 14px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        <span className="crumb">{t("View")}</span>
-        <div className="seg">
-          <button className={mode === "districts" ? "on" : ""} onClick={() => setMode("districts")}>
-            {t("Districts")}
-          </button>
-          <button className={mode === "grid" ? "on" : ""} onClick={() => setMode("grid")}>
-            {t("Forecast grid")}
-          </button>
-        </div>
-        {mode === "grid" && (
-          <div className="seg">
-            {(["forecast", "priority"] as const).map((l) => (
-              <button key={l} className={layer === l ? "on" : ""} onClick={() => setLayer(l)}>
-                {l === "forecast" ? "PM2.5" : t("Wards")}
-              </button>
-            ))}
-          </div>
-        )}
-        <span className="sub" style={{ margin: 0, marginLeft: "auto", fontSize: 11 }}>
-          {forecast?.n_cells?.toLocaleString() ?? "—"} H3 cells · {districts?.meta?.n_districts ?? 28} {t("districts")}
-        </span>
-      </div>
 
       {welcome && (
         <div
@@ -390,28 +336,6 @@ export function MapView() {
         </div>
       )}
 
-      {mode === "grid" && (
-        <>
-          <div
-            className="map-panel"
-            style={{
-              top: 78,
-              right: 18,
-              width: 340,
-              maxHeight: "calc(100% - 200px)",
-              overflowY: "auto",
-            }}
-          >
-            <AttributionCard />
-          </div>
-          <div
-            className="map-panel"
-            style={{ bottom: 0, left: 0, right: 0, borderRadius: 0, border: 0 }}
-          >
-            <TimeSlider />
-          </div>
-        </>
-      )}
     </div>
   );
 }
