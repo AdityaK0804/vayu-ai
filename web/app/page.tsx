@@ -8,6 +8,7 @@ import CityIndex from "@/components/landing/CityIndex";
 import SiteShell, { PAD } from "@/components/site/SiteChrome";
 import { FeatureGrid, Section, StepsPanel } from "@/components/site/blocks";
 import { useMetrics } from "@/lib/data";
+import { useT } from "@/lib/i18n";
 
 /* ---------------------------------------------------------------------------
    VAYU landing — ported from the design's index.dc.html.
@@ -18,20 +19,21 @@ import { useMetrics } from "@/lib/data";
 --------------------------------------------------------------------------- */
 
 export default function Landing() {
+  const { t } = useT();
   const { data: metrics } = useMetrics("korba");
   const h24 = metrics?.forecast_vs_baselines.find((h) => h.horizon_h === 24);
 
   const stats = [
-    { v: "72h", k: "forecast horizon" },
-    { v: h24?.model_rmse != null ? `${h24.model_rmse}` : "—", k: "µg/m³ RMSE @24h" },
+    { v: "72h", k: t("forecast horizon") },
+    { v: h24?.model_rmse != null ? `${h24.model_rmse}` : "—", k: t("µg/m³ RMSE @24h") },
     {
       v:
         metrics?.zero_station_loso.rmse_satellite_subset != null
           ? `${metrics.zero_station_loso.rmse_satellite_subset}`
           : "—",
-      k: "µg/m³ zero-station",
+      k: t("µg/m³ zero-station"),
     },
-    { v: String(metrics?.dataset.stations ?? "—"), k: "ground stations" },
+    { v: String(metrics?.dataset.stations ?? "—"), k: t("ground stations") },
   ];
 
   return (
@@ -42,9 +44,9 @@ export default function Landing() {
         style={{
           position: "relative",
           zIndex: 1,
-          maxWidth: 1220,
+          maxWidth: 1400,
           margin: "0 auto",
-          padding: `clamp(124px,13vw,156px) ${PAD} 40px`,
+          padding: `clamp(115px,10vw,140px) ${PAD} 40px`,
         }}
       >
         <div
@@ -85,9 +87,9 @@ export default function Landing() {
             animation: "vayuRise .7s .05s both",
           }}
         >
-          No sensors.
+          {t("No sensors.")}
           <br />
-          No problem.
+          {t("No problem.")}
           <br />
           <span
             style={{
@@ -97,7 +99,7 @@ export default function Landing() {
               color: "transparent",
             }}
           >
-            AI fills the gaps.
+            {t("AI fills the gaps.")}
           </span>
         </h1>
 
@@ -141,7 +143,7 @@ export default function Landing() {
               boxShadow: "0 14px 34px -12px var(--accent)",
             }}
           >
-            Launch the platform →
+            {t("Launch the platform →")}
           </ShinyLink>
           <ShinyLink
             href="/dashboard"
@@ -156,7 +158,7 @@ export default function Landing() {
               fontSize: 15.5,
             }}
           >
-            Explore the live map
+            {t("Explore the live map")}
           </ShinyLink>
         </div>
 
@@ -193,10 +195,10 @@ export default function Landing() {
             className="figure"
             style={{ fontSize: 12, letterSpacing: ".18em", color: "var(--accent)", marginBottom: 12 }}
           >
-            THE PLATFORM
+            {t("THE PLATFORM")}
           </div>
           <h2 className="display" style={{ fontSize: "clamp(26px,3.6vw,40px)", lineHeight: 1.08 }}>
-            One control room for the air a region breathes
+            {t("One control room for the air a region breathes")}
           </h2>
         </div>
         <FeatureGrid />
@@ -204,7 +206,7 @@ export default function Landing() {
 
       {/* ---------------- how it works ---------------- */}
       <Section id="how" pt={56} pb={56}>
-        <StepsPanel heading="From raw signal to clean-air action in three steps" />
+        <StepsPanel heading={t("From raw signal to clean-air action in three steps")} />
       </Section>
 
       {/* ---------------- CTA ---------------- */}
@@ -241,7 +243,7 @@ export default function Landing() {
                 margin: "0 auto 14px",
               }}
             >
-              Ready to clear the air over your city?
+              {t("Ready to clear the air over your city?")}
             </h2>
             <p
               style={{
@@ -251,7 +253,7 @@ export default function Landing() {
                 margin: "0 auto 28px",
               }}
             >
-              Step into the live command center — no login needed for the demo.
+              {t("Step into the live command center — no login needed for the demo.")}
             </p>
             <ShinyLink
               href="/dashboard"
@@ -267,7 +269,7 @@ export default function Landing() {
                 fontSize: 16,
               }}
             >
-              Open the dashboard →
+              {t("Open the dashboard →")}
             </ShinyLink>
           </div>
         </div>

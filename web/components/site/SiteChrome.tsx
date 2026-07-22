@@ -8,11 +8,13 @@ import { AnimatedThemeToggler } from "@/components/magicui/animated-theme-toggle
 import { Particles } from "@/components/magicui/particles";
 import ShinyLink from "@/components/magicui/shiny-link";
 import Chatbot from "@/components/Chatbot";
+import LangToggle from "@/components/LangToggle";
+import { useT } from "@/lib/i18n";
 import { bandFor } from "@/lib/aqi";
 import { useLive, usePriority } from "@/lib/data";
 import { useApp } from "@/lib/store";
 
-const PAD = "clamp(20px,5vw,72px)";
+const PAD = "clamp(16px,2.5vw,36px)";
 
 const NAV = [
   { href: "/live-cities", label: "Live Cities" },
@@ -203,6 +205,7 @@ function AlertTicker() {
 /* ------------------------------------------------------------- site nav */
 function SiteNav() {
   const pathname = usePathname();
+  const { t } = useT();
   const navRef = useRef<HTMLElement | null>(null);
 
   // Nav condenses into a floating dark pill once scrolled, exactly as the design does.
@@ -306,7 +309,7 @@ function SiteNav() {
             className="figure"
             style={{ fontSize: 9.5, letterSpacing: ".22em", color: "var(--ink-3)", marginTop: 3 }}
           >
-            AIR INTELLIGENCE
+            {t("AIR INTELLIGENCE")}
           </span>
         </span>
       </Link>
@@ -333,10 +336,11 @@ function SiteNav() {
                 fontWeight: active ? 600 : 500,
               }}
             >
-              {n.label}
+              {t(n.label)}
             </Link>
           );
         })}
+        <LangToggle compact />
         <AnimatedThemeToggler
           className="nav-theme grid place-items-center cursor-pointer"
           style={undefined}
@@ -355,7 +359,7 @@ function SiteNav() {
             fontSize: 13.5,
           }}
         >
-          Open Dashboard →
+          {t("Open Dashboard →")}
         </ShinyLink>
       </div>
     </nav>

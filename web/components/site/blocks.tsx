@@ -37,18 +37,27 @@ export const FEATURES = [
 
 export const STEPS = [
   {
-    n: "01 — INGEST",
-    title: "Fuse every signal",
+    n: "01",
+    tag: "STEP 01",
+    label: "Data Ingestion",
+    icon: "📡",
+    title: "Sensors & Satellite",
     body: "CPCB station hours, Open-Meteo weather and CAMS, Sentinel-5P and MODIS columns, EDGAR emissions, WorldPop and OSM roads — harmonised onto one H3 grid and hourly clock.",
   },
   {
-    n: "02 — PREDICT",
-    title: "Model the plume",
+    n: "02",
+    tag: "STEP 02",
+    label: "AI Processing",
+    icon: "🧠",
+    title: "AI Risk Scoring",
     body: "Gradient-boosted models forecast PM2.5 at +24/48/72h from lagged observations, meteorology and CAMS; a no-lag spatial model covers cells with no sensor history.",
   },
   {
-    n: "03 — INTERVENE",
-    title: "Attribute & rank",
+    n: "03",
+    tag: "STEP 03",
+    label: "Multi-channel",
+    icon: "🔔",
+    title: "Alerts & Actions",
     body: "SHAP attribution plus an upwind wind-cone names the likely source, then wards are ranked by exceedance × population × vulnerability into an action list.",
   },
 ];
@@ -56,17 +65,17 @@ export const STEPS = [
 export function FeatureGrid() {
   return (
     <div
-      style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 16 }}
+      style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))", gap: 20 }}
     >
       {FEATURES.map((f) => (
-        <div key={f.title} className="card lift" style={{ padding: 24 }}>
+        <div key={f.title} className="card lift" style={{ padding: 24, borderRadius: 18 }}>
           <div
             style={{
               width: 44,
               height: 44,
               borderRadius: 12,
-              background: "var(--surface-2)",
-              border: "1px solid var(--line)",
+              background: "color-mix(in oklch, var(--accent), transparent 90%)",
+              border: "1px solid color-mix(in oklch, var(--accent), transparent 75%)",
               display: "grid",
               placeItems: "center",
               fontSize: 20,
@@ -75,7 +84,7 @@ export function FeatureGrid() {
           >
             {f.icon}
           </div>
-          <h3 className="display" style={{ fontSize: 18, marginBottom: 8 }}>
+          <h3 className="display" style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>
             {f.title}
           </h3>
           <p style={{ fontSize: 14, lineHeight: 1.6, color: "var(--ink-2)" }}>{f.body}</p>
@@ -87,59 +96,122 @@ export function FeatureGrid() {
 
 export function StepsPanel({ heading }: { heading?: string }) {
   return (
-    <div
-      className="card"
-      style={{
-        borderRadius: 24,
-        padding: "clamp(26px,4vw,52px)",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
+    <div style={{ position: "relative" }}>
+      {heading && (
+        <div style={{ textAlign: "center", marginBottom: 44 }}>
+          <div
+            className="figure"
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              letterSpacing: ".2em",
+              color: "var(--accent)",
+              marginBottom: 10,
+              textTransform: "uppercase",
+            }}
+          >
+            HOW IT WORKS
+          </div>
+          <h2
+            className="display"
+            style={{
+              fontSize: "clamp(28px,4vw,44px)",
+              fontWeight: 700,
+              maxWidth: "24ch",
+              margin: "0 auto",
+              lineHeight: 1.1,
+            }}
+          >
+            {heading}
+          </h2>
+        </div>
+      )}
       <div
-        aria-hidden
         style={{
-          position: "absolute",
-          inset: 0,
-          opacity: 0.5,
-          background:
-            "repeating-linear-gradient(90deg,transparent,transparent 22px,var(--line) 22px,var(--line) 23px)",
-          maskImage: "linear-gradient(180deg,#000,transparent 70%)",
-          pointerEvents: "none",
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit,minmax(280px,1fr))",
+          gap: 22,
         }}
-      />
-      <div style={{ position: "relative" }}>
-        {heading && (
-          <>
+      >
+        {STEPS.map((s) => (
+          <div
+            key={s.n}
+            className="card lift"
+            style={{
+              padding: "26px 26px 30px",
+              borderRadius: 20,
+              position: "relative",
+              overflow: "hidden",
+              background: "var(--surface)",
+              border: "1px solid var(--line)",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
             <div
-              className="figure"
-              style={{ fontSize: 12, letterSpacing: ".18em", color: "var(--accent)", marginBottom: 12 }}
+              aria-hidden
+              style={{
+                position: "absolute",
+                right: 18,
+                top: 8,
+                fontSize: 72,
+                fontWeight: 800,
+                opacity: 0.05,
+                fontFamily: "var(--font-display, sans-serif)",
+                pointerEvents: "none",
+                userSelect: "none",
+              }}
             >
-              HOW THE MODEL WORKS
+              {s.n}
             </div>
-            <h2
-              className="display"
-              style={{ fontSize: "clamp(24px,3.4vw,38px)", maxWidth: "20ch", marginBottom: 34 }}
-            >
-              {heading}
-            </h2>
-          </>
-        )}
-        <div
-          style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(230px,1fr))", gap: 24 }}
-        >
-          {STEPS.map((s) => (
-            <div key={s.n}>
-              <div className="figure" style={{ fontSize: 13, color: "var(--ink-3)" }}>
-                {s.n}
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: 20,
+                }}
+              >
+                <span
+                  className="figure"
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    letterSpacing: ".12em",
+                    color: "var(--accent)",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {s.tag}
+                </span>
+                <span style={{ fontSize: 11.5, color: "var(--ink-3)", opacity: 0.85 }}>
+                  {s.label}
+                </span>
               </div>
-              <h3 className="display" style={{ fontSize: 20, margin: "10px 0 8px" }}>
+              <div
+                style={{
+                  width: 46,
+                  height: 46,
+                  borderRadius: 14,
+                  background: "color-mix(in oklch, var(--accent), transparent 90%)",
+                  border: "1px solid color-mix(in oklch, var(--accent), transparent 75%)",
+                  display: "grid",
+                  placeItems: "center",
+                  fontSize: 22,
+                  marginBottom: 20,
+                }}
+              >
+                {s.icon}
+              </div>
+              <h3 className="display" style={{ fontSize: 20, fontWeight: 600, marginBottom: 10 }}>
                 {s.title}
               </h3>
               <p style={{ fontSize: 14, lineHeight: 1.6, color: "var(--ink-2)" }}>{s.body}</p>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -162,7 +234,7 @@ export function Section({
       style={{
         position: "relative",
         zIndex: 1,
-        maxWidth: 1220,
+        maxWidth: 1400,
         margin: "0 auto",
         padding: `${pt}px ${PAD} ${pb}px`,
       }}

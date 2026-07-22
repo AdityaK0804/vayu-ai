@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useDistricts } from "@/components/DistrictMap";
 import { useLive, useMetrics, usePriority } from "@/lib/data";
 import { aqiLabel } from "@/lib/aqiScale";
+import { useT, useLangStore, type Lang } from "@/lib/i18n";
 
 /**
  * VAYU Assistant — visuals ported 1:1 from the design's initChat() in
@@ -24,10 +25,13 @@ interface Msg {
   text: string;
   chips?: string[];
   pending?: boolean;
+  model?: string;
 }
 
-const GREETING =
-  "Namaste! 🌱 I'm the <b>VAYU assistant</b>. How can I help with the region's air today?";
+const GREETING: Record<Lang, string> = {
+  en: "Namaste! 🌱 I'm <b>Vayu Assist</b>. How can I help with the region's air today?",
+  hi: "नमस्ते! 🌱 मैं <b>Vayu Assist</b> हूँ। आज क्षेत्र की हवा के बारे में कैसे मदद करूँ?",
+};
 
 const CHIPS = ["Korba AQI", "72h forecast", "Worst district", "Recommend actions"];
 
@@ -41,6 +45,8 @@ export default function Chatbot() {
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [q, setQ] = useState("");
   const bodyRef = useRef<HTMLDivElement | null>(null);
+  const { t } = useT();
+  const { lang, setLang } = useLangStore();
 
   const { data: districts } = useDistricts();
   const { data: live } = useLive();
@@ -54,9 +60,16 @@ export default function Chatbot() {
   // greet on first open, exactly as the design does
   useEffect(() => {
     if (open && msgs.length === 0) {
-      setMsgs([{ role: "bot", text: GREETING, chips: CHIPS }]);
+      setMsgs([{ role: "bot", text: GREETING[lang], chips: CHIPS.map((c) => t(c)) }]);
     }
-  }, [open, msgs.length]);
+  }, [open, msgs.length, lang, t]);
+
+  // switching language mid-conversation re-greets rather than leaving a
+  // half-English, half-Hindi thread on screen
+  useEffect(() => {
+    if (msgs.length > 0) setMsgs([{ role: "bot", text: GREETING[lang], chips: CHIPS.map((c) => t(c)) }]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang]);
 
   /* ----------------------------------------------------- grounded answers */
   function answer(raw: string): string {
@@ -156,25 +169,35 @@ export default function Chatbot() {
   }
 
   async function send(text: string) {
-    const t = text.trim();
-    if (!t) return;
+    const t2 = text.trim();
+    if (!t2) return;
     const history = msgs.slice(-6).map((m) => ({ role: m.role, content: m.text }));
-    setMsgs((m) => [...m, { role: "user", text: t }, { role: "bot", text: "typing…", pending: true }]);
+    setMsgs((m) => [...m, { role: "user", text: t2 }, { role: "bot", text: t("typing…"), pending: true }]);
     setQ("");
 
     let reply: string | null = null;
+    let modelName: string | undefined = undefined;
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: t, context: buildContext(), history }),
+        body: JSON.stringify({ message: t2, context: buildContext(), history, lang }),
       });
       const j = await res.json();
-      if (j?.ok && j.text) reply = String(j.text).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
-    } catch {
-      /* fall through to the grounded answer */
+      if (j?.ok && j.text) {
+        reply = String(j.text).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+        modelName = j.model ?? "gemini-2.0-flash";
+      } else if (j?.reason || j?.detail || j?.hint) {
+        const errorDetail = j?.detail ? (typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail)) : j?.hint ?? j?.reason;
+        reply = `⚠️ <b>Gemini API Note (${j?.status || j?.reason})</b>: ${errorDetail}`;
+      }
+    } catch (err) {
+      console.warn("[Vayu Assist Fetch Error]:", err);
     }
-    setMsgs((m) => [...m.filter((x) => !x.pending), { role: "bot", text: reply ?? answer(t) }]);
+    setMsgs((m) => [
+      ...m.filter((x) => !x.pending),
+      { role: "bot", text: reply ?? answer(t2), model: reply && !reply.startsWith("⚠️") ? modelName : undefined },
+    ]);
   }
 
   /* --------------------------------------------------------------- render */
@@ -266,15 +289,16 @@ export default function Chatbot() {
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontFamily: "var(--font-display)", fontWeight: 600, fontSize: 15 }}>
-              VAYU Assistant
+              Vayu Assist
             </div>
             <div
               style={{
-                fontSize: 11.5,
-                opacity: 0.85,
+                fontSize: 11,
+                opacity: 0.9,
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
+                marginTop: 2,
               }}
             >
               <span
@@ -286,8 +310,30 @@ export default function Chatbot() {
                   boxShadow: "0 0 6px #7CFFB2",
                 }}
               />
-              Online · air quality help
+              Online · Powered by Gemini ✨
             </div>
+          </div>
+          <div style={{ display: "flex", gap: 3, marginRight: 4 }}>
+            {(["en", "hi"] as Lang[]).map((l) => (
+              <button
+                key={l}
+                onClick={() => setLang(l)}
+                aria-pressed={lang === l}
+                style={{
+                  border: 0,
+                  borderRadius: 7,
+                  padding: "4px 8px",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  background: lang === l ? "rgba(255,255,255,.28)" : "rgba(255,255,255,.10)",
+                  color: "#fff",
+                }}
+              >
+                {l === "en" ? "EN" : "हिं"}
+              </button>
+            ))}
           </div>
           <button
             aria-label="Close"
@@ -298,6 +344,7 @@ export default function Chatbot() {
               border: 0,
               borderRadius: 9,
               background: "rgba(255,255,255,.16)",
+
               color: "#fff",
               cursor: "pointer",
               fontSize: 17,
@@ -326,22 +373,38 @@ export default function Chatbot() {
             const me = m.role === "user";
             return (
               <div key={i} style={{ display: "contents" }}>
-                <div
-                  style={{
-                    maxWidth: "82%",
-                    padding: "10px 13px",
-                    borderRadius: 14,
-                    lineHeight: 1.5,
-                    alignSelf: me ? "flex-end" : "flex-start",
-                    background: me ? "var(--ink)" : "var(--surface-2)",
-                    color: me ? "var(--bg)" : "var(--ink)",
-                    border: me ? "0" : "1px solid var(--line)",
-                    borderBottomRightRadius: me ? 4 : 14,
-                    borderBottomLeftRadius: me ? 14 : 4,
-                    opacity: m.pending ? 0.6 : 1,
-                  }}
-                  dangerouslySetInnerHTML={{ __html: m.text }}
-                />
+                <div style={{ display: "flex", flexDirection: "column", alignSelf: me ? "flex-end" : "flex-start", maxWidth: "82%" }}>
+                  <div
+                    style={{
+                      padding: "10px 13px",
+                      borderRadius: 14,
+                      lineHeight: 1.5,
+                      background: me ? "var(--ink)" : "var(--surface-2)",
+                      color: me ? "var(--bg)" : "var(--ink)",
+                      border: me ? "0" : "1px solid var(--line)",
+                      borderBottomRightRadius: me ? 4 : 14,
+                      borderBottomLeftRadius: me ? 14 : 4,
+                      opacity: m.pending ? 0.6 : 1,
+                    }}
+                    dangerouslySetInnerHTML={{ __html: m.text }}
+                  />
+                  {!me && m.model && (
+                    <div
+                      style={{
+                        fontSize: 10,
+                        opacity: 0.65,
+                        marginTop: 3,
+                        marginLeft: 4,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 4,
+                        fontFamily: "monospace",
+                      }}
+                    >
+                      <span style={{ color: "var(--accent, #3B82F6)" }}>✨</span> {m.model}
+                    </div>
+                  )}
+                </div>
                 {m.chips && (
                   <div
                     style={{ display: "flex", flexWrap: "wrap", gap: 7, alignSelf: "flex-start" }}
@@ -386,7 +449,7 @@ export default function Chatbot() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send(q)}
-            placeholder="Ask about AQI, alerts, cities…"
+            placeholder={t("Ask about AQI, alerts, cities…")}
             aria-label="Ask the assistant"
             style={{
               flex: 1,

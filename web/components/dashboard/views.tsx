@@ -19,6 +19,7 @@ import {
   useStations,
 } from "@/lib/data";
 import { useApp } from "@/lib/store";
+import { useT } from "@/lib/i18n";
 import { selectFrame } from "@/lib/types";
 
 const DistrictMap = dynamic(() => import("@/components/DistrictMap"), {
@@ -41,10 +42,11 @@ const MapCanvas = dynamic(() => import("@/components/MapCanvas"), {
 
 /* ------------------------------------------------------------------ shared */
 export function Head({ crumb, title, sub }: { crumb: string; title: string; sub?: string }) {
+  const { t } = useT();
   return (
     <div style={{ marginBottom: 20 }}>
-      <div className="crumb">{crumb}</div>
-      <h1 className="disp">{title}</h1>
+      <div className="crumb">{t(crumb)}</div>
+      <h1 className="disp">{t(title)}</h1>
       {sub && <p className="sub">{sub}</p>}
     </div>
   );
@@ -252,6 +254,7 @@ export function OverviewView() {
 type MapMode = "districts" | "grid";
 
 export function MapView() {
+  const { t } = useT();
   const { layer, setLayer, city, setCity } = useApp();
   const { data: forecast } = useForecast(city);
   const { data: districts } = useDistricts();
@@ -342,7 +345,7 @@ export function MapView() {
           >
             ◉
           </span>
-          <b style={{ fontFamily: "var(--font-display)", fontSize: 16 }}>Risk Map</b>
+          <b style={{ fontFamily: "var(--font-display)", fontSize: 16 }}>{t("Risk Map")}</b>
           <span className="sub" style={{ margin: 0 }}>
             Chhattisgarh ·{" "}
             {mode === "districts"
@@ -357,7 +360,7 @@ export function MapView() {
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Search district or city…"
+                placeholder={t("Search district or city…")}
                 aria-label="Search district or city"
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && results[0]) go(results[0]);
@@ -539,7 +542,7 @@ export function MapView() {
         >
           <span style={{ color: "var(--accent)" }}>◉</span>
           <span style={{ fontSize: 13 }}>
-            Welcome to <b style={{ fontFamily: "var(--font-display)" }}>{welcome}</b>
+            {t("Welcome to")} <b style={{ fontFamily: "var(--font-display)" }}>{welcome}</b>
           </span>
         </div>
       )}
@@ -559,7 +562,7 @@ export function MapView() {
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", gap: 8 }}>
             <div>
-              <div className="crumb">District</div>
+              <div className="crumb">{t("District")}</div>
               <b style={{ fontFamily: "var(--font-display)", fontSize: 18 }}>{district.name}</b>
             </div>
             <button
@@ -1294,9 +1297,10 @@ function Rowk({ k, v }: { k: string; v: string }) {
 }
 
 function Block({ title, children }: { title: string; children: React.ReactNode }) {
+  const { t } = useT();
   return (
     <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--line)" }}>
-      <div className="crumb" style={{ marginBottom: 8 }}>{title}</div>
+      <div className="crumb" style={{ marginBottom: 8 }}>{t(title)}</div>
       {children}
     </div>
   );
