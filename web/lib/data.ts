@@ -103,3 +103,74 @@ export function useStationsLive() {
     staleTime: 60_000,
   });
 }
+
+/* -------------------- citizen advisories (hospital + school bake) -------------------- */
+export interface AdvisoryFacility {
+  name: string;
+  type?: string;
+  address?: string;
+  district?: string;
+  block?: string;
+}
+export interface CityAdvisory {
+  city_id: string;
+  city_name: string;
+  districts_matched: string[];
+  air: {
+    pm25: number | null;
+    us_aqi: number | null;
+    band_en: string;
+    band_hi: string;
+    severity: number;
+    basis: string;
+    top_source: string | null;
+    source_shares?: Record<string, number> | null;
+    priority_ward?: string | null;
+  };
+  exposure: {
+    hospitals_total: number;
+    hospitals_public: number;
+    hospitals_private: number;
+    schools_total: number;
+    vulnerable_note_en: string;
+    vulnerable_note_hi: string;
+  };
+  hospitals_sample: AdvisoryFacility[];
+  schools_sample: AdvisoryFacility[];
+  messages: { en: string; hi: string };
+  actions: { en: string[]; hi: string[] };
+  audience: { id: string; en: string; hi: string }[];
+}
+export interface AdvisoryIndex {
+  version: string;
+  cities: {
+    city_id: string;
+    city_name: string;
+    hospitals: number;
+    schools: number;
+    severity: number;
+    band_en: string;
+    pm25: number | null;
+  }[];
+  advisories: Record<string, CityAdvisory>;
+}
+
+export function useAdvisoryIndex() {
+  return useQuery({
+    queryKey: ["advisories_index"],
+    queryFn: async (): Promise<AdvisoryIndex> => {
+      const res = await fetch("/data/advisories/index.json", { cache: "force-cache" });
+      if (!res.ok) throw new Error(`advisories: HTTP ${res.status}`);
+      return res.json();
+    },
+    ...STATIC,
+  });
+}
+
+export function useAdvisory(city: CityId) {
+  return useQuery({
+    queryKey: ["advisories", city],
+    queryFn: () => getJSON<CityAdvisory>(city, "advisories.json"),
+    ...STATIC,
+  });
+}

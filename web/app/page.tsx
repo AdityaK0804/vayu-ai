@@ -12,6 +12,9 @@ import { useMetrics } from "@/lib/data";
 import { useT } from "@/lib/i18n";
 
 /* lazy-load below-the-fold sections for faster initial paint */
+const PlatformLivePreview = dynamic(() => import("@/components/site/PlatformLivePreview"), {
+  ssr: false,
+});
 const FlowSteps = dynamic(() => import("@/components/site/FlowSteps"), { ssr: false });
 const AlertPreview = dynamic(() => import("@/components/site/AlertPreview"), { ssr: false });
 
@@ -55,7 +58,9 @@ export default function Landing() {
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
           gap: "clamp(24px, 4vw, 56px)",
-          alignItems: "center",
+          // top-aligned, not centred: the left column is much taller than the
+          // preview, so centring pushed the frame down past the headline
+          alignItems: "start",
         }}
       >
         {/* ---------- left: hero text ---------- */}
@@ -196,9 +201,12 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* ---------- right: dashboard preview ---------- */}
+        {/* ---------- right: dashboard preview (NOT a link) ---------- */}
         <DashboardPreview />
       </header>
+
+      {/* full-width live map platform preview (Climate Saathi style) */}
+      <PlatformLivePreview />
 
       <CityIndex />
 

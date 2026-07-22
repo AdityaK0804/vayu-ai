@@ -223,6 +223,18 @@
   .alert-preview > div:last-child { order: -1; }
 }
 
+/* full-width live platform preview below hero */
+.platform-live-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 200px) 1fr minmax(0, 220px);
+  min-height: 380px;
+}
+@media (max-width: 900px) {
+  .platform-live-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* hero-side dashboard sidebar preview (Climate Saathi style) */
 .dash-sidebar {
   display: flex;

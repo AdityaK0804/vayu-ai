@@ -2,18 +2,15 @@
 
 import { useMemo, useState } from "react";
 
-import {
-  Bar,
-  BarChart,
-  BarLegend,
-  BarXAxis,
-  ChartTooltip,
-  Grid,
-} from "@/components/charts/BarChart";
+import { Bar } from "@/components/charts/bar";
+import { BarChart } from "@/components/charts/bar-chart";
+import { BarXAxis } from "@/components/charts/bar-x-axis";
+import { Grid } from "@/components/charts/grid";
+import { ChartTooltip } from "@/components/charts/tooltip";
 import { PieWithLegend, type PieData } from "@/components/charts/PieChart";
 import { aqiCss } from "@/lib/aqiScale";
 import { SOURCE_LABEL } from "@/lib/aqi";
-import { useMetrics, usePriority, useStationsLive } from "@/lib/data";
+import { useAttribution, useMetrics, usePriority, useStationsLive } from "@/lib/data";
 import { useDistricts } from "@/lib/districts";
 import { useT } from "@/lib/i18n";
 import { useApp } from "@/lib/store";
@@ -99,6 +96,7 @@ export default function AnalyticsView() {
   const { data: districts } = useDistricts();
   const { data: metrics } = useMetrics(city);
   const { data: priority } = usePriority(city);
+  const { data: attribution } = useAttribution(city);
   const { data: stationsLive } = useStationsLive();
 
   const props = useMemo(
@@ -152,8 +150,57 @@ export default function AnalyticsView() {
     [pollutantMix],
   );
 
-  /* ---- statewide source mix from SHAP, population-weighted ---- */
+  /**
+   * Source mix from the TRAINED attribution model — prefer city priority dossiers
+   * (SHAP shares on model cells), then baked attribution cells, then district shares.
+   */
   const sourceMix = useMemo<PieData[]>(() => {
+    const colors: Record<string, string> = {
+      industry: "#fb923c",
+      traffic: "#38bdf8",
+      fire: "#f43f5e",
+      dust: "#a78bfa",
+    };
+    const toPie = (shares: Record<string, number>) =>
+      Object.entries(shares)
+        .map(([k, v]) => ({
+          label: t(SOURCE_LABEL[k] ?? k),
+          value: Math.round(v * 1000) / 10,
+          color: colors[k] ?? "#94a3b8",
+        }))
+        .filter((d) => d.value > 0)
+        .sort((a, b) => b.value - a.value);
+
+    // 1) priority dossiers for the selected hero city (model enforcement path)
+    const dossiers = priority?.dossiers ?? [];
+    if (dossiers.length) {
+      const acc: Record<string, number> = { industry: 0, traffic: 0, fire: 0, dust: 0 };
+      let n = 0;
+      for (const d of dossiers) {
+        const sh = (d as any).attribution_shares ?? (d as any).shares;
+        if (!sh) continue;
+        n += 1;
+        for (const k of Object.keys(acc)) acc[k] += Number(sh[k] ?? 0);
+      }
+      if (n) {
+        for (const k of Object.keys(acc)) acc[k] /= n;
+        return toPie(acc);
+      }
+    }
+
+    // 2) baked attribution cells for this city
+    const cells = attribution?.cells ?? [];
+    if (cells.length) {
+      const acc: Record<string, number> = { industry: 0, traffic: 0, fire: 0, dust: 0 };
+      for (const c of cells) {
+        const sh = c.shares ?? {};
+        for (const k of Object.keys(acc)) acc[k] += Number((sh as any)[k] ?? 0);
+      }
+      for (const k of Object.keys(acc)) acc[k] /= cells.length;
+      return toPie(acc);
+    }
+
+    // 3) statewide population-weighted district shares (model bake on districts)
     const acc: Record<string, number> = { industry: 0, traffic: 0, fire: 0, dust: 0 };
     let tot = 0;
     for (const p of props) {
@@ -161,21 +208,10 @@ export default function AnalyticsView() {
       tot += w;
       for (const k of Object.keys(acc)) acc[k] += (p.shares?.[k] ?? 0) * w;
     }
-    const colors: Record<string, string> = {
-      industry: "#fb923c",
-      traffic: "#38bdf8",
-      fire: "#f43f5e",
-      dust: "#a78bfa",
-    };
-    return Object.entries(acc)
-      .map(([k, v]) => ({
-        label: t(SOURCE_LABEL[k] ?? k),
-        value: Math.round((v / (tot || 1)) * 100),
-        color: colors[k],
-      }))
-      .filter((d) => d.value > 0)
-      .sort((a, b) => b.value - a.value);
-  }, [props, t]);
+    if (!tot) return [];
+    for (const k of Object.keys(acc)) acc[k] /= tot;
+    return toPie(acc);
+  }, [props, t, priority, attribution]);
 
   /* ---- EDGAR emission sectors for the district holding the selected city ---- */
   const sectorMix = useMemo<PieData[]>(() => {
@@ -220,7 +256,9 @@ export default function AnalyticsView() {
       <Head
         crumb="Monitor / Analytics"
         title="Analytics"
-        sub={t("Pollutant load, source mix and model performance — all from live measurements.")}
+        sub={t(
+          "Pollutant load from live stations; source mix from the trained attribution model; RMSE from held-out test.",
+        )}
       />
 
       <div className="grid kpis" style={{ marginBottom: 16 }}>
@@ -332,7 +370,7 @@ export default function AnalyticsView() {
         <div className="card">
           <div className="card-h">
             <h3>{t("Source mix")}</h3>
-            <span className="sub">{t("population-weighted SHAP")}</span>
+            <span className="sub">{t("trained model SHAP · city dossiers")}</span>
           </div>
           <div style={{ padding: "16px 18px 20px" }}>
             <PieWithLegend
@@ -375,20 +413,32 @@ export default function AnalyticsView() {
         <div style={{ padding: "16px 20px 22px" }}>
           {compare.length ? (
             <>
-              <BarLegend series={MODEL_SERIES} />
+              <div style={{ display: "flex", gap: 18, flexWrap: "wrap", marginBottom: 6 }}>
+                {MODEL_SERIES.map((s) => (
+                  <span
+                    key={s.key}
+                    style={{ display: "inline-flex", alignItems: "center", gap: 7, fontSize: 12 }}
+                  >
+                    <span
+                      style={{ width: 10, height: 10, borderRadius: 3, background: s.fill, flex: "none" }}
+                    />
+                    <span style={{ color: "var(--ink-2)" }}>{s.label}</span>
+                  </span>
+                ))}
+              </div>
               <BarChart
                 data={compare}
                 xDataKey="horizon"
-                height={330}
-                barGap={0.3}
-                margin={{ top: 16, right: 16, bottom: 32, left: 44 }}
+                aspectRatio="3 / 1"
+                barGap={0.35}
+                margin={{ top: 24, right: 24, bottom: 40, left: 52 }}
               >
                 <Grid horizontal />
                 {MODEL_SERIES.map((s) => (
-                  <Bar key={s.key} dataKey={s.key} label={s.label} fill={s.fill} lineCap="round" />
+                  <Bar key={s.key} dataKey={s.key} fill={s.fill} lineCap="round" />
                 ))}
                 <BarXAxis showAllLabels />
-                <ChartTooltip formatValue={(v) => v.toFixed(2)} unit=" µg/m³" />
+                <ChartTooltip />
               </BarChart>
               <p style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 12, lineHeight: 1.55 }}>
                 {t(
