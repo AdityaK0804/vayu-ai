@@ -131,10 +131,13 @@ export default function DistrictMap({
   onSelect,
   focus,
   showCities = true,
+  openCityOnFocus = true,
 }: {
   selected: string | null;
   onSelect: (d: DistrictProps | null) => void;
   /** name of a district or city to fly to (from the search box) */
+  /** when a CITY is focused, whether to also open its host district panel */
+  openCityOnFocus?: boolean;
   focus?: {
     kind: "district" | "city" | "india";
     name: string;
@@ -179,13 +182,16 @@ export default function DistrictMap({
       const c = data.cities?.find((x) => x.name === focus.name);
       if (c) {
         m.flyTo({ center: [c.lon, c.lat], zoom: 9.6, duration: 1500, curve: 1.5, essential: true });
-        // open the detail panel for whichever district the city sits in, so a
-        // city search lands on data rather than just a viewport move
-        const host = data.features.find((f) => {
-          const [[w, s2], [e, n]] = bboxOf(f.geometry);
-          return c.lon >= w && c.lon <= e && c.lat >= s2 && c.lat <= n;
-        });
-        if (host) onSelect(host.properties);
+        // The dashboard shows a dedicated CITY panel, so it opts out of this.
+        // Elsewhere (e.g. search), falling back to the host district is still
+        // better than a bare viewport move.
+        if (openCityOnFocus) {
+          const host = data.features.find((f) => {
+            const [[w, s2], [e, n]] = bboxOf(f.geometry);
+            return c.lon >= w && c.lon <= e && c.lat >= s2 && c.lat <= n;
+          });
+          if (host) onSelect(host.properties);
+        }
       }
       return;
     }
@@ -200,7 +206,7 @@ export default function DistrictMap({
         m.flyTo({ center: [focus.lon, focus.lat], zoom: 9, duration: 1600, curve: 1.5, essential: true });
       }
     }
-  }, [focus, data, onSelect]);
+  }, [focus, data, onSelect, openCityOnFocus]);
 
   const layers = useMemo(() => {
     if (!data) return [];

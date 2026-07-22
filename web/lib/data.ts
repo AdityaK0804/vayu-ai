@@ -74,3 +74,32 @@ export function useLive() {
     retry: 1,
   });
 }
+
+/** Per-station live readings (scripts/live/fetch_live_stations.py). */
+export interface LiveStation {
+  openaq_id: number;
+  station: string;
+  city_id: string | null;
+  lat: number;
+  lon: number;
+  pm25?: number;
+  pm25_24h?: number | null;
+  pm10?: number;
+  no2?: number;
+  so2?: number;
+  co?: number;
+  o3?: number;
+  us_aqi: number | null;
+  measured_at_utc: string | null;
+}
+export function useStationsLive() {
+  return useQuery({
+    queryKey: ["stations_live"],
+    queryFn: async (): Promise<{ fetched_at_utc: string; stations: LiveStation[] }> => {
+      const res = await fetch("/data/live/stations_live.json", { cache: "no-cache" });
+      if (!res.ok) throw new Error(`stations_live: HTTP ${res.status}`);
+      return res.json();
+    },
+    staleTime: 60_000,
+  });
+}

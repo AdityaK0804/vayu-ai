@@ -209,3 +209,16 @@
   .flow-item { flex-direction: column; }
   .flow-arrow { transform: rotate(90deg); padding: 10px 0; }
 }
+
+/* multilingual alert preview */
+.alert-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: clamp(24px, 5vw, 64px);
+  align-items: center;
+}
+.alert-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 900px) {
+  .alert-preview { grid-template-columns: 1fr; }
+  .alert-preview > div:last-child { order: -1; }
+}

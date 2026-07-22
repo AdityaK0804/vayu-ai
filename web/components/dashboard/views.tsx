@@ -8,6 +8,7 @@ import TimeSlider from "@/components/TimeSlider";
 import ShinyButton from "@/components/magicui/shiny-button";
 import { useDistricts, useIndiaIndex, type DistrictProps } from "@/components/DistrictMap";
 import MapWorkspace from "@/components/dashboard/MapWorkspace";
+import type { CityPoint } from "@/components/DistrictMap";
 import { AQI_BANDS, aqiCss, aqiLabel } from "@/lib/aqiScale";
 import type { CityId } from "@/lib/types";
 import { BANDS, SOURCE_LABEL, bandFor } from "@/lib/aqi";
@@ -261,6 +262,7 @@ export function MapView() {
   const { data: districts } = useDistricts();
   const [mode, setMode] = useState<MapMode>("districts");
   const [district, setDistrict] = useState<DistrictProps | null>(null);
+  const [openCity, setOpenCity] = useState<CityPoint | null>(null);
   const [q, setQ] = useState("");
   const { data: india } = useIndiaIndex();
   const [focus, setFocus] = useState<
@@ -317,7 +319,12 @@ export function MapView() {
   return (
     <div className="section" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {mode === "districts" ? (
-        <MapWorkspace selected={district} onSelectDistrict={setDistrict} />
+        <MapWorkspace
+          selected={district}
+          onSelectDistrict={setDistrict}
+          openCity={openCity}
+          setOpenCity={setOpenCity}
+        />
       ) : (
         <div className="map-wrap" style={{ position: "relative", height: "calc(100vh - 150px)" }}>
           <MapCanvas />

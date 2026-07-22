@@ -250,6 +250,35 @@ const HI: Dict = {
   View: "दृश्य",
   Wards: "वार्ड",
 
+
+  /* ---- alert preview ---- */
+  "MULTILINGUAL ALERTS": "बहुभाषी चेतावनियाँ",
+  "Alerts that speak their language": "चेतावनी, उनकी अपनी भाषा में",
+  "Every alert goes out in Hindi, Chhattisgarhi or English — on whichever channel reaches that official fastest. Built from the live reading, not a template.":
+    "हर चेतावनी हिन्दी, छत्तीसगढ़ी या अंग्रेज़ी में जाती है — उसी माध्यम से जो अधिकारी तक सबसे तेज़ पहुँचे। लाइव रीडिंग से बनी, किसी तयशुदा साँचे से नहीं।",
+  CHANNEL: "माध्यम",
+  LANGUAGE: "भाषा",
+  "Alert languages": "चेतावनी भाषाएँ",
+  "Delivery channels": "वितरण माध्यम",
+  "Live worst AQI": "लाइव सर्वाधिक AQI",
+  "Auto-retry on no ACK": "उत्तर न मिलने पर पुनःप्रयास",
+  "Preview of the message format. Delivery via Twilio (SMS / WhatsApp / IVR) is not connected yet — nothing is being sent.":
+    "यह संदेश के प्रारूप की झलक है। Twilio (SMS / WhatsApp / IVR) से वितरण अभी जुड़ा नहीं है — कुछ भी भेजा नहीं जा रहा।",
+  "just now": "अभी",
+  "incoming call": "आती हुई कॉल",
+
+  /* ---- city detail ---- */
+  City: "शहर",
+  LIVE: "लाइव",
+  stations: "स्टेशन",
+  "PREDICTED · no sensor here": "पूर्वानुमानित · यहाँ सेंसर नहीं",
+  "Model prediction": "मॉडल पूर्वानुमान",
+  Role: "भूमिका",
+  "Measured now at this city": "इस शहर पर अभी मापा गया",
+  "as of": "समय",
+  "This city has no CPCB station. Its value is predicted from satellite, meteorology and emissions geography — the basis the leave-one-station-out test validated.":
+    "इस शहर में कोई CPCB स्टेशन नहीं है। इसका मान उपग्रह, मौसम और उत्सर्जन भूगोल से अनुमानित है — वही आधार जिसे leave-one-station-out परीक्षण ने सत्यापित किया।",
+
   /* ---- chatbot ---- */
   "VAYU Assistant": "VAYU सहायक",
   "Online · air quality help": "ऑनलाइन · वायु गुणवत्ता सहायता",
