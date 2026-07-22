@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useLive } from "@/lib/data";
+import { useT } from "@/lib/i18n";
 import type { LiveCity } from "@/lib/types";
 
 /** US AQI category -> the design's ramp. */
@@ -24,6 +25,7 @@ const SUBTITLE: Record<string, string> = {
 };
 
 export default function CityIndex() {
+  const { t } = useT();
   const { data, isLoading, isError } = useLive();
 
   return (
@@ -32,9 +34,9 @@ export default function CityIndex() {
       style={{
         position: "relative",
         zIndex: 1,
-        maxWidth: 1220,
+        maxWidth: 1400,
         margin: "0 auto",
-        padding: "44px clamp(20px,5vw,72px)",
+        padding: "44px clamp(16px,2.5vw,36px)",
       }}
     >
       <div
@@ -48,7 +50,7 @@ export default function CityIndex() {
         }}
       >
         <h2 className="display" style={{ fontSize: "clamp(22px,3vw,30px)" }}>
-          Live city index
+          {t("Live city index")}
         </h2>
         <span className="figure" style={{ fontSize: 12, color: "var(--ink-3)" }}>
           {isError
@@ -68,7 +70,7 @@ export default function CityIndex() {
       >
         {isLoading &&
           Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="card lift" style={{ padding: 20, height: 168, opacity: 0.5 }} />
+            <div key={i} className="card lift city-card-hover" style={{ padding: 20, height: 168, opacity: 0.5 }} />
           ))}
 
         {data?.map((c: LiveCity) => {
@@ -78,7 +80,7 @@ export default function CityIndex() {
             <Link
               key={c.city_id}
               href={zeroStation ? "/dashboard?city=jagdalpur" : "/dashboard"}
-              className="card lift"
+              className="card lift city-card-hover"
               style={{ display: "block", padding: 20, position: "relative", overflow: "hidden" }}
             >
               <div

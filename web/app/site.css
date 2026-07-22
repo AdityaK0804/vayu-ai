@@ -64,6 +64,21 @@
   border-color: color-mix(in oklch, var(--accent), transparent 55%);
 }
 
+.city-card-hover {
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease, border-color 0.35s ease !important;
+  will-change: transform, box-shadow;
+}
+.city-card-hover:hover {
+  transform: translateY(-8px) scale(1.03) !important;
+  box-shadow: 0 22px 45px -12px rgba(0, 0, 0, 0.6), 0 0 24px -2px color-mix(in oklch, var(--accent), transparent 70%) !important;
+  border-color: color-mix(in oklch, var(--accent), transparent 35%) !important;
+  z-index: 5;
+}
+.city-card-hover:active {
+  transform: translateY(-3px) scale(0.99) !important;
+  transition-duration: 0.1s !important;
+}
+
 
 /* ---------------------------------------------------------------------------
    AnimatedThemeToggler: the circular reveal is driven by the View Transitions
@@ -103,25 +118,39 @@
 }
 
 /* ---------------------------------------------------------------------------
-   Card hover: pop-in on enter (slight overshoot), smooth pop-out on leave.
-   Applies to every .card in the app — marketing cards, KPI tiles, dashboard
-   panels — so hover behaviour is consistent everywhere.
+   Card hover — the design's exact spec (index.dc.html style-hover):
+     transform: translateY(-6px) scale(1.02)
+     box-shadow: 0 24px 50px -18px rgba(0,0,0,.45)
+     border-color: color-mix(in oklch, var(--accent), transparent 55%)
+     transition: transform .3s cubic-bezier(.34,1.56,.64,1), box-shadow .3s, border-color .3s
+   The >1 overshoot in that curve is what makes it pop in and settle back out.
+   Applied to every card surface in the app so the behaviour is uniform.
 --------------------------------------------------------------------------- */
 .card,
-.lift {
+.lift,
+.kpi,
+.interv,
+.feature-card {
   transition:
-    transform 0.34s cubic-bezier(0.34, 1.56, 0.64, 1),
-    box-shadow 0.34s ease,
-    border-color 0.34s ease;
+    transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.3s ease,
+    border-color 0.3s ease;
+  will-change: transform;
 }
 .card:hover,
-.lift:hover {
+.lift:hover,
+.kpi:hover,
+.feature-card:hover {
   transform: translateY(-6px) scale(1.02);
   box-shadow: 0 24px 50px -18px rgba(0, 0, 0, 0.45);
   border-color: color-mix(in oklch, var(--accent), transparent 55%);
 }
 .card:active,
-.lift:active { transform: translateY(-2px) scale(0.995); transition-duration: 0.12s; }
+.lift:active,
+.feature-card:active {
+  transform: translateY(-2px) scale(0.995);
+  transition-duration: 0.12s;
+}
 
 /* Anchored map chrome must stay put — popping a legend or floating panel
    away from the thing it labels is disorienting, not delightful. */

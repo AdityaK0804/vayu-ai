@@ -13,6 +13,8 @@ import {
   ReportsView,
 } from "@/components/dashboard/views";
 import Chatbot from "@/components/Chatbot";
+import LangToggle from "@/components/LangToggle";
+import { useT } from "@/lib/i18n";
 import { AnimatedThemeToggler } from "@/components/magicui/animated-theme-toggler";
 import { useLive, usePriority } from "@/lib/data";
 import { useApp } from "@/lib/store";
@@ -49,6 +51,7 @@ const NAV: {
 
 export default function Dashboard() {
   const { city, setCity, view, setView, sideOpen, toggleSide } = useApp();
+  const { t } = useT();
   // city selection now lives inside the Risk Map card (Live Map view)
   const { data: priority } = usePriority(city);
   const { data: live } = useLive();
@@ -77,13 +80,13 @@ export default function Dashboard() {
           </span>
           <span>
             <b>VAYU</b>
-            <small>COMMAND CENTER</small>
+            <small>{t("COMMAND CENTER")}</small>
           </span>
         </Link>
 
         <div className="search hidden md:flex">
           <span>⌕</span>
-          <input placeholder="Search wards, stations, sources…" aria-label="Search" />
+          <input placeholder={t("Search wards, stations, sources…")} aria-label="Search" />
         </div>
 
         <div className="tb-right">
@@ -99,6 +102,7 @@ export default function Dashboard() {
               </span>
             </span>
           )}
+          <LangToggle compact />
           <AnimatedThemeToggler className="icon-btn" />
         </div>
       </header>
@@ -107,7 +111,7 @@ export default function Dashboard() {
       <aside className={`side${sideOpen ? " open" : ""}`}>
         {NAV.map((grp) => (
           <div key={grp.group}>
-            <div className="grp">{grp.group}</div>
+            <div className="grp">{t(grp.group)}</div>
             {grp.items.map((it) => {
               const val = badgeVal(it.badge);
               return (
@@ -117,7 +121,7 @@ export default function Dashboard() {
                   onClick={() => setView(it.id)}
                 >
                   <span className="ico">{it.ico}</span>
-                  {it.label}
+                  {t(it.label)}
                   {val && <span className="n-badge">{val}</span>}
                 </button>
               );
