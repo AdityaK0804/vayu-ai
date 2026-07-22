@@ -42,6 +42,7 @@ export default function DistrictMap({
   focus,
   showCities = true,
   openCityOnFocus = true,
+  interactive = true,
 }: {
   selected: string | null;
   onSelect: (d: DistrictProps | null) => void;
@@ -57,6 +58,8 @@ export default function DistrictMap({
     lon?: number;
   } | null;
   showCities?: boolean;
+  /** false on the landing page: a preview should look live, not invite panning */
+  interactive?: boolean;
 }) {
   const mapRef = useRef<MapRef | null>(null);
   const [hover, setHover] = useState<string | null>(null);
@@ -124,7 +127,7 @@ export default function DistrictMap({
       new GeoJsonLayer({
         id: "cg-districts",
         data: data as any,
-        pickable: true,
+        pickable: interactive,
         stroked: true,
         filled: true,
         extruded: false, // flat: the extruded walls looked like torn paper at low pitch
@@ -176,7 +179,7 @@ export default function DistrictMap({
         new ScatterplotLayer({
           id: "cg-cities",
           data: data.cities,
-          pickable: true,
+          pickable: interactive,
           stroked: true,
           filled: true,
           radiusUnits: "pixels",
@@ -215,7 +218,7 @@ export default function DistrictMap({
       );
     }
     return out;
-  }, [data, selected, hover, onSelect, flyToFeature, showCities]);
+  }, [data, selected, hover, onSelect, flyToFeature, showCities, interactive]);
 
   return (
     <div style={{ position: "absolute", inset: 0 }}>
@@ -225,11 +228,20 @@ export default function DistrictMap({
         mapStyle={BASEMAP}
         style={{ width: "100%", height: "100%", background: "#060b0a" }}
         attributionControl={false}
+        interactive={interactive}
+        dragPan={interactive}
+        dragRotate={interactive}
+        scrollZoom={interactive}
+        doubleClickZoom={interactive}
+        touchZoomRotate={interactive}
+        keyboard={interactive}
       >
         <AttributionControl compact position="bottom-right" />
         <DeckOverlay
           layers={layers}
-          getCursor={({ isHovering }: any) => (isHovering ? "pointer" : "grab")}
+          getCursor={({ isHovering }: any) =>
+            !interactive ? "default" : isHovering ? "pointer" : "grab"
+          }
           getTooltip={({ object }: any) => {
             if (!object) return null;
             // NB: every GeoJSON feature carries an `id`, so sniffing for one to

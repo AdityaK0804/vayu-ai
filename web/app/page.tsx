@@ -6,7 +6,7 @@ import ShinyLink from "@/components/magicui/shiny-link";
 
 import CityIndex from "@/components/landing/CityIndex";
 import SiteShell, { PAD } from "@/components/site/SiteChrome";
-import { FeatureGrid, Section } from "@/components/site/blocks";
+import { FeatureGrid, Section, SectionHead } from "@/components/site/blocks";
 import DashboardPreview from "@/components/site/DashboardPreview";
 import { useMetrics } from "@/lib/data";
 import { useT } from "@/lib/i18n";
@@ -212,17 +212,11 @@ export default function Landing() {
 
       {/* ---------------- platform ---------------- */}
       <Section id="features" pt={56} pb={56}>
-        <div style={{ maxWidth: "58ch", marginBottom: 34 }}>
-          <div
-            className="figure"
-            style={{ fontSize: 12, letterSpacing: ".18em", color: "var(--accent)", marginBottom: 12 }}
-          >
-            {t("THE PLATFORM")}
-          </div>
-          <h2 className="display" style={{ fontSize: "clamp(26px,3.6vw,40px)", lineHeight: 1.08 }}>
-            {t("One control room for the air a region breathes")}
-          </h2>
-        </div>
+        <SectionHead
+          eyebrow={t("THE PLATFORM")}
+          title={t("One control room for the air a region breathes")}
+          mb={34}
+        />
         <FeatureGrid />
       </Section>
 

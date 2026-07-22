@@ -8,6 +8,7 @@ import { AnimatedThemeToggler } from "@/components/magicui/animated-theme-toggle
 import { Particles } from "@/components/magicui/particles";
 import ShinyLink from "@/components/magicui/shiny-link";
 import Chatbot from "@/components/Chatbot";
+import SiteFooter from "./SiteFooter";
 import LangToggle from "@/components/LangToggle";
 import { useT } from "@/lib/i18n";
 import { bandFor } from "@/lib/aqi";
@@ -358,49 +359,6 @@ function SiteNav() {
         </ShinyLink>
       </div>
     </nav>
-  );
-}
-
-/* ---------------------------------------------------------------- footer */
-export function SiteFooter() {
-  const { t } = useT();
-  return (
-    <footer
-      style={{
-        position: "relative",
-        zIndex: 1,
-        borderTop: "1px solid var(--line)",
-        padding: `34px ${PAD}`,
-        display: "flex",
-        flexWrap: "wrap",
-        gap: 16,
-        alignItems: "center",
-        justifyContent: "space-between",
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
-        <span
-          style={{
-            display: "grid",
-            placeItems: "center",
-            width: 30,
-            height: 30,
-            borderRadius: 9,
-            background: "linear-gradient(140deg,var(--accent),var(--accent-2))",
-          }}
-        >
-          <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#fff" }} />
-        </span>
-        <span className="display" style={{ fontWeight: 700, letterSpacing: ".08em" }}>
-          Vayu AI
-        </span>
-        <span style={{ fontSize: 13, color: "var(--ink-3)" }}>{t("Urban Air Quality Intelligence")}</span>
-      </div>
-      <div className="figure" style={{ fontSize: 12, color: "var(--ink-3)", maxWidth: "62ch" }}>
-        Real data · CPCB stations · Open-Meteo &amp; CAMS · Sentinel-5P / MODIS · EDGAR v8.1 ·
-        WorldPop · GPPD
-      </div>
-    </footer>
   );
 }
 

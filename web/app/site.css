@@ -229,10 +229,20 @@
   grid-template-columns: minmax(0, 200px) 1fr minmax(0, 220px);
   min-height: 380px;
 }
+/* compact: the hero-side card, same frame at ~60% scale */
+.platform-live-grid.compact {
+  grid-template-columns: minmax(0, 118px) 1fr minmax(0, 128px);
+  min-height: 236px;
+}
 @media (max-width: 900px) {
   .platform-live-grid {
     grid-template-columns: 1fr;
   }
+}
+@media (max-width: 1100px) {
+  /* the compact card loses its side rails before the full-width one does */
+  .platform-live-grid.compact { grid-template-columns: minmax(0, 100px) 1fr; }
+  .platform-live-grid.compact > aside:last-child { display: none; }
 }
 
 /* hero-side dashboard sidebar preview (Climate Saathi style) */
@@ -483,3 +493,8 @@
   .dash-win-body { grid-template-columns: 1fr; }
   .dash-win-side { display: none; }
 }
+
+/* footer links: quiet by default, accent on hover — the footer should not
+   compete with the page above it */
+.footer-link { color: var(--ink-2); transition: color .15s; }
+.footer-link:hover { color: var(--accent); }

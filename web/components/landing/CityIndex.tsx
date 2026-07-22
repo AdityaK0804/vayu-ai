@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useLive } from "@/lib/data";
 import { useT } from "@/lib/i18n";
+import { SectionHead } from "@/components/site/blocks";
 import type { LiveCity } from "@/lib/types";
 
 /** US AQI category -> the design's ramp. */
@@ -39,27 +40,27 @@ export default function CityIndex() {
         padding: "44px clamp(16px,2.5vw,36px)",
       }}
     >
-      <div
+      <SectionHead
+        eyebrow={t("LIVE CITY INDEX")}
+        title={t("Live city index")}
+        size="md"
+        mb={12}
+      />
+      <p
+        className="figure"
         style={{
-          display: "flex",
-          alignItems: "baseline",
-          justifyContent: "space-between",
-          flexWrap: "wrap",
-          gap: 10,
-          marginBottom: 22,
+          textAlign: "center",
+          fontSize: 12,
+          color: "var(--ink-3)",
+          margin: "0 0 26px",
         }}
       >
-        <h2 className="display" style={{ fontSize: "clamp(22px,3vw,30px)" }}>
-          {t("Live city index")}
-        </h2>
-        <span className="figure" style={{ fontSize: 12, color: "var(--ink-3)" }}>
-          {isError
-            ? t("live feed unavailable — showing nothing rather than stale numbers")
-            : data?.[0]?.updated
-              ? `Open-Meteo CAMS · US AQI · updated ${new Date(data[0].updated).toUTCString().slice(5, 22)} UTC`
-              : t("loading…")}
-        </span>
-      </div>
+        {isError
+          ? t("live feed unavailable — showing nothing rather than stale numbers")
+          : data?.[0]?.updated
+            ? `Open-Meteo CAMS · US AQI · updated ${new Date(data[0].updated).toUTCString().slice(5, 22)} UTC`
+            : t("loading…")}
+      </p>
 
       <div
         style={{

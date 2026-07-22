@@ -246,3 +246,68 @@ export function Section({
     </section>
   );
 }
+
+/**
+ * Centred section header.
+ *
+ * Every landing section is its own band, so they should announce themselves
+ * the same way. This is the arrangement the bilingual-alerts section already
+ * used — accent eyebrow, display heading, optional lede capped at 62ch and
+ * centred — lifted out so the other sections stop each inventing their own
+ * left-aligned variant.
+ */
+export function SectionHead({
+  eyebrow,
+  title,
+  lede,
+  size = "lg",
+  mb = 40,
+}: {
+  eyebrow?: string;
+  title: string;
+  lede?: string;
+  /** "lg" for top-level bands, "md" where the heading sits above dense content */
+  size?: "lg" | "md";
+  mb?: number;
+}) {
+  return (
+    <div style={{ textAlign: "center", marginBottom: mb }}>
+      {eyebrow && (
+        <div
+          className="figure"
+          style={{
+            fontSize: 12,
+            letterSpacing: ".18em",
+            color: "var(--accent)",
+            marginBottom: 12,
+          }}
+        >
+          {eyebrow}
+        </div>
+      )}
+      <h2
+        className="display"
+        style={{
+          fontSize: size === "lg" ? "clamp(28px,4.4vw,48px)" : "clamp(24px,3.4vw,38px)",
+          lineHeight: 1.08,
+          marginBottom: lede ? 14 : 0,
+        }}
+      >
+        {title}
+      </h2>
+      {lede && (
+        <p
+          style={{
+            fontSize: 16,
+            lineHeight: 1.6,
+            color: "var(--ink-2)",
+            maxWidth: "62ch",
+            margin: "0 auto",
+          }}
+        >
+          {lede}
+        </p>
+      )}
+    </div>
+  );
+}
