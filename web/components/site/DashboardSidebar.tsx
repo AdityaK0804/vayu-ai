@@ -190,7 +190,7 @@ export default function DashboardSidebar() {
       )}
 
       <div className="dash-sidebar-foot">
-        Vayu AI · demo build
+        Vayu.AI · demo build
       </div>
     </Link>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import dynamic from "next/dynamic";
 
 import ShinyLink from "@/components/magicui/shiny-link";
@@ -30,6 +31,14 @@ export default function Landing() {
   const { t } = useT();
   const { data: metrics } = useMetrics("korba");
   const h24 = metrics?.forecast_vs_baselines.find((h) => h.horizon_h === 24);
+
+  // Scroll to top and reset hash on page load
+  useEffect(() => {
+    if (window.location.hash) {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+    window.scrollTo(0, 0);
+  }, []);
 
   const stats = [
     { v: "72h", k: t("forecast horizon") },
@@ -130,7 +139,7 @@ export default function Landing() {
             }}
           >
             {t(
-              "VAYU fuses CPCB ground stations, satellite columns, meteorology and emissions inventories into one forecasting engine — predicting PM2.5 72 hours out, attributing it to a named source, and ranking where enforcement should go first. Including Jagdalpur, which has no ground sensor at all.",
+              "VAYU fuses satellite, ground, and emissions data to forecast PM2.5 72 hours out. It pinpoints pollution sources and prioritizes enforcement across the state-even in districts without physical sensors.",
             )}
           </p>
 
@@ -161,7 +170,7 @@ export default function Landing() {
               {t("Launch the platform →")}
             </ShinyLink>
             <ShinyLink
-              href="/dashboard"
+              href="/#how"
               className="card"
               style={{
                 display: "inline-flex",
@@ -173,7 +182,7 @@ export default function Landing() {
                 fontSize: 15.5,
               }}
             >
-              {t("Explore the live map")}
+              {t("How it works")}
             </ShinyLink>
           </div>
 
@@ -206,12 +215,16 @@ export default function Landing() {
       </header>
 
       {/* full-width live map platform preview (Climate Saathi style) */}
-      <PlatformLivePreview />
+      <div style={{ marginTop: 80, marginBottom: 80 }}>
+        <PlatformLivePreview />
+      </div>
 
-      <CityIndex />
+      <div style={{ marginTop: 80, marginBottom: 80 }}>
+        <CityIndex />
+      </div>
 
       {/* ---------------- platform ---------------- */}
-      <Section id="features" pt={56} pb={56}>
+      <Section id="features" pt={100} pb={100}>
         <SectionHead
           eyebrow={t("THE PLATFORM")}
           title={t("One control room for the air a region breathes")}
@@ -221,10 +234,14 @@ export default function Landing() {
       </Section>
 
       {/* ---------------- how it works ---------------- */}
-      <FlowSteps />
+      <div style={{ marginTop: 100, marginBottom: 100 }}>
+        <FlowSteps />
+      </div>
 
       {/* ---------------- multilingual alerts ---------------- */}
-      <AlertPreview />
+      <div style={{ marginTop: 100, marginBottom: 100 }}>
+        <AlertPreview />
+      </div>
 
       {/* ---------------- CTA ---------------- */}
       <Section pt={20} pb={70}>

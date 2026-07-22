@@ -1,0 +1,206 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Facility {
+  id          String       @id @default(cuid())
+  name        String
+  nameHi      String?
+  type        FacilityType
+  district    String
+  block       String
+  lat         Float
+  lng         Float
+  metadata    Json?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  sensors       SensorReading[]
+  riskScores    RiskScore[]
+  forecasts     Forecast[]
+  alerts        Alert[]
+  interventions Intervention[]
+}
+
+enum FacilityType {
+  SCHOOL
+  PHC
+  CHC
+  ANGANWADI
+}
+
+model SensorReading {
+  id          String      @id @default(cuid())
+  facilityId  String
+  facility    Facility    @relation(fields: [facilityId], references: [id])
+  sensorType  SensorType
+  value       Float
+  unit        String
+  qualityFlag QualityFlag @default(GOOD)
+  timestamp   DateTime
+
+  @@index([facilityId, timestamp])
+}
+
+enum SensorType {
+  WATER_LEVEL
+  SOLAR_OUTPUT
+  TEMPERATURE
+  CHLORINE
+  TURBIDITY
+  HUMIDITY
+  BATTERY
+}
+
+enum QualityFlag {
+  GOOD
+  SUSPECT
+  BAD
+  MISSING
+}
+
+model RiskScore {
+  id             String    @id @default(cuid())
+  facilityId     String
+  facility       Facility  @relation(fields: [facilityId], references: [id])
+  waterRisk      Float
+  energyRisk     Float
+  sanitationRisk Float
+  diseaseRisk    Float
+  overallRisk    Float
+  scoredAt       DateTime  @default(now())
+
+  shapValues ShapValue[]
+}
+
+model Forecast {
+  id           String       @id @default(cuid())
+  facilityId   String
+  facility     Facility     @relation(fields: [facilityId], references: [id])
+  forecastType ForecastType
+  values       Json
+  p10          Json
+  p90          Json
+  horizonDays  Int          @default(14)
+  createdAt    DateTime     @default(now())
+}
+
+enum ForecastType {
+  WATER_LEVEL
+  SOLAR_OUTPUT
+  DISEASE_RISK
+  HEAT_INDEX
+}
+
+model Alert {
+  id          String      @id @default(cuid())
+  facilityId  String
+  facility    Facility    @relation(fields: [facilityId], references: [id])
+  type        AlertType
+  severity    Severity
+  message     String
+  status      AlertStatus @default(ACTIVE)
+  confidence  Float
+  triggeredAt DateTime    @default(now())
+  resolvedAt  DateTime?
+
+  channels      AlertChannel[]
+  interventions Intervention[]
+}
+
+enum AlertType {
+  WATER_SHORTAGE
+  SOLAR_FAILURE
+  HEAT_STRESS
+  DISEASE_RISK
+  TURBIDITY
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AlertStatus {
+  ACTIVE
+  ACKNOWLEDGED
+  RESOLVED
+  DISMISSED
+}
+
+model AlertChannel {
+  id        String    @id @default(cuid())
+  alertId   String
+  alert     Alert     @relation(fields: [alertId], references: [id])
+  channel   Channel
+  recipient String
+  language  Language  @default(HINDI)
+  sentAt    DateTime?
+  ackedAt   DateTime?
+  status    String    @default("PENDING")
+}
+
+enum Channel {
+  SMS
+  WHATSAPP
+  IVR
+  IN_APP
+  EMAIL
+}
+
+enum Language {
+  HINDI
+  CHHATTISGARHI
+  ENGLISH
+}
+
+model ShapValue {
+  id          String    @id @default(cuid())
+  riskScoreId String
+  riskScore   RiskScore @relation(fields: [riskScoreId], references: [id])
+  featureName String
+  shapValue   Float
+  rank        Int
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String?  @unique
+  phone        String?  @unique
+  role         Role
+  district     String?
+  block        String?
+  authProvider String   @default("credentials")
+  createdAt    DateTime @default(now())
+}
+
+enum Role {
+  ADMIN
+  STATE_OFFICER
+  DISTRICT_OFFICER
+  BLOCK_ENGINEER
+  HEADMASTER
+  ANM
+  VIEWER
+}
+
+model Intervention {
+  id          String   @id @default(cuid())
+  facilityId  String
+  facility    Facility @relation(fields: [facilityId], references: [id])
+  alertId     String?
+  alert       Alert?   @relation(fields: [alertId], references: [id])
+  actionTaken String
+  takenById   String
+  outcome     String?
+  cost        Float?
+  loggedAt    DateTime @default(now())
+}

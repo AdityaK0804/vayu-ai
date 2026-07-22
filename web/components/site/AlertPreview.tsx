@@ -221,11 +221,11 @@ export default function AlertPreview() {
               { v: facts.aqi ? `${facts.aqi}` : "—", k: t("Live worst AQI") },
               { v: "3x", k: t("Auto-retry on no ACK") },
             ].map((s) => (
-              <div key={s.k} className="card" style={{ padding: "14px 16px" }}>
-                <div className="figure" style={{ fontSize: 21, fontWeight: 600, color: "var(--accent)" }}>
+              <div key={s.k} className="card" style={{ padding: "10px 14px" }}>
+                <div className="figure" style={{ fontSize: 18, fontWeight: 600, color: "var(--accent)" }}>
                   {s.v}
                 </div>
-                <div style={{ fontSize: 12, color: "var(--ink-2)", marginTop: 3 }}>{s.k}</div>
+                <div style={{ fontSize: 11, color: "var(--ink-2)", marginTop: 2 }}>{s.k}</div>
               </div>
             ))}
           </div>

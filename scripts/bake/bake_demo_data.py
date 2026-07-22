@@ -116,28 +116,56 @@ def bake_forecast_frames(city_id: str, origin: pd.Timestamp) -> dict:
     return out
 
 
+def _decode_pm25(raw: float, target_mode: str) -> float:
+    """Map model output back to µg/m³ (v2.1 champions use log1p)."""
+    if target_mode == "log1p":
+        return float(np.clip(np.expm1(raw), 0, None))
+    return float(np.clip(raw, 0, None))
+
+
 def _hero_station_forecast(origin: pd.Timestamp) -> list:
     """Trained lag-model prediction at korba's station cells for h=24/48/72."""
     pool, sat = ENF._STATE["pool"], FC.load_satellite()
     sub = pool[pool.city_id == "korba"].copy()
     if "split" not in sub.columns:      # build_samples expects it; not filtered here
         sub["split"] = "train"
+    # v2 feature builder accepts optional traffic_curve; fall back if older API
+    try:
+        import importlib.util
+        _ff = Path(__file__).resolve().parents[1] / "models" / "forecast_features.py"
+        if _ff.exists():
+            spec = importlib.util.spec_from_file_location("ff_bake", _ff)
+            ff = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(ff)
+            curve = ff.build_congestion_curve()
+        else:
+            curve = None
+    except Exception:
+        curve = None
     frames = []
     for h in (24, 48, 72):
         bundle = joblib.load(DATA / "models" / f"lgbm_pm25_h{h}.joblib")
-        samples = FC.build_samples(sub, sat, h)
+        try:
+            samples = FC.build_samples(sub, sat, h, traffic_curve=curve)
+        except TypeError:
+            samples = FC.build_samples(sub, sat, h)
         samples["cell_id"] = samples.station_id.map(
             {r.station_id: __import__("h3").latlng_to_cell(r.latitude, r.longitude, FC.H3_RES)
              for _, r in pd.read_csv(ROOT / "config" / "stations.csv").iterrows()})
         at = samples[samples.timestamp == origin]
         if at.empty:
             at = samples.iloc[[(samples.timestamp - origin).abs().argmin()]]
+        mode = bundle.get("target_mode", "raw")
+        feats = bundle["features"]
         for _, row in at.iterrows():
-            X = pd.DataFrame([row[bundle["features"]]])[bundle["features"]].astype(float)
-            pred = float(np.clip(bundle["model"].predict(X)[0], 0, None))
+            X = pd.DataFrame([{f: row[f] if f in row.index else np.nan for f in feats}])[feats]
+            X = X.astype(float)
+            raw = float(bundle["model"].predict(X)[0])
+            pred = _decode_pm25(raw, mode)
             frames.append({"cell": row.cell_id, "horizon_h": h,
                            "valid_time": str(pd.Timestamp(row.target_time)),
-                           "pred_pm25": _round(pred), "actual_pm25": _round(row.y)})
+                           "pred_pm25": _round(pred), "actual_pm25": _round(row.y),
+                           "target_mode": mode})
     return frames
 
 
@@ -180,26 +208,58 @@ def bake_metrics(city_id: str) -> dict:
     def rd(name):
         p = DATA / "processed" / name
         return json.loads(p.read_text()) if p.exists() else {}
-    bm, fm, lm = rd("baseline_metrics.json"), rd("forecast_metrics.json"), rd("loso_metrics.json")
-    fres = {r["horizon_h"]: r for r in fm.get("results", [])}
+
+    bm = rd("baseline_metrics.json")
+    fm = rd("forecast_metrics.json")
+    fm21 = rd("forecast_metrics_v21.json")
+    lm = rd("loso_metrics.json")
+    qm = rd("quantile_metrics.json")
+    v1 = rd("forecast_metrics_v1_baseline.json")
+
+    # Prefer v2.1 champions; fall back to forecast_metrics.results
+    champ_list = fm21.get("champions") or fm.get("results") or []
+    fres = {r["horizon_h"]: r for r in champ_list}
     bres = {r["horizon_h"]: r for r in bm.get("results", [])}
+    v1res = {r["horizon_h"]: r for r in v1.get("results", [])}
+    qres = {r["horizon_h"]: r for r in qm.get("results", [])}
+
+    rows_per_city = (
+        fm21.get("rows_per_city")
+        or fm.get("rows_per_city")
+        or v1.get("rows_per_city")
+        or {}
+    )
+
     horizons = []
     for h in (24, 48, 72):
         f, b = fres.get(h, {}), bres.get(h, {})
+        old = v1res.get(h, {})
+        q = qres.get(h, {})
         horizons.append({
             "horizon_h": h,
             "model_rmse": _round(f.get("model_rmse"), 2),
-            "persistence_rmse": _round(b.get("persistence_rmse"), 2),
-            "cams_bc_rmse": _round(b.get("cams_bc_rmse"), 2),
+            "model_mae": _round(f.get("model_mae"), 2),
+            "persistence_rmse": _round(b.get("persistence_rmse") or f.get("persistence_rmse"), 2),
+            "cams_bc_rmse": _round(b.get("cams_bc_rmse") or f.get("cams_bc_rmse"), 2),
             "vs_persistence_pct": _round(f.get("vs_persistence_pct"), 1),
             "vs_cams_bc_pct": _round(f.get("vs_cams_bc_pct"), 1),
+            "vs_v1_pct": _round(f.get("vs_v1_pct"), 1),
+            "v1_rmse": _round(old.get("model_rmse"), 2),
+            "champion": f.get("champion") or f.get("best_single"),
+            "quantile_p50_rmse": _round(q.get("p50_rmse"), 2),
+            "quantile_picp": _round(q.get("picp_calibrated") or q.get("picp"), 3),
+            "quantile_mpiw": _round(q.get("mpiw_calibrated") or q.get("mpiw"), 1),
         })
+
+    h24 = fres.get(24, {})
     return {
         "city": city_id,
+        "model_version": fm21.get("version") or fm.get("version") or "v2.1",
         "dataset": {
-            "pooled_target_rows": sum(fm.get("rows_per_city", {}).values()) or None,
+            "pooled_target_rows": sum(rows_per_city.values()) or None,
             "stations": lm.get("n_stations"),
             "window": bm.get("window") or lm.get("window"),
+            "n_features": (fm21.get("horizons") or {}).get("24", {}).get("n_features"),
         },
         "forecast_vs_baselines": horizons,
         "zero_station_loso": {
@@ -208,10 +268,13 @@ def bake_metrics(city_id: str) -> dict:
             "cams_bc_rmse": _round(lm.get("pooled_cams_bc_rmse_satellite"), 2),
             "beats_cams_by_pct": _round(lm.get("vs_cams_pct_satellite"), 1),
         },
-        "headline": (f"Predicts a never-seen station from satellite+weather at "
-                     f"{_round(lm.get('pooled_loso_rmse_satellite'), 1)} ug/m3 RMSE; "
-                     f"the {city_id} forecast beats CAMS by "
-                     f"{_round(fres.get(24, {}).get('vs_cams_bc_pct'), 0)}% at 24h."),
+        "headline": (
+            f"v2.1 forecast beats v1 by {_round(h24.get('vs_v1_pct'), 1)}% RMSE at 24h "
+            f"({_round(h24.get('model_rmse'), 2)} vs persistence "
+            f"{_round(bres.get(24, {}).get('persistence_rmse'), 2)}); "
+            f"zero-station LOSO {_round(lm.get('pooled_loso_rmse_satellite'), 1)} ug/m3 "
+            f"(beats CAMS by {_round(lm.get('vs_cams_pct_satellite'), 0)}%)."
+        ),
     }
 
 

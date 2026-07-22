@@ -158,6 +158,44 @@ def main():
     else:
         print(f"\n[!] FIRMS file not found: {firms_file.name}")
 
+    # S5P SO2 Hotspots
+    so2_file = SOURCES_DIR / "s5p_so2_hotspots.csv"
+    if so2_file.exists():
+        print(f"\nProcessing S5P SO2 Hotspots: {so2_file.name}...")
+        df_so2 = pd.read_csv(so2_file)
+        
+        # Group by cell_id to get average SO2 and active years
+        grouped_so2 = df_so2.groupby(["city_id", "cell_id", "lat", "lon"]).agg(
+            mean_so2=("so2_mean", "mean"),
+            years=("year", lambda x: sorted(list(x.unique())))
+        ).reset_index()
+        
+        for _, row in grouped_so2.iterrows():
+            lat, lon = float(row["lat"]), float(row["lon"])
+            name = f"S5P SO2 hotspot cell ({lat:.4f}, {lon:.4f})"
+            years_str = ", ".join(map(str, row["years"]))
+            notes = f"Mean SO2: {row['mean_so2']:.6f} mol/m2, Active Years: [{years_str}]"
+            
+            feat = {
+                "type": "Feature",
+                "properties": {
+                    "name": name,
+                    "city_id": row["city_id"],
+                    "source": "s5p_so2",
+                    "latitude": lat,
+                    "longitude": lon,
+                    "notes": notes
+                },
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [lon, lat]
+                }
+            }
+            features.append(feat)
+        print(f"  Added {len(grouped_so2)} aggregated SO2 features (from {len(df_so2)} individual hotspot records).")
+    else:
+        print(f"\n[!] SO2 hotspots file not found: {so2_file.name}")
+
     # 3. OSM Layers per city
     for city in cities:
         cid = city["id"]

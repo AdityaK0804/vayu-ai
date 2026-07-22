@@ -18,6 +18,7 @@ export interface AqiBand {
   rgb: [number, number, number];
 }
 
+/** US-EPA style display bands (used for live US AQI feeds). */
 export const AQI_BANDS: AqiBand[] = [
   { max: 50, label: "Good", short: "0–50", hex: "#00c26e", rgb: [0, 194, 110] },
   { max: 100, label: "Moderate", short: "51–100", hex: "#f2d024", rgb: [242, 208, 36] },
@@ -26,6 +27,34 @@ export const AQI_BANDS: AqiBand[] = [
   { max: 300, label: "Very unhealthy", short: "201–300", hex: "#9333ea", rgb: [147, 51, 234] },
   { max: Infinity, label: "Hazardous", short: "301+", hex: "#7f1d1d", rgb: [127, 29, 29] },
 ];
+
+/**
+ * CPCB National AQI categories from PM2.5 24-hr breakpoints
+ * (National Air Quality Index Report — Table 3.11 / index report.jpeg).
+ * Good 0–30 · Satisfactory 31–60 · Moderate 61–90 · Poor 91–120 ·
+ * Very Poor 121–250 · Severe 250+.
+ */
+export const CPCB_PM25_BANDS: AqiBand[] = [
+  { max: 30, label: "Good", short: "0–30", hex: "#00c26e", rgb: [0, 194, 110] },
+  { max: 60, label: "Satisfactory", short: "31–60", hex: "#f2d024", rgb: [242, 208, 36] },
+  { max: 90, label: "Moderate", short: "61–90", hex: "#fb923c", rgb: [251, 146, 60] },
+  { max: 120, label: "Poor", short: "91–120", hex: "#e11d48", rgb: [225, 29, 72] },
+  { max: 250, label: "Very Poor", short: "121–250", hex: "#9333ea", rgb: [147, 51, 234] },
+  { max: Infinity, label: "Severe", short: "250+", hex: "#7f1d1d", rgb: [127, 29, 29] },
+];
+
+export function cpcbPm25Band(pm25: number | null | undefined): AqiBand | null {
+  if (pm25 == null || Number.isNaN(pm25)) return null;
+  return CPCB_PM25_BANDS.find((b) => pm25 <= b.max) ?? CPCB_PM25_BANDS[CPCB_PM25_BANDS.length - 1];
+}
+
+export function cpcbPm25Css(pm25: number | null | undefined): string {
+  return cpcbPm25Band(pm25)?.hex ?? "#606a72";
+}
+
+export function cpcbPm25Label(pm25: number | null | undefined): string {
+  return cpcbPm25Band(pm25)?.label ?? "No data";
+}
 
 /**
  * Continuous colour stops: green -> yellow -> red, no orange in the middle.

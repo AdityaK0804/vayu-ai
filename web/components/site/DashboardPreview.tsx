@@ -2,6 +2,8 @@
 
 import { useT } from "@/lib/i18n";
 import DashboardFrame from "./DashboardFrame";
+import { useState, useRef } from "react";
+import { motion, useMotionValue, useSpring, useTransform } from "motion/react";
 
 /**
  * Hero-side dashboard preview, in a tilted browser frame.
@@ -12,43 +14,56 @@ import DashboardFrame from "./DashboardFrame";
  * and nothing here navigates.
  */
 
-const TILT_REST = "rotateY(-12deg) rotateX(4deg) scale(0.95)";
-const TILT_HOVER = "rotateY(-4deg) rotateX(2deg) scale(1.02)";
-
 export default function DashboardPreview() {
   const { t } = useT();
+  const cardRef = useRef<HTMLDivElement>(null);
+  
+  // 3D tilt on mouse
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  const rotateX = useSpring(useTransform(mouseY, [-300, 300], [8, -8]), { stiffness: 150, damping: 20 });
+  const rotateY = useSpring(useTransform(mouseX, [-300, 300], [-12, 4]), { stiffness: 150, damping: 20 }); // slightly skewed by default
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    mouseX.set(e.clientX - rect.left - rect.width / 2);
+    mouseY.set(e.clientY - rect.top - rect.height / 2);
+  };
+
+  const handleMouseLeave = () => {
+    mouseX.set(0);
+    mouseY.set(0);
+  };
 
   return (
     <div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
       style={{
         perspective: 1500,
         width: "100%",
-        maxWidth: 750,
-        // small nudge down so the frame sits level with the headline rather
-        // than the LIVE badge above it
+        maxWidth: 850,
         margin: "clamp(8px, 2vw, 28px) auto 0",
+        padding: "20px", 
+        animation: "vayuFloat 6s ease-in-out infinite", 
       }}
     >
-      <div
+      <motion.div
         role="img"
         aria-label={t("Dashboard preview — live map (not clickable)")}
-        className="dash-preview-card"
         style={{
           transformStyle: "preserve-3d",
-          transform: TILT_REST,
-          transition: "transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
-          cursor: "default",
-          userSelect: "none",
+          rotateX,
+          rotateY,
+          transform: "scale(1.0)",
+          pointerEvents: "none", // Prevent children from messing with mouse hover state
         }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = TILT_HOVER;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = TILT_REST;
-        }}
+        className="glass-panel"
       >
         <DashboardFrame compact />
-      </div>
+      </motion.div>
     </div>
   );
 }

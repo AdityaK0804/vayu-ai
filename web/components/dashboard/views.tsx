@@ -14,6 +14,8 @@ import { BANDS, SOURCE_LABEL, bandFor } from "@/lib/aqi";
 import {
   useAttribution,
   useForecast,
+  useForecasts72h,
+  useInterventions,
   useLive,
   useMetrics,
   usePriority,
@@ -22,6 +24,7 @@ import {
 import { useApp } from "@/lib/store";
 import { useT } from "@/lib/i18n";
 import { selectFrame } from "@/lib/types";
+import { cpcbPm25Css, cpcbPm25Label } from "@/lib/aqiScale";
 
 const DistrictMap = dynamic(() => import("@/components/DistrictMap"), {
   ssr: false,
@@ -85,37 +88,35 @@ function Kpi({
 
 /* ---------------------------------------------------------------- OVERVIEW */
 export function OverviewView() {
-  const { city, setView } = useApp();
-  const { data: metrics } = useMetrics(city);
-  const { data: priority } = usePriority(city);
-  const { data: stations } = useStations(city);
+  const { setView } = useApp();
+  const { data: metrics } = useMetrics("korba");
   const { data: live } = useLive();
+  const { data: interventions } = useInterventions();
 
   const h24 = metrics?.forecast_vs_baselines.find((h) => h.horizon_h === 24);
-  const cityLive = live?.find((l) => l.city_id === city);
-  const band = bandFor(cityLive?.current_pm25 ?? 0);
+  const top = interventions?.items?.[0];
+  const nAction = interventions?.n_items ?? 0;
 
   return (
     <div className="section">
       <Head
         crumb="Monitor / Overview"
-        title={`${city[0].toUpperCase()}${city.slice(1)} command overview`}
-        sub="Every figure below is measured from the pipeline — nothing on this screen is simulated."
+        title="Multi-city command overview"
+        sub="Statewide live feed + model proof + ranked interventions across cities (not Korba-only)."
       />
 
       <div className="grid kpis" style={{ marginBottom: 16 }}>
         <Kpi
-          lab="Live PM2.5"
-          val={cityLive?.current_pm25 ?? "—"}
-          unit="µg/m³"
-          delta={cityLive ? `AQI ${cityLive.current_us_aqi} · ${band.label}` : undefined}
-          deltaColor={band.hex}
+          lab="Cities live"
+          val={live?.length ?? "—"}
+          delta="Chhattisgarh feed"
+          deltaColor="var(--accent)"
         />
         <Kpi
           lab="Forecast RMSE @24h"
           val={h24?.model_rmse ?? "—"}
           unit="µg/m³"
-          delta={h24?.vs_cams_bc_pct != null ? `▼ ${h24.vs_cams_bc_pct}% vs CAMS` : undefined}
+          delta={h24?.vs_persistence_pct != null ? `▼ ${h24.vs_persistence_pct}% vs persist` : undefined}
           deltaColor="var(--aqi-1)"
           accent
         />
@@ -132,12 +133,36 @@ export function OverviewView() {
           accent
         />
         <Kpi
-          lab="Cells over standard"
-          val={priority ? priority.cells_over_threshold.toLocaleString() : "—"}
-          unit={priority ? `/ ${priority.cells_scored.toLocaleString()}` : ""}
-          delta={priority ? `${priority.threshold_ug_m3} µg/m³ CPCB` : undefined}
-          deltaColor="var(--aqi-4)"
+          lab="Cities needing action"
+          val={nAction}
+          delta={top ? `Top: ${top.city_name}` : "None elevated"}
+          deltaColor={top?.category_hex ?? "var(--aqi-1)"}
         />
+      </div>
+
+      {/* multi-city live strip */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="card-h">
+          <h3>Live cities</h3>
+          <span className="sub">PM2.5 · CPCB category from National AQI scale</span>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 8, padding: 14 }}>
+          {(live ?? []).map((l) => {
+            const pm = l.current_pm25 ?? l.measured_pm25_24h ?? null;
+            const cat = cpcbPm25Label(pm);
+            const hex = cpcbPm25Css(pm);
+            return (
+              <div key={l.city_id} style={{ padding: 12, borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface-2)" }}>
+                <div className="lab" style={{ textTransform: "capitalize" }}>{l.name || l.city_id}</div>
+                <div className="figure" style={{ fontSize: 22, fontWeight: 700, color: hex, marginTop: 4 }}>
+                  {pm != null ? pm : "—"}
+                  <span style={{ fontSize: 11, marginLeft: 4 }}>µg/m³</span>
+                </div>
+                <div style={{ fontSize: 11, color: hex, marginTop: 2 }}>{cat}</div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))" }}>
@@ -176,31 +201,35 @@ export function OverviewView() {
 
         <div className="card">
           <div className="card-h">
-            <h3>Top enforcement target</h3>
+            <h3>Top multi-city intervention</h3>
             <span className="ai-badge">AI RANKED</span>
           </div>
           <div style={{ padding: "14px 18px 18px" }}>
-            {priority?.dossiers[0] ? (
+            {top ? (
               <>
                 <div className="figure" style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                  {priority.dossiers[0].ward}
+                  {top.city_name} · {top.ward}
+                  {top.demo_episode ? " · demo episode" : ""}
                 </div>
-                <div
-                  className="disp"
-                  style={{ fontSize: 30, marginTop: 6, color: bandFor(priority.dossiers[0].predicted_pm25).hex }}
-                >
-                  {priority.dossiers[0].predicted_pm25}
+                <div className="disp" style={{ fontSize: 30, marginTop: 6, color: top.category_hex }}>
+                  {top.pm25}
                   <span className="unit"> µg/m³</span>
                 </div>
+                <div style={{ fontSize: 12, color: top.category_hex, marginTop: 4 }}>
+                  CPCB {top.cpcb_category} (AQI {top.cpcb_aqi_range}) · {SOURCE_LABEL[top.top_source] ?? top.top_source}
+                </div>
                 <p style={{ fontSize: 12.5, lineHeight: 1.6, color: "var(--ink-2)", marginTop: 10 }}>
-                  {priority.dossiers[0].recommended_action}
+                  {top.reason}
+                </p>
+                <p style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 6 }}>
+                  {top.n_schools_district.toLocaleString()} schools in district · {top.affected_schools.length} listed for action
                 </p>
                 <ShinyButton className="btn pri" style={{ marginTop: 14 }} onClick={() => setView("interventions")}>
-                  Open dossier →
+                  Open interventions →
                 </ShinyButton>
               </>
             ) : (
-              <span className="sub">No dossiers.</span>
+              <span className="sub">No elevated cities right now.</span>
             )}
           </div>
         </div>
@@ -220,7 +249,8 @@ export function OverviewView() {
                   ? `${metrics.dataset.window[0].slice(0, 7)} → ${metrics.dataset.window[1].slice(0, 7)}`
                   : "—",
               ],
-              ["Stations in this city", String(stations?.stations.length ?? 0)],
+              ["Features", String(metrics?.dataset.n_features ?? 95)],
+              ["Cities with action", String(nAction)],
             ].map(([k, v]) => (
               <div
                 key={k}
@@ -342,26 +372,46 @@ export function MapView() {
 
 /* --------------------------------------------------------------- FORECAST */
 export function ForecastView() {
-  const { city } = useApp();
+  const { city, setCity } = useApp();
+  const { data: multi } = useForecasts72h();
   const { data: forecast } = useForecast(city);
-  const { data: metrics } = useMetrics(city);
+  const { data: metrics } = useMetrics("korba");
   const [h, setH] = useState<24 | 48 | 72>(24);
+  const [focus, setFocus] = useState<string | null>(null);
 
+  const cities = multi?.cities ?? [];
+  const proof = multi?.proof?.forecast_vs_baselines ?? metrics?.forecast_vs_baselines ?? [];
+  const hRow = proof.find((x) => x.horizon_h === h);
+  const activeId = focus ?? city;
+
+  const active = useMemo(
+    () => cities.find((c) => c.city_id === activeId) ?? cities[0],
+    [cities, activeId],
+  );
+  const hz = active?.horizons?.[String(h)];
+
+  // grid trajectory for selected city (korba / jagdalpur)
+  const traj = multi?.grid_trajectories?.[activeId];
+  const trajMax = useMemo(() => {
+    const vals = (traj?.grid_mean_pm25 ?? []).filter((v): v is number => v != null);
+    return Math.max(...vals, 1);
+  }, [traj]);
+
+  // keep station-level bake for map city when present
   const sf = forecast?.station_forecast?.filter((s) => s.horizon_h === h) ?? [];
-  const frames = forecast?.timestamps ?? [];
-  const cells = useMemo(() => selectFrame(forecast, 0), [forecast]);
-  const cityMean =
-    cells.length > 0 ? Math.round(cells.reduce((a, c) => a + c.pm25, 0) / cells.length) : null;
 
   return (
     <div className="section">
       <Head
         crumb="Monitor / AI Forecast"
-        title="72-hour PM2.5 forecast"
-        sub={`${forecast?.grid_model ?? ""} across the grid · ${forecast?.station_forecast_model ?? "trained model"} at stations`}
+        title="72-hour PM2.5 forecast — all cities"
+        sub={
+          multi?.model_note ??
+          "Trained LightGBM (log1p) at +24 / +48 / +72h · live feed shown alongside model origin"
+        }
       />
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
         <div className="seg">
           {([24, 48, 72] as const).map((x) => (
             <button key={x} className={h === x ? "on" : ""} onClick={() => setH(x)}>
@@ -369,76 +419,275 @@ export function ForecastView() {
             </button>
           ))}
         </div>
+        <span className="sub">
+          Point models + P10–P90 bands · CPCB category on predicted PM2.5
+        </span>
       </div>
 
       <div className="grid kpis" style={{ marginBottom: 16 }}>
-        <Kpi lab="Frames" val={frames.length} unit={`× ${forecast?.frame_step_hours ?? 6}h`} />
-        <Kpi lab="Grid mean (T+0)" val={cityMean ?? "—"} unit="µg/m³" />
+        <Kpi lab="Cities forecast" val={cities.length} />
         <Kpi
           lab={`RMSE @${h}h`}
-          val={metrics?.forecast_vs_baselines.find((x) => x.horizon_h === h)?.model_rmse ?? "—"}
+          val={hRow?.model_rmse ?? "—"}
           unit="µg/m³"
           accent
         />
         <Kpi
-          lab={`Beats CAMS @${h}h`}
-          val={metrics?.forecast_vs_baselines.find((x) => x.horizon_h === h)?.vs_cams_bc_pct ?? "—"}
+          lab={`vs persistence @${h}h`}
+          val={hRow?.vs_persistence_pct != null ? `+${hRow.vs_persistence_pct}` : "—"}
+          unit="%"
+          accent
+        />
+        <Kpi
+          lab={`vs CAMS @${h}h`}
+          val={hRow?.vs_cams_bc_pct != null ? `+${hRow.vs_cams_bc_pct}` : "—"}
           unit="%"
           accent
         />
       </div>
 
-      <div className="card">
+      {/* multi-city table */}
+      <div className="card" style={{ marginBottom: 16 }}>
         <div className="card-h">
-          <h3>Station forecast vs measured</h3>
-          <span className="sub">the trained lag model at real CPCB stations</span>
+          <h3>All cities · +{h}h</h3>
+          <span className="sub">click a row for detail · live now vs model forecast</span>
         </div>
-        <div style={{ padding: "14px 18px 18px" }}>
-          {sf.length === 0 && (
-            <p className="sub">
-              No station forecast at this horizon — this city has no ground station (that is the
-              point of the zero-station reveal).
-            </p>
-          )}
-          {sf.map((s) => {
-            const err = s.actual_pm25 != null ? Math.abs(s.pred_pm25 - s.actual_pm25) : null;
-            const max = Math.max(s.pred_pm25, s.actual_pm25 ?? 0, 1);
-            return (
-              <div key={s.cell + s.horizon_h} style={{ padding: "12px 0", borderTop: "1px solid var(--line)" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12 }}>
-                  <span className="figure" style={{ color: "var(--ink-3)" }}>
-                    {s.cell.slice(4, 11)} · valid {s.valid_time.slice(0, 16)}
-                  </span>
-                  {err != null && (
-                    <span className="figure" style={{ color: err < 15 ? "var(--aqi-1)" : "var(--aqi-4)" }}>
-                      err {err.toFixed(1)}
-                    </span>
-                  )}
-                </div>
-                {[
-                  ["predicted", s.pred_pm25, "var(--accent)"],
-                  ["measured", s.actual_pm25, "var(--ink-3)"],
-                ].map(([lab, v, col]) => (
-                  <div key={lab as string} style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 7 }}>
-                    <span style={{ width: 66, fontSize: 11, color: "var(--ink-2)" }}>{lab as string}</span>
-                    <div style={{ flex: 1, height: 8, background: "var(--surface-2)", borderRadius: 4 }}>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", fontSize: 12.5, borderCollapse: "collapse" }}>
+            <thead>
+              <tr className="crumb">
+                <th style={{ textAlign: "left", padding: "10px 12px", fontWeight: 400 }}>City</th>
+                <th style={{ textAlign: "right", padding: "10px 12px", fontWeight: 400 }}>Live now</th>
+                <th style={{ textAlign: "right", padding: "10px 12px", fontWeight: 400 }}>Model origin PM</th>
+                <th style={{ textAlign: "right", padding: "10px 12px", fontWeight: 400 }}>+{h}h pred</th>
+                <th style={{ textAlign: "right", padding: "10px 12px", fontWeight: 400 }}>P10–P90</th>
+                <th style={{ textAlign: "left", padding: "10px 12px", fontWeight: 400 }}>CPCB</th>
+                <th style={{ textAlign: "left", padding: "10px 12px", fontWeight: 400 }}>Path</th>
+              </tr>
+            </thead>
+            <tbody className="figure">
+              {cities.map((c) => {
+                const row = c.horizons?.[String(h)];
+                const pred = row?.pred_pm25;
+                const hex = row?.cpcb?.hex ?? cpcbPm25Css(pred ?? null);
+                const livePm = c.live?.pm25 ?? null;
+                const sel = c.city_id === activeId;
+                return (
+                  <tr
+                    key={c.city_id}
+                    onClick={() => {
+                      setFocus(c.city_id);
+                      if (c.city_id === "korba" || c.city_id === "jagdalpur") {
+                        setCity(c.city_id as CityId);
+                      }
+                    }}
+                    style={{
+                      borderTop: "1px solid var(--line)",
+                      cursor: "pointer",
+                      background: sel ? "var(--surface-2)" : undefined,
+                    }}
+                  >
+                    <td style={{ padding: "10px 12px", fontWeight: 600 }}>{c.city_name}</td>
+                    <td style={{ padding: "10px 12px", textAlign: "right", color: "var(--ink-2)" }}>
+                      {livePm != null ? livePm : "—"}
+                    </td>
+                    <td style={{ padding: "10px 12px", textAlign: "right", color: "var(--ink-3)" }}>
+                      {c.latest_observed_pm25 ?? "—"}
+                    </td>
+                    <td
+                      style={{
+                        padding: "10px 12px",
+                        textAlign: "right",
+                        fontWeight: 700,
+                        color: hex,
+                      }}
+                    >
+                      {pred != null ? pred : "—"}
+                    </td>
+                    <td style={{ padding: "10px 12px", textAlign: "right", color: "var(--ink-3)", fontSize: 11 }}>
+                      {row?.p10 != null && row?.p90 != null
+                        ? `${row.p10}–${row.p90}`
+                        : "—"}
+                    </td>
+                    <td style={{ padding: "10px 12px", color: hex }}>
+                      {row?.cpcb?.label ?? cpcbPm25Label(pred ?? null)}
+                    </td>
+                    <td style={{ padding: "10px 12px", color: "var(--ink-3)", fontSize: 11 }}>
+                      {c.has_stations ? "station LGBM" : "zero-station / grid"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* detail for selected city */}
+      {active && (
+        <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 16, marginBottom: 16 }}>
+          <div className="card">
+            <div className="card-h">
+              <h3>{active.city_name} · horizons</h3>
+              <span className="sub">{active.model ?? "trained model"}</span>
+            </div>
+            <div style={{ padding: "12px 16px 16px" }}>
+              <div className="grid kpis" style={{ marginBottom: 12 }}>
+                <Kpi lab="Live PM2.5" val={active.live?.pm25 ?? "—"} unit="µg/m³" />
+                <Kpi
+                  lab={`+${h}h`}
+                  val={hz?.pred_pm25 ?? "—"}
+                  unit="µg/m³"
+                  accent
+                />
+              </div>
+              {([24, 48, 72] as const).map((hh) => {
+                const r = active.horizons?.[String(hh)];
+                if (!r) return null;
+                const max = Math.max(r.pred_pm25, r.p90 ?? 0, r.pm25_lag0 ?? 0, 1);
+                return (
+                  <div key={hh} style={{ padding: "10px 0", borderTop: "1px solid var(--line)" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 6 }}>
+                      <b>+{hh}h</b>
+                      <span style={{ color: r.cpcb?.hex }}>{r.cpcb?.label}</span>
+                    </div>
+                    {[
+                      ["now (origin)", r.pm25_lag0, "var(--ink-3)"],
+                      ["pred", r.pred_pm25, "var(--accent)"],
+                      ["CAMS@t+h", r.cams_target, "#818cf8"],
+                    ].map(([lab, v, col]) =>
+                      v == null ? null : (
+                        <div key={lab as string} style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 5 }}>
+                          <span style={{ width: 88, fontSize: 11, color: "var(--ink-2)" }}>{lab as string}</span>
+                          <div style={{ flex: 1, height: 8, background: "var(--surface-2)", borderRadius: 4 }}>
+                            <div
+                              style={{
+                                width: `${(Number(v) / max) * 100}%`,
+                                height: "100%",
+                                background: col as string,
+                                borderRadius: 4,
+                              }}
+                            />
+                          </div>
+                          <span className="figure" style={{ width: 40, textAlign: "right", fontSize: 12 }}>
+                            {v as number}
+                          </span>
+                        </div>
+                      ),
+                    )}
+                    {r.p10 != null && r.p90 != null && (
+                      <div className="sub" style={{ marginTop: 6 }}>
+                        Uncertainty band P10–P90: {r.p10} – {r.p90} µg/m³
+                        {r.valid_time ? ` · valid ${String(r.valid_time).slice(0, 16)}` : ""}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {active.note && <p className="sub" style={{ marginTop: 10 }}>{active.note}</p>}
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="card-h">
+              <h3>Grid trajectory</h3>
+              <span className="sub">
+                {traj
+                  ? `${traj.n_cells?.toLocaleString() ?? "—"} cells · step ${traj.frame_step_hours}h`
+                  : "available for Korba & Jagdalpur grid bakes"}
+              </span>
+            </div>
+            <div style={{ padding: "14px 16px 18px" }}>
+              {!traj && (
+                <p className="sub">
+                  Full H3 field trajectory is baked for hero/reveal cities. Point forecasts above
+                  cover every city from the trained models.
+                </p>
+              )}
+              {traj && (
+                <>
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 3, height: 100 }}>
+                    {(traj.grid_mean_pm25 ?? []).map((v, i) => (
                       <div
+                        key={i}
+                        title={`${traj.timestamps[i]}: ${v}`}
                         style={{
-                          width: `${((v as number) / max) * 100}%`,
-                          height: "100%",
-                          background: col as string,
-                          borderRadius: 4,
+                          flex: 1,
+                          height: `${((v ?? 0) / trajMax) * 100}%`,
+                          minHeight: 4,
+                          borderRadius: 3,
+                          background: cpcbPm25Css(v),
+                          opacity: 0.9,
                         }}
                       />
-                    </div>
-                    <span className="figure" style={{ width: 44, textAlign: "right", fontSize: 12 }}>
-                      {v ?? "—"}
-                    </span>
+                    ))}
                   </div>
-                ))}
-              </div>
-            );
-          })}
+                  <div className="sub" style={{ marginTop: 8 }}>
+                    Origin {traj.origin?.slice(0, 16)} · mean PM2.5 over grid each frame
+                  </div>
+                </>
+              )}
+
+              {/* station-level for map city bake */}
+              {sf.length > 0 && (
+                <div style={{ marginTop: 16 }}>
+                  <div className="lab" style={{ marginBottom: 8 }}>
+                    Station check (map city bake)
+                  </div>
+                  {sf.map((s) => {
+                    const err =
+                      s.actual_pm25 != null ? Math.abs(s.pred_pm25 - s.actual_pm25) : null;
+                    return (
+                      <div key={s.cell + s.horizon_h} className="sub" style={{ marginBottom: 6 }}>
+                        +{s.horizon_h}h pred {s.pred_pm25}
+                        {s.actual_pm25 != null ? ` · actual ${s.actual_pm25}` : ""}
+                        {err != null ? ` · |err| ${err.toFixed(1)}` : ""}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* proof strip */}
+      <div className="card">
+        <div className="card-h">
+          <h3>Model proof (held-out test)</h3>
+          <span className="sub">same metrics as Analytics · not live AQI</span>
+        </div>
+        <div style={{ padding: "12px 16px 16px", overflowX: "auto" }}>
+          <table style={{ width: "100%", fontSize: 12.5 }}>
+            <thead>
+              <tr className="crumb">
+                <th style={{ textAlign: "left", paddingBottom: 8, fontWeight: 400 }}>H</th>
+                <th style={{ textAlign: "right", paddingBottom: 8, fontWeight: 400 }}>RMSE</th>
+                <th style={{ textAlign: "right", paddingBottom: 8, fontWeight: 400 }}>vs persist</th>
+                <th style={{ textAlign: "right", paddingBottom: 8, fontWeight: 400 }}>vs CAMS</th>
+              </tr>
+            </thead>
+            <tbody className="figure">
+              {proof.map((r) => (
+                <tr key={r.horizon_h} style={{ borderTop: "1px solid var(--line)" }}>
+                  <td style={{ padding: "7px 0" }}>{r.horizon_h}h</td>
+                  <td style={{ textAlign: "right", color: "var(--accent)", fontWeight: 600 }}>
+                    {r.model_rmse}
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    {r.vs_persistence_pct != null ? `+${r.vs_persistence_pct}%` : "—"}
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    {r.vs_cams_bc_pct != null ? `+${r.vs_cams_bc_pct}%` : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {multi?.proof?.headline && (
+            <p className="sub" style={{ marginTop: 10 }}>{multi.proof.headline}</p>
+          )}
         </div>
       </div>
     </div>
@@ -447,95 +696,159 @@ export function ForecastView() {
 
 /* ---------------------------------------------------------- INTERVENTIONS */
 export function InterventionsView() {
-  const { city, selectedCell, selectCell, setView } = useApp();
-  const { data: priority } = usePriority(city);
+  const { setView, setCity } = useApp();
+  const { data: interventions } = useInterventions();
+  const [open, setOpen] = useState<number | null>(1);
+
+  const items = interventions?.items ?? [];
 
   return (
     <div className="section">
       <Head
         crumb="Act / Intervention Engine"
-        title="Ranked enforcement dossiers"
+        title="Multi-city interventions"
         sub={
-          priority
-            ? `${priority.cells_over_threshold.toLocaleString()} of ${priority.cells_scored.toLocaleString()} cells over ${priority.threshold_ug_m3} µg/m³ · signal→dossier ${priority.signal_to_dossier_seconds}s`
+          interventions
+            ? `${items.length} cities needing action · CPCB National AQI (PM2.5) · schools exposed + remedies`
             : undefined
         }
       />
 
-      {priority?.cells_over_threshold === 0 && (
-        <div
-          className="card"
-          style={{ padding: 16, marginBottom: 16, borderColor: "color-mix(in oklch,var(--accent),transparent 60%)" }}
-        >
-          <span className="sub">
-            No cell exceeds the standard in this window — these are ranked for context, not
-            enforcement.
-          </span>
+      {/* CPCB scale legend from index report */}
+      <div className="card" style={{ padding: 12, marginBottom: 14 }}>
+        <div className="lab" style={{ marginBottom: 8 }}>
+          CPCB AQI scale (PM2.5 24-hr) — National Air Quality Index Report
         </div>
-      )}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {(interventions?.pm25_breakpoints ?? []).map((b) => (
+            <span
+              key={b.category}
+              className="pill"
+              style={{
+                background: `color-mix(in oklch, ${cpcbPm25Css(Number(b.pm25.split("-")[0]) || (b.category === "Severe" ? 260 : 20))}, transparent 85%)`,
+                color: cpcbPm25Css(Number(b.pm25.split("-")[0]) || (b.category === "Severe" ? 260 : 20)),
+                fontSize: 11,
+              }}
+            >
+              {b.category}: PM {b.pm25} → AQI {b.aqi}
+            </span>
+          ))}
+        </div>
+        {items.some((i) => i.demo_episode) && (
+          <p className="sub" style={{ marginTop: 10 }}>
+            Live monsoon air is clean — Korba / Raipur / Bhilai rows include labelled{" "}
+            <b>demo episodes</b> so enforcement + school remedies stay visible for the demo.
+          </p>
+        )}
+      </div>
 
       <div style={{ display: "grid", gap: 12 }}>
-        {priority?.dossiers.map((d) => {
-          const sel = d.cell === selectedCell;
-          const band = bandFor(d.predicted_pm25);
+        {items.map((d) => {
+          const sel = open === d.rank;
           return (
-            <button
-              key={d.cell}
-              className={`interv${sel ? " sel" : ""}`}
-              onClick={() => selectCell(sel ? null : d.cell)}
-            >
-              <span className="rank" style={{ color: band.hex }}>
-                {d.rank}
-              </span>
-              <span style={{ minWidth: 0 }}>
-                <span style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  <b style={{ fontFamily: "var(--font-display)", fontSize: 15 }}>{d.ward}</b>
-                  <span
-                    className="pill"
-                    style={{
-                      background: `color-mix(in oklch, ${band.hex}, transparent 86%)`,
-                      color: band.hex,
-                    }}
-                  >
-                    {d.predicted_pm25} µg/m³
-                  </span>
-                  <span className="pill" style={{ background: "var(--surface-2)", color: "var(--ink-2)" }}>
-                    {SOURCE_LABEL[d.top_source] ?? d.top_source}
-                  </span>
-                  {d.edgar_agreement.match && (
-                    <span className="pill" style={{ background: "var(--surface-2)", color: "var(--aqi-1)" }}>
-                      EDGAR ✓
+            <div key={`${d.city_id}-${d.rank}`} className={`interv${sel ? " sel" : ""}`} style={{ cursor: "pointer" }}>
+              <button
+                type="button"
+                className="interv"
+                style={{ width: "100%", border: "none", background: "transparent", textAlign: "left" }}
+                onClick={() => setOpen(sel ? null : d.rank)}
+              >
+                <span className="rank" style={{ color: d.category_hex }}>
+                  {d.rank}
+                </span>
+                <span style={{ minWidth: 0, flex: 1 }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <b style={{ fontFamily: "var(--font-display)", fontSize: 15 }}>
+                      {d.city_name}
+                    </b>
+                    <span className="pill" style={{ background: "var(--surface-2)" }}>
+                      {d.ward}
                     </span>
-                  )}
+                    <span
+                      className="pill"
+                      style={{
+                        background: `color-mix(in oklch, ${d.category_hex}, transparent 86%)`,
+                        color: d.category_hex,
+                      }}
+                    >
+                      {d.pm25} µg/m³ · {d.cpcb_category}
+                    </span>
+                    <span className="pill" style={{ background: "var(--surface-2)", color: "var(--ink-2)" }}>
+                      {SOURCE_LABEL[d.top_source] ?? d.top_source}
+                    </span>
+                    {d.demo_episode && (
+                      <span className="pill" style={{ background: "var(--surface-2)", color: "var(--ink-3)" }}>
+                        demo episode
+                      </span>
+                    )}
+                  </span>
+                  <p style={{ fontSize: 12.5, lineHeight: 1.55, color: "var(--ink-2)", marginTop: 8 }}>
+                    <b>Why:</b> {d.reason}
+                  </p>
+                  <span className="row">
+                    {d.n_schools_district.toLocaleString()} schools in district ·{" "}
+                    {d.affected_schools.length} named for this action · urgency {d.urgency}
+                  </span>
                 </span>
-                <p style={{ fontSize: 12.5, lineHeight: 1.6, color: "var(--ink-2)", marginTop: 8 }}>
-                  {d.recommended_action}
-                </p>
-                <span className="row">
-                  {d.population_affected.toLocaleString()} residents · {d.vulnerable_sites}{" "}
-                  schools/hospitals · confidence {(d.confidence * 100).toFixed(0)}%
-                </span>
-              </span>
-              <span style={{ textAlign: "right" }}>
-                <span className="figure" style={{ fontSize: 11, color: "var(--ink-3)" }}>
-                  score
-                </span>
-                <span className="disp" style={{ display: "block", fontSize: 18 }}>
-                  {(d.priority_score / 1e6).toFixed(1)}M
-                </span>
-                <span
-                  className="chip"
-                  style={{ marginTop: 8, display: "inline-block" }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    selectCell(d.cell);
-                    setView("map");
-                  }}
-                >
-                  View on map
-                </span>
-              </span>
-            </button>
+              </button>
+
+              {sel && (
+                <div style={{ padding: "0 16px 16px 56px" }}>
+                  <div className="lab" style={{ marginBottom: 6 }}>
+                    Schools affected (sample)
+                  </div>
+                  <ul style={{ margin: "0 0 12px", paddingLeft: 18, fontSize: 12.5, color: "var(--ink-2)" }}>
+                    {d.affected_schools.map((s, i) => (
+                      <li key={i} style={{ marginBottom: 4 }}>
+                        {s.name}
+                        {s.block ? ` · ${s.block}` : ""}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="lab" style={{ marginBottom: 6 }}>
+                    Remedies
+                  </div>
+                  <div style={{ display: "grid", gap: 6 }}>
+                    {d.remedies.map((r, i) => (
+                      <div
+                        key={i}
+                        style={{
+                          fontSize: 12.5,
+                          padding: "8px 10px",
+                          borderRadius: 8,
+                          border: "1px solid var(--line)",
+                          background: "var(--surface-2)",
+                        }}
+                      >
+                        <span className="pill" style={{ marginRight: 8, fontSize: 10 }}>
+                          {r.type === "school" ? "SCHOOL" : "CITY"}
+                        </span>
+                        {r.action}
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ marginTop: 12, display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button
+                      type="button"
+                      className="chip"
+                      onClick={() => {
+                        if (d.city_id === "korba" || d.city_id === "jagdalpur") {
+                          setCity(d.city_id as CityId);
+                          setView("map");
+                        } else {
+                          setView("map");
+                        }
+                      }}
+                    >
+                      View map
+                    </button>
+                    <button type="button" className="chip" onClick={() => setView("advisories")}>
+                      Citizen advisory
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           );
         })}
       </div>

@@ -1,0 +1,763 @@
+{
+  "version": "v2.1",
+  "horizons_h": [
+    24,
+    48,
+    72
+  ],
+  "model_note": "LightGBM one model per horizon; target log1p(pm25); features include fire + met@t+h",
+  "proof": {
+    "model_version": "v2.1",
+    "forecast_vs_baselines": [
+      {
+        "horizon_h": 24,
+        "model_rmse": 13.26,
+        "model_mae": 7.52,
+        "persistence_rmse": 16.37,
+        "cams_bc_rmse": 25.32,
+        "vs_persistence_pct": 19.0,
+        "vs_cams_bc_pct": 47.6,
+        "vs_v1_pct": 1.8,
+        "v1_rmse": 13.51,
+        "champion": "ensemble_top2",
+        "quantile_p50_rmse": 13.25,
+        "quantile_picp": 0.785,
+        "quantile_mpiw": 22.0
+      },
+      {
+        "horizon_h": 48,
+        "model_rmse": 14.67,
+        "model_mae": 8.38,
+        "persistence_rmse": 19.01,
+        "cams_bc_rmse": 25.63,
+        "vs_persistence_pct": 22.8,
+        "vs_cams_bc_pct": 42.8,
+        "vs_v1_pct": 1.6,
+        "v1_rmse": 14.91,
+        "champion": "lgbm_log1p_w",
+        "quantile_p50_rmse": 14.69,
+        "quantile_picp": 0.789,
+        "quantile_mpiw": 24.2
+      },
+      {
+        "horizon_h": 72,
+        "model_rmse": 15.97,
+        "model_mae": 8.93,
+        "persistence_rmse": 20.71,
+        "cams_bc_rmse": 26.15,
+        "vs_persistence_pct": 22.9,
+        "vs_cams_bc_pct": 38.9,
+        "vs_v1_pct": 1.6,
+        "v1_rmse": 16.23,
+        "champion": "lgbm_log1p_w",
+        "quantile_p50_rmse": 16.04,
+        "quantile_picp": 0.78,
+        "quantile_mpiw": 25.2
+      }
+    ],
+    "headline": "v2.1 forecast beats v1 by 1.8% RMSE at 24h (13.26 vs persistence 16.37); zero-station LOSO 20.5 ug/m3 (beats CAMS by 23.0%)."
+  },
+  "cities": [
+    {
+      "city_id": "bhilai",
+      "city_name": "Bhilai",
+      "has_stations": true,
+      "latest_observed_pm25": 41.1,
+      "latest_observed_time": "2025-12-31 23:00:00",
+      "latest_cpcb": {
+        "label": "Satisfactory",
+        "hex": "#f2d024"
+      },
+      "horizons": {
+        "24": {
+          "horizon_h": 24,
+          "origin": "2025-12-30 23:00:00",
+          "valid_time": "2025-12-31 23:00:00",
+          "pred_pm25": 80.8,
+          "actual_pm25": 54.5,
+          "pm25_lag0": 87.8,
+          "cams_target": 108.5,
+          "cpcb": {
+            "label": "Moderate",
+            "hex": "#fb923c"
+          },
+          "p10": 40.6,
+          "p50": 76.1,
+          "p90": 104.1
+        },
+        "48": {
+          "horizon_h": 48,
+          "origin": "2025-12-29 23:00:00",
+          "valid_time": "2025-12-31 23:00:00",
+          "pred_pm25": 63.9,
+          "actual_pm25": 54.5,
+          "pm25_lag0": 51.9,
+          "cams_target": 108.5,
+          "cpcb": {
+            "label": "Moderate",
+            "hex": "#fb923c"
+          },
+          "p10": 36.2,
+          "p50": 63.5,
+          "p90": 80.6
+        },
+        "72": {
+          "horizon_h": 72,
+          "origin": "2025-12-28 23:00:00",
+          "valid_time": "2025-12-31 23:00:00",
+          "pred_pm25": 67.9,
+          "actual_pm25": 54.5,
+          "pm25_lag0": 57.9,
+          "cams_target": 108.5,
+          "cpcb": {
+            "label": "Moderate",
+            "hex": "#fb923c"
+          },
+          "p10": 35.1,
+          "p50": 56.8,
+          "p90": 76.3
+        }
+      },
+      "model": "LightGBM v2.1 log1p · one model per horizon",
+      "n_features": 95,
+      "live": {
+        "pm25": 9.7,
+        "us_aqi": 62,
+        "measured": true,
+        "updated": "2026-07-21T20:12:04Z",
+        "n_stations": 3
+      }
+    },
+    {
+      "city_id": "bilaspur",
+      "city_name": "Bilaspur",
+      "has_stations": true,
+      "latest_observed_pm25": 102.2,
+      "latest_observed_time": "2025-12-31 23:00:00",
+      "latest_cpcb": {
+        "label": "Poor",
+        "hex": "#e11d48"
+      },
+      "horizons": {
+        "24": {
+          "horizon_h": 24,
+          "origin": "2025-12-30 23:00:00",
+          "valid_time": "2025-12-31 23:00:00",
+          "pred_pm25": 82.0,
+          "actual_pm25": 102.2,
+          "pm25_lag0": 87.0,
+          "cams_target": 97.3,
+          "cpcb": {
+            "label": "Moderate",
+            "hex": "#fb923c"
+          },
+          "p10": 51.2,
+          "p50": 80.2,
+          "p90": 105.0
+        },
+        "48": {
+          "horizon_h": 48,
+          "origin": "2025-12-29 23:00:00",
+          "valid_time": "2025-12-31 23:00:00",
+          "pred_pm25": 74.1,
+          "actual_pm25": 102.2,
+          "pm25_lag0": 52.9,
+          "cams_target": 97.3,
+          "cpcb": {
+            "label": "Moderate",
+            "hex": "#fb923c"
+          },
+          "p10": 45.0,
+          "p50": 72.3,
+          "p90": 99.3
+        },
+        "72": {
+          "horizon_h": 72,
+          "origin": "2025-12-28 23:00:00",
+          "valid_time": "2025-12-31 23:00:00",
+          "pred_pm25": 82.7,
+          "actual_pm25": 102.2,
+          "pm25_lag0": 63.2,
+          "cams_target": 97.3,
+          "cpcb": {
+            "label": "Moderate",
+            "hex": "#fb923c"
+          },
+          "p10": 45.5,
+          "p50": 82.6,
+          "p90": 95.2
+        }
+      },
+      "model": "LightGBM v2.1 log1p · one model per horizon",
+      "n_features": 95,
+      "live": {
+        "pm25": 7.1,
+        "us_aqi": 56,
+        "measured": true,
+        "updated": "2026-07-21T20:12:04Z",
+        "n_stations": 1
+      }
+    },
+    {
+      "city_id": "chhal",
+      "city_name": "Chhal",
+      "has_stations": true,
+      "latest_observed_pm25": 55.5,
+      "latest_observed_time": "2025-12-31 23:00:00",
+      "latest_cpcb": {
+        "label": "Satisfactory",
+        "hex": "#f2d024"
+      },
+      "horizons": {
+        "24": {
+          "horizon_h": 24,
+          "origin": "2025-12-30 23:00:00",
+          "valid_time": "2025-12-31 23:00:00",
+          "pred_pm25": 52.4,
+          "actual_pm25": 55.5,
+          "pm25_lag0": 35.1,
+          "cams_target": 110.6,
+          "cpcb": {
+            "label": "Satisfactory",
+            "hex": "#f2d024"
+          },
+          "p10": 34.0,
+          "p50": 49.2,
+          "p90": 65.5
+        },
+        "48": {
+          "horizon_h": 48,
+          "origin": "2025-12-29 23:00:00",
+          "valid_time": "2025-12-31 23:00:00",
+          "pred_pm25": 64.1,
+          "actual_pm25": 55.5,
+          "pm25_lag0": 44.3,
+          "cams_target": 110.6,
+          "cpcb": {
+            "label": "Moderate",
+            "hex": "#fb923c"
+          },
+          "p10": 43.6,
+          "p50": 63.1,
+          "p90": 80.8
+        },
+        "72": {
+          "horizon_h": 72,
+          "origin": "2025-12-28 23:00:00",
+          "valid_time": "2025-12-31 23:00:00",
+          "pred_pm25": 69.6,
+          "actual_pm25": 55.5,
+          "pm25_lag0": 42.9,
+          "cams_target": 110.6,
+          "cpcb": {
+            "label": "Moderate",
+            "hex": "#fb923c"
+          },
+          "p10": 42.9,
+          "p50": 67.3,
+          "p90": 84.9
+        }
+      },
+      "model": "LightGBM v2.1 log1p · one model per horizon",
+      "n_features": 95,
+      "live": {
+        "pm25": 7.0,
+        "us_aqi": 67,
+        "measured": true,
+        "updated": "2026-07-21T20:12:04Z",
+        "n_stations": 1
+      }
+    },
+    {
+      "city_id": "jagdalpur",
+      "city_name": "Jagdalpur",
+      "has_stations": false,
+      "latest_observed_pm25": 5.6,
+      "latest_observed_time": null,
+      "latest_cpcb": {
+        "label": "Good",
+        "hex": "#00c26e"
+      },
+      "horizons": {
+        "24": {
+          "horizon_h": 24,
+          "origin": "2023-01-04 20:00:00",
+          "valid_time": "2023-01-05 20:00:00",
+          "pred_pm25": 32.2,
+          "actual_pm25": null,
+          "pm25_lag0": 44.3,
+          "cams_target": null,
+          "cpcb": {
+            "label": "Satisfactory",
+            "hex": "#f2d024"
+          },
+          "source": "spatial_grid_trajectory"
+        },
+        "48": {
+          "horizon_h": 48,
+          "origin": "2023-01-04 20:00:00",
+          "valid_time": "2023-01-06 20:00:00",
+          "pred_pm25": 41.4,
+          "actual_pm25": null,
+          "pm25_lag0": 44.3,
+          "cams_target": null,
+          "cpcb": {
+            "label": "Satisfactory",
+            "hex": "#f2d024"
+          },
+          "source": "spatial_grid_trajectory"
+        },
+        "72": {
+          "horizon_h": 72,
+          "origin": "2023-01-04 20:00:00",
+          "valid_time": "2023-01-07 20:00:00",
+          "pred_pm25": 27.5,
+          "actual_pm25": null,
+          "pm25_lag0": 44.3,
+          "cams_target": null,
+          "cpcb": {
+            "label": "Good",
+            "hex": "#00c26e"
+          },
+          "source": "spatial_grid_trajectory"
+        }
+      },
+      "model": "spatial grid bake (zero-station path)",
+      "n_features": null,
+      "note": "zero-station reveal — no CPCB lags",
+      "live": {
+        "pm25": 5.6,
+        "us_aqi": 21,
+        "measured": false,
+        "updated": "2026-07-21T20:11:00Z",
+        "n_stations": 0
+      }
+    },
+    {
+      "city_id": "korba",
+      "city_name": "Korba",
+      "has_stations": true,
+      "latest_observed_pm25": 59.2,
+      "latest_observed_time": "2025-12-31 23:00:00",
+      "latest_cpcb": {
+        "label": "Satisfactory",
+        "hex": "#f2d024"
+      },
+      "horizons": {
+        "24": {
+          "horizon_h": 24,
+          "origin": "2025-12-30 23:00:00",
+          "valid_time": "2025-12-31 23:00:00",
+          "pred_pm25": 72.8,
+          "actual_pm25": 59.2,
+          "pm25_lag0": 44.3,
+          "cams_target": 96.2,
+          "cpcb": {
+            "label": "Moderate",
+            "hex": "#fb923c"
+          },
+          "p10": 42.2,
+          "p50": 64.1,
+          "p90": 107.8
+        },
+        "48": {
+          "horizon_h": 48,
+          "origin": "2025-12-29 23:00:00",
+          "valid_time": "2025-12-31 23:00:00",
+          "pred_pm25": 79.1,
+          "actual_pm25": 59.2,
+          "pm25_lag0": 57.1,
+          "cams_target": 96.2,
+          "cpcb": {
+            "label": "Moderate",
+            "hex": "#fb923c"
+          },
+          "p10": 44.0,
+          "p50": 74.7,
+          "p90": 104.8
+        },
+        "72": {
+          "horizon_h": 72,
+          "origin": "2025-12-28 23:00:00",
+          "valid_time": "2025-12-31 23:00:00",
+          "pred_pm25": 62.8,
+          "actual_pm25": 59.2,
+          "pm25_lag0": 42.3,
+          "cams_target": 96.2,
+          "cpcb": {
+            "label": "Moderate",
+            "hex": "#fb923c"
+          },
+          "p10": 38.4,
+          "p50": 67.2,
+          "p90": 81.3
+        }
+      },
+      "model": "LightGBM v2.1 log1p · one model per horizon",
+      "n_features": 95,
+      "live": {
+        "pm25": 5.4,
+        "us_aqi": 64,
+        "measured": true,
+        "updated": "2026-07-21T20:12:04Z",
+        "n_stations": 2
+      }
+    },
+    {
+      "city_id": "kunjemara",
+      "city_name": "Kunjemura",
+      "has_stations": true,
+      "latest_observed_pm25": 48.7,
+      "latest_observed_time": "2025-12-31 23:00:00",
+      "latest_cpcb": {
+        "label": "Satisfactory",
+        "hex": "#f2d024"
+      },
+      "horizons": {
+        "24": {
+          "horizon_h": 24,
+          "origin": "2025-12-30 23:00:00",
+          "valid_time": "2025-12-31 23:00:00",
+          "pred_pm25": 39.5,
+          "actual_pm25": 48.7,
+          "pm25_lag0": 24.8,
+          "cams_target": 97.1,
+          "cpcb": {
+            "label": "Satisfactory",
+            "hex": "#f2d024"
+          },
+          "p10": 24.7,
+          "p50": 34.5,
+          "p90": 55.3
+        },
+        "48": {
+          "horizon_h": 48,
+          "origin": "2025-12-29 23:00:00",
+          "valid_time": "2025-12-31 23:00:00",
+          "pred_pm25": 54.4,
+          "actual_pm25": 48.7,
+          "pm25_lag0": 28.0,
+          "cams_target": 97.1,
+          "cpcb": {
+            "label": "Satisfactory",
+            "hex": "#f2d024"
+          },
+          "p10": 27.5,
+          "p50": 47.2,
+          "p90": 64.4
+        },
+        "72": {
+          "horizon_h": 72,
+          "origin": "2025-12-27 18:00:00",
+          "valid_time": "2025-12-30 18:00:00",
+          "pred_pm25": 53.5,
+          "actual_pm25": 34.1,
+          "pm25_lag0": 50.5,
+          "cams_target": 85.4,
+          "cpcb": {
+            "label": "Satisfactory",
+            "hex": "#f2d024"
+          },
+          "p10": 34.6,
+          "p50": 54.7,
+          "p90": 67.2
+        }
+      },
+      "model": "LightGBM v2.1 log1p · one model per horizon",
+      "n_features": 95,
+      "live": {
+        "pm25": 7.3,
+        "us_aqi": 65,
+        "measured": true,
+        "updated": "2026-07-21T20:12:04Z",
+        "n_stations": 1
+      }
+    },
+    {
+      "city_id": "milupara",
+      "city_name": "Milupara",
+      "has_stations": true,
+      "latest_observed_pm25": 48.7,
+      "latest_observed_time": "2025-12-31 23:00:00",
+      "latest_cpcb": {
+        "label": "Satisfactory",
+        "hex": "#f2d024"
+      },
+      "horizons": {
+        "24": {
+          "horizon_h": 24,
+          "origin": "2025-12-30 23:00:00",
+          "valid_time": "2025-12-31 23:00:00",
+          "pred_pm25": 39.7,
+          "actual_pm25": 48.7,
+          "pm25_lag0": 24.8,
+          "cams_target": 97.1,
+          "cpcb": {
+            "label": "Satisfactory",
+            "hex": "#f2d024"
+          },
+          "p10": 27.0,
+          "p50": 34.9,
+          "p90": 50.9
+        },
+        "48": {
+          "horizon_h": 48,
+          "origin": "2025-12-29 23:00:00",
+          "valid_time": "2025-12-31 23:00:00",
+          "pred_pm25": 53.4,
+          "actual_pm25": 48.7,
+          "pm25_lag0": 28.0,
+          "cams_target": 97.1,
+          "cpcb": {
+            "label": "Satisfactory",
+            "hex": "#f2d024"
+          },
+          "p10": 31.2,
+          "p50": 48.8,
+          "p90": 59.9
+        },
+        "72": {
+          "horizon_h": 72,
+          "origin": "2025-12-27 18:00:00",
+          "valid_time": "2025-12-30 18:00:00",
+          "pred_pm25": 57.7,
+          "actual_pm25": 34.1,
+          "pm25_lag0": 50.5,
+          "cams_target": 85.4,
+          "cpcb": {
+            "label": "Satisfactory",
+            "hex": "#f2d024"
+          },
+          "p10": 37.0,
+          "p50": 54.4,
+          "p90": 66.8
+        }
+      },
+      "model": "LightGBM v2.1 log1p · one model per horizon",
+      "n_features": 95,
+      "live": {
+        "pm25": 7.3,
+        "us_aqi": 65,
+        "measured": true,
+        "updated": "2026-07-21T20:12:04Z",
+        "n_stations": 1
+      }
+    },
+    {
+      "city_id": "raipur",
+      "city_name": "Raipur",
+      "has_stations": true,
+      "latest_observed_pm25": 30.7,
+      "latest_observed_time": "2025-12-31 23:00:00",
+      "latest_cpcb": {
+        "label": "Satisfactory",
+        "hex": "#f2d024"
+      },
+      "horizons": {
+        "24": {
+          "horizon_h": 24,
+          "origin": "2025-12-30 23:00:00",
+          "valid_time": "2025-12-31 23:00:00",
+          "pred_pm25": 37.7,
+          "actual_pm25": 41.5,
+          "pm25_lag0": 35.3,
+          "cams_target": 88.5,
+          "cpcb": {
+            "label": "Satisfactory",
+            "hex": "#f2d024"
+          },
+          "p10": 32.1,
+          "p50": 38.3,
+          "p90": 44.6
+        },
+        "48": {
+          "horizon_h": 48,
+          "origin": "2025-12-29 23:00:00",
+          "valid_time": "2025-12-31 23:00:00",
+          "pred_pm25": 45.1,
+          "actual_pm25": 30.7,
+          "pm25_lag0": 37.8,
+          "cams_target": 88.5,
+          "cpcb": {
+            "label": "Satisfactory",
+            "hex": "#f2d024"
+          },
+          "p10": 28.1,
+          "p50": 40.5,
+          "p90": 55.5
+        },
+        "72": {
+          "horizon_h": 72,
+          "origin": "2025-12-28 23:00:00",
+          "valid_time": "2025-12-31 23:00:00",
+          "pred_pm25": 50.3,
+          "actual_pm25": 52.8,
+          "pm25_lag0": 32.6,
+          "cams_target": 88.5,
+          "cpcb": {
+            "label": "Satisfactory",
+            "hex": "#f2d024"
+          },
+          "p10": 29.9,
+          "p50": 47.4,
+          "p90": 63.9
+        }
+      },
+      "model": "LightGBM v2.1 log1p · one model per horizon",
+      "n_features": 95,
+      "live": {
+        "pm25": 10.9,
+        "us_aqi": 66,
+        "measured": true,
+        "updated": "2026-07-21T20:12:04Z",
+        "n_stations": 4
+      }
+    },
+    {
+      "city_id": "tumidih",
+      "city_name": "Tumidih",
+      "has_stations": true,
+      "latest_observed_pm25": 77.1,
+      "latest_observed_time": "2025-12-31 23:00:00",
+      "latest_cpcb": {
+        "label": "Moderate",
+        "hex": "#fb923c"
+      },
+      "horizons": {
+        "24": {
+          "horizon_h": 24,
+          "origin": "2025-12-30 23:00:00",
+          "valid_time": "2025-12-31 23:00:00",
+          "pred_pm25": 98.5,
+          "actual_pm25": 77.1,
+          "pm25_lag0": 87.1,
+          "cams_target": 110.6,
+          "cpcb": {
+            "label": "Poor",
+            "hex": "#e11d48"
+          },
+          "p10": 57.4,
+          "p50": 88.4,
+          "p90": 127.4
+        },
+        "48": {
+          "horizon_h": 48,
+          "origin": "2025-12-29 23:00:00",
+          "valid_time": "2025-12-31 23:00:00",
+          "pred_pm25": 83.9,
+          "actual_pm25": 77.1,
+          "pm25_lag0": 53.4,
+          "cams_target": 110.6,
+          "cpcb": {
+            "label": "Moderate",
+            "hex": "#fb923c"
+          },
+          "p10": 47.7,
+          "p50": 80.4,
+          "p90": 108.2
+        },
+        "72": {
+          "horizon_h": 72,
+          "origin": "2025-12-28 23:00:00",
+          "valid_time": "2025-12-31 23:00:00",
+          "pred_pm25": 84.8,
+          "actual_pm25": 77.1,
+          "pm25_lag0": 59.2,
+          "cams_target": 110.6,
+          "cpcb": {
+            "label": "Moderate",
+            "hex": "#fb923c"
+          },
+          "p10": 43.1,
+          "p50": 77.7,
+          "p90": 113.8
+        }
+      },
+      "model": "LightGBM v2.1 log1p · one model per horizon",
+      "n_features": 95,
+      "live": {
+        "pm25": 7.0,
+        "us_aqi": 67,
+        "measured": true,
+        "updated": "2026-07-21T20:12:04Z",
+        "n_stations": 1
+      }
+    }
+  ],
+  "grid_trajectories": {
+    "korba": {
+      "city_id": "korba",
+      "origin": "2022-12-30 22:00:00",
+      "timestamps": [
+        "2022-12-30 22:00:00",
+        "2022-12-31 04:00:00",
+        "2022-12-31 10:00:00",
+        "2022-12-31 16:00:00",
+        "2022-12-31 22:00:00",
+        "2023-01-01 04:00:00",
+        "2023-01-01 10:00:00",
+        "2023-01-01 16:00:00",
+        "2023-01-01 22:00:00",
+        "2023-01-02 04:00:00",
+        "2023-01-02 10:00:00",
+        "2023-01-02 16:00:00",
+        "2023-01-02 22:00:00"
+      ],
+      "frame_step_hours": 6,
+      "grid_mean_pm25": [
+        64.3,
+        41.5,
+        29.6,
+        23.0,
+        26.0,
+        28.5,
+        39.8,
+        25.0,
+        37.1,
+        33.4,
+        51.2,
+        40.0,
+        50.0
+      ],
+      "n_cells": 8360,
+      "threshold_ug_m3": 60.0
+    },
+    "jagdalpur": {
+      "city_id": "jagdalpur",
+      "origin": "2023-01-04 20:00:00",
+      "timestamps": [
+        "2023-01-04 20:00:00",
+        "2023-01-05 02:00:00",
+        "2023-01-05 08:00:00",
+        "2023-01-05 14:00:00",
+        "2023-01-05 20:00:00",
+        "2023-01-06 02:00:00",
+        "2023-01-06 08:00:00",
+        "2023-01-06 14:00:00",
+        "2023-01-06 20:00:00",
+        "2023-01-07 02:00:00",
+        "2023-01-07 08:00:00",
+        "2023-01-07 14:00:00",
+        "2023-01-07 20:00:00"
+      ],
+      "frame_step_hours": 6,
+      "grid_mean_pm25": [
+        44.3,
+        24.3,
+        36.1,
+        29.0,
+        32.2,
+        28.1,
+        40.1,
+        39.9,
+        41.4,
+        34.1,
+        26.1,
+        19.2,
+        27.5
+      ],
+      "n_cells": 6238,
+      "threshold_ug_m3": 60.0
+    }
+  }
+}

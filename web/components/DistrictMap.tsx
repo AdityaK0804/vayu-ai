@@ -41,8 +41,10 @@ export default function DistrictMap({
   onSelect,
   focus,
   showCities = true,
+  showCityLabels = true,
   openCityOnFocus = true,
   interactive = true,
+  initialZoom = 6.35,
 }: {
   selected: string | null;
   onSelect: (d: DistrictProps | null) => void;
@@ -58,8 +60,10 @@ export default function DistrictMap({
     lon?: number;
   } | null;
   showCities?: boolean;
+  showCityLabels?: boolean;
   /** false on the landing page: a preview should look live, not invite panning */
   interactive?: boolean;
+  initialZoom?: number;
 }) {
   const mapRef = useRef<MapRef | null>(null);
   const [hover, setHover] = useState<string | null>(null);
@@ -192,39 +196,44 @@ export default function DistrictMap({
           lineWidthUnits: "pixels",
           getLineWidth: (d: CityPoint) => (d.has_stations ? 2 : 3),
         }),
-        new TextLayer({
-          id: "cg-city-labels",
-          data: data.cities,
-          pickable: false,
-          getPosition: (d: CityPoint) => [d.lon, d.lat],
-          getText: (d: CityPoint) => `${d.name} · ${d.us_aqi}`,
-          getSize: 12,
-          sizeUnits: "pixels",
-          getColor: [255, 255, 255, 252],
-          getTextAnchor: "start",
-          getAlignmentBaseline: "center",
-          getPixelOffset: [13, 0],
-          // solid plate behind the label — the single biggest legibility win
-          // over a coloured choropleth
-          background: true,
-          getBackgroundColor: [6, 12, 11, 225],
-          backgroundPadding: [7, 4, 7, 4],
-          getBorderColor: [255, 255, 255, 55],
-          getBorderWidth: 1,
-          fontWeight: 600,
-          characterSet: "auto",
-          fontSettings: { sdf: true, buffer: 8 },
-        }),
       );
+      
+      if (showCityLabels) {
+        out.push(
+          new TextLayer({
+            id: "cg-city-labels",
+            data: data.cities,
+            pickable: false,
+            getPosition: (d: CityPoint) => [d.lon, d.lat],
+            getText: (d: CityPoint) => `${d.name} · ${d.us_aqi}`,
+            getSize: 12,
+            sizeUnits: "pixels",
+            getColor: [255, 255, 255, 252],
+            getTextAnchor: "start",
+            getAlignmentBaseline: "center",
+            getPixelOffset: [13, 0],
+            // solid plate behind the label — the single biggest legibility win
+            // over a coloured choropleth
+            background: true,
+            getBackgroundColor: [6, 12, 11, 225],
+            backgroundPadding: [7, 4, 7, 4],
+            getBorderColor: [255, 255, 255, 55],
+            getBorderWidth: 1,
+            fontWeight: 600,
+            characterSet: "auto",
+            fontSettings: { sdf: true, buffer: 8 },
+          }),
+        );
+      }
     }
     return out;
-  }, [data, selected, hover, onSelect, flyToFeature, showCities, interactive]);
+  }, [data, selected, hover, onSelect, flyToFeature, showCities, showCityLabels, interactive]);
 
   return (
     <div style={{ position: "absolute", inset: 0 }}>
       <Map
         ref={mapRef}
-        initialViewState={{ longitude: 82.1, latitude: 21.2, zoom: 6.35, pitch: 0, bearing: 0 }}
+        initialViewState={{ longitude: 82.1, latitude: 21.2, zoom: initialZoom, pitch: 0, bearing: 0 }}
         mapStyle={BASEMAP}
         style={{ width: "100%", height: "100%", background: "#060b0a" }}
         attributionControl={false}

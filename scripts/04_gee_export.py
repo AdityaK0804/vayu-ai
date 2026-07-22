@@ -142,6 +142,72 @@ def export_channel(ee, city, fc, ch_key, year, tag):
     return desc
 
 
+def export_channel_local(ee, city, fc, ch_key, year, tag):
+    """Same computation as export_channel, but pulled straight down and written
+    to data/satellite/<ch>/<city>/ instead of queued to Google Drive.
+
+    Only safe for `stations` mode: a handful of points x 365 days stays well
+    under the getInfo element cap. Grid mode must still go via Drive.
+    """
+    import pandas as pd
+    from common import DATA
+
+    import time as _time
+
+    ch = CHANNELS[ch_key]
+    rows = []
+    # A whole year in one getInfo trips GEE's "Too many concurrent aggregations".
+    # Month-sized chunks stay under the limit and retry cleanly.
+    for month in range(1, 13):
+        start = ee.Date(f"{year}-{month:02d}-01")
+        end = start.advance(1, "month")
+        col = (ee.ImageCollection(ch["collection"])
+               .filterDate(start, end)
+               .filterBounds(ee.Geometry.Rectangle(city["bbox"]))
+               .select(ch["band"]))
+        n_days = end.difference(start, "day")
+        days = ee.List.sequence(0, n_days.subtract(1))
+
+        # Plain closure: ee.List.map binds only the element, so extra default
+        # args get mis-bound as ComputedObjects. The table is consumed inside
+        # this same iteration, so late binding is not a hazard here.
+        def per_day(d):
+            d0 = start.advance(ee.Number(d), "day")
+            daily = col.filterDate(d0, d0.advance(1, "day"))
+            img = ee.Image(ee.Algorithms.If(
+                daily.size().gt(0), daily.mean(),
+                ee.Image.constant(0).rename(ch["band"]).selfMask()))
+            sampled = img.reduceRegions(collection=fc, reducer=ee.Reducer.mean(),
+                                        scale=ch["scale"])
+            return sampled.map(lambda f: f.set("date", d0.format("YYYY-MM-dd")))
+
+        table = ee.FeatureCollection(days.map(per_day)).flatten()
+        for attempt in range(5):
+            try:
+                feats = table.select(["cell_id", "date", "mean"]).getInfo()["features"]
+                rows += [f["properties"] for f in feats]
+                break
+            except Exception as e:  # noqa: BLE001 - GEE throttles; back off and retry
+                if attempt == 4:
+                    warn(f"{ch_key} {city['id']} {year}-{month:02d}: {type(e).__name__} - skipped")
+                    break
+                _time.sleep(5 * (attempt + 1))
+
+    df = pd.DataFrame(rows)
+    if df.empty:
+        return None, 0
+    for c in ("cell_id", "date", "mean"):
+        if c not in df.columns:
+            df[c] = None
+    df = df[["cell_id", "date", "mean"]].dropna(subset=["cell_id", "date"])
+
+    out = DATA / "satellite" / ch_key / city["id"]
+    out.mkdir(parents=True, exist_ok=True)
+    dest = out / f"airsight_{ch_key}_{city['id']}_{tag}_{year}.csv"
+    df.to_csv(dest, index=False)
+    return dest, int(df["mean"].notna().sum())
+
+
 def export_landuse(ee, city, fc):
     """Dynamic World built-up fraction per cell, per year.
     built-up CHANGE between years = our honest construction-activity proxy,

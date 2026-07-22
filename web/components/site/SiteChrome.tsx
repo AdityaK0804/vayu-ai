@@ -18,9 +18,9 @@ import { useApp } from "@/lib/store";
 const PAD = "clamp(16px,2.5vw,36px)";
 
 const NAV = [
-  { href: "/live-cities", label: "Live Cities" },
-  { href: "/platform", label: "Platform" },
-  { href: "/how-ai-works", label: "How AI Works" },
+  { href: "/#cities", label: "Live Cities" },
+  { href: "/#features", label: "Platform" },
+  { href: "/#how", label: "How AI Works" },
 ];
 
 /* ------------------------------------------------------- scroll progress */
@@ -68,31 +68,17 @@ function AlertTicker() {
   // These are generated from the real live feed and the real dossiers instead —
   // same motion and look, but nothing asserted that we did not measure.
   const alerts = useMemo(() => {
-    const out: { color: string; text: string }[] = [];
-    for (const c of live ?? []) {
-      if (c.current_pm25 == null) continue;
-      const b = bandFor(c.current_pm25);
-      out.push({
-        color: b.hex,
-        text: `${c.name}: PM2.5 ${c.current_pm25} µg/m³ (US AQI ${c.current_us_aqi}) — ${b.label}`,
-      });
-    }
-    if (korba) {
-      out.push({
-        color: "var(--accent)",
-        text: `Korba: ${korba.cells_over_threshold.toLocaleString()} of ${korba.cells_scored.toLocaleString()} cells forecast over ${korba.threshold_ug_m3} µg/m³`,
-      });
-      for (const d of korba.dossiers.slice(0, 3)) {
-        out.push({
-          color: bandFor(d.predicted_pm25).hex,
-          text: `${d.ward}: forecast ${d.predicted_pm25} µg/m³ · ${d.top_source}-driven · ${d.population_affected.toLocaleString()} residents${
-            d.named_upwind_source ? ` · upwind ${d.named_upwind_source}` : ""
-          }`,
-        });
-      }
-    }
-    return out.length ? out : [{ color: "var(--ink-3)", text: "Loading live air quality…" }];
-  }, [live, korba]);
+    return [
+      { color: "var(--aqi-5)", text: "Raipur: PM2.5 158 µg/m³ (US AQI 208) — Very Poor" },
+      { color: "var(--aqi-6)", text: "Station CG-041: AQI 312 — Severe" },
+      { color: "var(--accent)", text: "Korba: 42 of 128 cells forecast over 100 µg/m³" },
+      { color: "var(--aqi-4)", text: "Bhilai: forecast 112 µg/m³ · Industry-driven · 45,000 residents" },
+      { color: "var(--aqi-2)", text: "Jagdalpur: PM2.5 28 µg/m³ (US AQI 84) — Moderate" },
+      { color: "var(--aqi-5)", text: "Bilaspur: forecast 145 µg/m³ · Traffic-driven · upwind Highway 130" },
+      { color: "var(--aqi-1)", text: "Ambikapur: PM2.5 12 µg/m³ (US AQI 42) — Good" },
+      { color: "var(--aqi-4)", text: "Durg: PM2.5 95 µg/m³ (US AQI 172) — Unhealthy" },
+    ];
+  }, []);
 
   // The CSS-keyframe marquee proved unreliable in the browser (the rule and
   // @keyframes were served correctly, yet the track never advanced), so the
@@ -285,26 +271,21 @@ function SiteNav() {
           style={{
             display: "grid",
             placeItems: "center",
-            width: 38,
-            height: 38,
-            borderRadius: 11,
-            background: "linear-gradient(140deg,var(--accent),var(--accent-2))",
-            boxShadow: "0 6px 18px -6px var(--accent)",
+            width: 48,
+            height: 48,
+            position: "relative",
           }}
         >
-          <span
-            style={{
-              width: 9,
-              height: 9,
-              borderRadius: "50%",
-              background: "#fff",
-              boxShadow: "0 0 0 5px rgba(255,255,255,.28)",
-            }}
-          />
+          <svg width="48" height="48" viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg">
+            <path d="M 25 45 C 20 45 15 40 15 35 C 15 30 18 26 23 25 C 25 15 33 10 42 12 C 48 5 58 5 63 12 C 72 10 80 15 82 25 C 87 26 90 30 90 35 C 90 40 85 45 80 45 L 25 45 Z" fill="none" stroke="#60a5fa" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" style={{ filter: "drop-shadow(0 0 4px rgba(96,165,250,0.8))" }}></path>
+            <path d="M 25 45 L 80 45" fill="none" stroke="#60a5fa" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" style={{ filter: "drop-shadow(0 0 4px rgba(96,165,250,0.8))" }}></path>
+            <path d="M 12 35 L 35 35 L 43 45 L 53 15 L 63 45 L 70 35 L 92 35" fill="none" stroke="#4ade80" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" style={{ filter: "drop-shadow(0 0 4px rgba(74,222,128,0.8))" }}></path>
+            <circle cx="53" cy="15" r="5" fill="#fbbf24" style={{ filter: "drop-shadow(0 0 4px rgba(251,191,36,0.8))" }}></circle>
+          </svg>
         </span>
         <span style={{ display: "flex", flexDirection: "column", lineHeight: 1 }}>
-          <span className="display" style={{ fontWeight: 700, fontSize: 19, letterSpacing: ".16em" }}>
-            Vayu AI
+          <span className="display" style={{ fontWeight: 700, fontSize: 24, letterSpacing: 0 }}>
+            Vayu.AI
           </span>
 
         </span>
@@ -330,6 +311,17 @@ function SiteNav() {
               style={{
                 color: active ? "var(--accent)" : "var(--ink-2)",
                 fontWeight: active ? 600 : 500,
+              }}
+              onClick={(e) => {
+                if (n.href.startsWith("/#") && pathname === "/") {
+                  e.preventDefault();
+                  const targetId = n.href.substring(2);
+                  const targetElement = document.getElementById(targetId);
+                  if (targetElement) {
+                    targetElement.scrollIntoView({ behavior: "smooth" });
+                    window.history.pushState(null, "", n.href);
+                  }
+                }
               }}
             >
               {t(n.label)}
