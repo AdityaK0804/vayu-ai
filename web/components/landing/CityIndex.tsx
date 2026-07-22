@@ -3,19 +3,11 @@
 import Link from "next/link";
 import { useLive } from "@/lib/data";
 import { useT } from "@/lib/i18n";
+import { aqiCss, aqiLabel } from "@/lib/aqiScale";
 import { SectionHead } from "@/components/site/blocks";
 import type { LiveCity } from "@/lib/types";
 
 /** US AQI category -> the design's ramp. */
-function aqiBand(aqi: number | null) {
-  if (aqi == null) return { c: "var(--ink-3)", label: "No data" };
-  if (aqi <= 50) return { c: "var(--aqi-1)", label: "Good" };
-  if (aqi <= 100) return { c: "var(--aqi-2)", label: "Moderate" };
-  if (aqi <= 150) return { c: "var(--aqi-4)", label: "Unhealthy (sensitive)" };
-  if (aqi <= 200) return { c: "var(--aqi-5)", label: "Unhealthy" };
-  if (aqi <= 300) return { c: "var(--aqi-5)", label: "Very poor" };
-  return { c: "var(--aqi-6)", label: "Severe" };
-}
 
 const SUBTITLE: Record<string, string> = {
   korba: "Coal & power belt",
@@ -75,12 +67,17 @@ export default function CityIndex() {
           ))}
 
         {data?.map((c: LiveCity) => {
-          const band = aqiBand(c.current_us_aqi);
-          const zeroStation = c.city_id === "jagdalpur";
+          // measured (24h CPCB mean) when stations exist, model only when they
+          // do not — the same rule the map paints by
+          const aqi = c.measured_us_aqi ?? c.current_us_aqi ?? null;
+          const pm25 = c.measured_pm25_24h ?? c.current_pm25 ?? null;
+          const measured = c.measured === true;
+          const band = { c: aqiCss(aqi), label: aqiLabel(aqi) };
+          const zeroStation = !measured;
           return (
             <Link
               key={c.city_id}
-              href={zeroStation ? "/dashboard?city=jagdalpur" : "/dashboard"}
+              href={c.city_id === "jagdalpur" ? "/dashboard?city=jagdalpur" : "/dashboard"}
               className="card lift city-card-hover"
               style={{ display: "block", padding: 20, position: "relative", overflow: "hidden" }}
             >
@@ -118,7 +115,7 @@ export default function CityIndex() {
                   className="display"
                   style={{ fontWeight: 700, fontSize: 46, lineHeight: 1, color: band.c }}
                 >
-                  {c.current_us_aqi ?? "—"}
+                  {aqi ?? "—"}
                 </span>
                 <span style={{ fontSize: 13, color: "var(--ink-2)" }}>{t("AQI")}</span>
               </div>
@@ -135,7 +132,7 @@ export default function CityIndex() {
                   color: band.c,
                 }}
               >
-                {t(band.label)} · PM2.5 {c.current_pm25 ?? "—"} µg/m³
+                {t(band.label)} · PM2.5 {pm25 ?? "—"} µg/m³
               </div>
             </Link>
           );

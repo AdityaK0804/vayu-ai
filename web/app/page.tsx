@@ -9,6 +9,7 @@ import CityIndex from "@/components/landing/CityIndex";
 import SiteShell, { PAD } from "@/components/site/SiteChrome";
 import { FeatureGrid, Section, SectionHead } from "@/components/site/blocks";
 import DashboardPreview from "@/components/site/DashboardPreview";
+import { TypingAnimation } from "@/components/ui/typing-animation";
 import { useMetrics } from "@/lib/data";
 import { useT } from "@/lib/i18n";
 
@@ -116,8 +117,17 @@ export default function Landing() {
             <br />
             {t("No problem.")}
             <br />
-            <span
+            <TypingAnimation
+              as="span"
+              duration={70}
+              delay={900}
+              startOnView={false}
               style={{
+                display: "inline-block",
+                fontSize: "inherit",
+                fontWeight: "inherit",
+                letterSpacing: "inherit",
+                lineHeight: "inherit",
                 background: "linear-gradient(120deg,var(--accent),var(--accent-2))",
                 WebkitBackgroundClip: "text",
                 backgroundClip: "text",
@@ -125,7 +135,7 @@ export default function Landing() {
               }}
             >
               {t("AI fills the gaps.")}
-            </span>
+            </TypingAnimation>
           </h1>
 
           <p
