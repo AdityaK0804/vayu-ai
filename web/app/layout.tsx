@@ -1,8 +1,40 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { IBM_Plex_Mono, IBM_Plex_Sans, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Providers } from "./providers";
 import ThemeShell from "@/components/ThemeShell";
+
+/**
+ * Fonts from the design, self-hosted via next/font.
+ *
+ * These used to be a <link> to fonts.googleapis.com: two extra DNS+TLS
+ * handshakes to a third party, and a render-blocking stylesheet before any text
+ * could paint. next/font inlines the @font-face rules and serves the files from
+ * our own origin, so text paints in one round trip. `display: swap` means a slow
+ * font never holds the page hostage, and every stack still falls back to system
+ * fonts, so the app renders with no network at all (demo-wifi safety).
+ */
+const display = Space_Grotesk({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+  variable: "--font-space-grotesk",
+});
+
+const body = IBM_Plex_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  display: "swap",
+  variable: "--font-plex-sans",
+});
+
+const mono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500"],
+  display: "swap",
+  variable: "--font-plex-mono",
+});
 
 export const metadata: Metadata = {
   title: "Vayu AI — Air Intelligence",
@@ -10,19 +42,14 @@ export const metadata: Metadata = {
     "Forecast, attribute and act on urban air quality across Chhattisgarh — including cities with no ground sensors.",
 };
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <head>
-        {/* Fonts from the design. Every stack falls back to system fonts, so the
-            app still renders correctly with no network (demo-wifi safety). */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html lang="en" className={`${display.variable} ${body.variable} ${mono.variable}`}>
       <body>
         <Providers>
           <ThemeShell>{children}</ThemeShell>

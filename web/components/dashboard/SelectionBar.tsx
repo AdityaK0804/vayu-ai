@@ -1,6 +1,6 @@
 "use client";
 
-import type { CityPoint, DistrictProps } from "@/components/DistrictMap";
+import type { CityPoint, DistrictProps } from "@/lib/districts";
 import { aqiCss, aqiLabel } from "@/lib/aqiScale";
 import { useLive } from "@/lib/data";
 import { useT } from "@/lib/i18n";

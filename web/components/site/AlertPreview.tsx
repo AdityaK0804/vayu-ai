@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import { useDistricts } from "@/components/DistrictMap";
+import { useDistricts } from "@/lib/districts";
 import { Iphone } from "@/components/magicui/iphone";
 import { aqiCss, aqiLabel } from "@/lib/aqiScale";
 import { useT } from "@/lib/i18n";
@@ -142,7 +142,7 @@ export default function AlertPreview() {
       style={{
         position: "relative",
         zIndex: 1,
-        maxWidth: 1220,
+        maxWidth: 1400,
         margin: "0 auto",
         padding: `56px ${PAD}`,
       }}

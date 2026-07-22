@@ -1,17 +1,19 @@
 "use client";
 
-import Link from "next/link";
+import dynamic from "next/dynamic";
 
 import ShinyLink from "@/components/magicui/shiny-link";
 
 import CityIndex from "@/components/landing/CityIndex";
 import SiteShell, { PAD } from "@/components/site/SiteChrome";
 import { FeatureGrid, Section } from "@/components/site/blocks";
-import FlowSteps from "@/components/site/FlowSteps";
-import AlertPreview from "@/components/site/AlertPreview";
 import DashboardPreview from "@/components/site/DashboardPreview";
 import { useMetrics } from "@/lib/data";
 import { useT } from "@/lib/i18n";
+
+/* lazy-load below-the-fold sections for faster initial paint */
+const FlowSteps = dynamic(() => import("@/components/site/FlowSteps"), { ssr: false });
+const AlertPreview = dynamic(() => import("@/components/site/AlertPreview"), { ssr: false });
 
 /* ---------------------------------------------------------------------------
    VAYU landing — ported from the design's index.dc.html.
@@ -41,7 +43,7 @@ export default function Landing() {
 
   return (
     <SiteShell>
-      {/* ---------------- hero ---------------- */}
+      {/* ---------------- hero (2-column: text left, sidebar right) ---------------- */}
       <header
         id="top"
         style={{
@@ -50,148 +52,153 @@ export default function Landing() {
           maxWidth: 1400,
           margin: "0 auto",
           padding: `clamp(115px,10vw,140px) ${PAD} 40px`,
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "clamp(24px, 4vw, 56px)",
+          alignItems: "center",
         }}
       >
-        <div
-          className="figure"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 10,
-            padding: "7px 14px",
-            borderRadius: 100,
-            border: "1px solid var(--line)",
-            background: "var(--surface)",
-            fontSize: 12,
-            color: "var(--ink-2)",
-            animation: "vayuRise .6s both",
-          }}
-        >
-          <span
-            style={{
-              width: 7,
-              height: 7,
-              borderRadius: "50%",
-              background: "var(--aqi-1)",
-              animation: "vayuPulse 1.8s infinite",
-            }}
-          />
-          LIVE · {metrics?.dataset.stations ?? "—"} stations · 9 cities · Chhattisgarh
-        </div>
-
-        <h1
-          className="display"
-          style={{
-            fontWeight: 700,
-            fontSize: "clamp(38px,6.6vw,80px)",
-            lineHeight: 1.02,
-            margin: "22px 0 0",
-            maxWidth: "15ch",
-            animation: "vayuRise .7s .05s both",
-          }}
-        >
-          {t("No sensors.")}
-          <br />
-          {t("No problem.")}
-          <br />
-          <span
-            style={{
-              background: "linear-gradient(120deg,var(--accent),var(--accent-2))",
-              WebkitBackgroundClip: "text",
-              backgroundClip: "text",
-              color: "transparent",
-            }}
-          >
-            {t("AI fills the gaps.")}
-          </span>
-        </h1>
-
-        <p
-          style={{
-            fontSize: "clamp(16px,1.9vw,20px)",
-            lineHeight: 1.6,
-            color: "var(--ink-2)",
-            maxWidth: "56ch",
-            margin: "26px 0 0",
-            animation: "vayuRise .7s .12s both",
-          }}
-        >
-          {t(
-            "VAYU fuses CPCB ground stations, satellite columns, meteorology and emissions inventories into one forecasting engine — predicting PM2.5 72 hours out, attributing it to a named source, and ranking where enforcement should go first. Including Jagdalpur, which has no ground sensor at all.",
-          )}
-        </p>
-
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 14,
-            marginTop: 34,
-            animation: "vayuRise .7s .18s both",
-          }}
-        >
-          <ShinyLink
-            href="/dashboard"
+        {/* ---------- left: hero text ---------- */}
+        <div style={{ minWidth: 0 }}>
+          <div
+            className="figure"
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 9,
-              padding: "15px 26px",
-              borderRadius: 12,
-              background: "linear-gradient(140deg,var(--accent),var(--accent-2))",
-              color: "#fff",
-              fontWeight: 600,
-              fontSize: 15.5,
-              boxShadow: "0 14px 34px -12px var(--accent)",
+              gap: 10,
+              padding: "7px 14px",
+              borderRadius: 100,
+              border: "1px solid var(--line)",
+              background: "var(--surface)",
+              fontSize: 12,
+              color: "var(--ink-2)",
+              animation: "vayuRise .6s both",
             }}
           >
-            {t("Launch the platform →")}
-          </ShinyLink>
-          <ShinyLink
-            href="/dashboard"
-            className="card"
+            <span
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                background: "var(--aqi-1)",
+                animation: "vayuPulse 1.8s infinite",
+              }}
+            />
+            LIVE · {metrics?.dataset.stations ?? "—"} stations · 9 cities · Chhattisgarh
+          </div>
+
+          <h1
+            className="display"
             style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 9,
-              padding: "15px 26px",
-              borderRadius: 12,
-              fontWeight: 600,
-              fontSize: 15.5,
+              fontWeight: 700,
+              fontSize: "clamp(38px,6.6vw,80px)",
+              lineHeight: 1.02,
+              margin: "22px 0 0",
+              maxWidth: "15ch",
+              animation: "vayuRise .7s .05s both",
             }}
           >
-            {t("Explore the live map")}
-          </ShinyLink>
+            {t("No sensors.")}
+            <br />
+            {t("No problem.")}
+            <br />
+            <span
+              style={{
+                background: "linear-gradient(120deg,var(--accent),var(--accent-2))",
+                WebkitBackgroundClip: "text",
+                backgroundClip: "text",
+                color: "transparent",
+              }}
+            >
+              {t("AI fills the gaps.")}
+            </span>
+          </h1>
+
+          <p
+            style={{
+              fontSize: "clamp(16px,1.9vw,20px)",
+              lineHeight: 1.6,
+              color: "var(--ink-2)",
+              maxWidth: "56ch",
+              margin: "26px 0 0",
+              animation: "vayuRise .7s .12s both",
+            }}
+          >
+            {t(
+              "VAYU fuses CPCB ground stations, satellite columns, meteorology and emissions inventories into one forecasting engine — predicting PM2.5 72 hours out, attributing it to a named source, and ranking where enforcement should go first. Including Jagdalpur, which has no ground sensor at all.",
+            )}
+          </p>
+
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 14,
+              marginTop: 34,
+              animation: "vayuRise .7s .18s both",
+            }}
+          >
+            <ShinyLink
+              href="/dashboard"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 9,
+                padding: "15px 26px",
+                borderRadius: 12,
+                background: "linear-gradient(140deg,var(--accent),var(--accent-2))",
+                color: "#fff",
+                fontWeight: 600,
+                fontSize: 15.5,
+                boxShadow: "0 14px 34px -12px var(--accent)",
+              }}
+            >
+              {t("Launch the platform →")}
+            </ShinyLink>
+            <ShinyLink
+              href="/dashboard"
+              className="card"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 9,
+                padding: "15px 26px",
+                borderRadius: 12,
+                fontWeight: 600,
+                fontSize: 15.5,
+              }}
+            >
+              {t("Explore the live map")}
+            </ShinyLink>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 28,
+              marginTop: 52,
+              paddingTop: 30,
+              borderTop: "1px solid var(--line)",
+              animation: "vayuRise .7s .24s both",
+            }}
+          >
+            {stats.map((s) => (
+              <div key={s.k}>
+                <div className="display" style={{ fontWeight: 700, fontSize: 30 }}>
+                  {s.v}
+                </div>
+                <div className="figure" style={{ fontSize: 13, color: "var(--ink-3)" }}>
+                  {s.k}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 28,
-            marginTop: 52,
-            paddingTop: 30,
-            borderTop: "1px solid var(--line)",
-            animation: "vayuRise .7s .24s both",
-          }}
-        >
-          {stats.map((s) => (
-            <div key={s.k}>
-              <div className="display" style={{ fontWeight: 700, fontSize: 30 }}>
-                {s.v}
-              </div>
-              <div className="figure" style={{ fontSize: 13, color: "var(--ink-3)" }}>
-                {s.k}
-              </div>
-            </div>
-          ))}
-        </div>
-      </header>
-
-      {/* live dashboard preview — hover lifts it, click opens the real thing */}
-      <Section pt={0} pb={20}>
+        {/* ---------- right: dashboard preview ---------- */}
         <DashboardPreview />
-      </Section>
+      </header>
 
       <CityIndex />
 

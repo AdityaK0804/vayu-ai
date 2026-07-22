@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 
-import { useDistricts, type CityPoint, type DistrictProps } from "@/components/DistrictMap";
+import { useDistricts, type CityPoint, type DistrictProps } from "@/lib/districts";
 import CityDetail from "@/components/dashboard/CityDetail";
 import DistrictDetail from "@/components/dashboard/DistrictDetail";
 import { AQI_BANDS, aqiCss, aqiLabel } from "@/lib/aqiScale";
@@ -81,8 +81,59 @@ export default function MapWorkspace({
       .slice(0, 12);
   }, [districts]);
 
+  const criticalAlerts = alerts.filter(a => (a.display_aqi ?? 0) > 150).length;
+
   return (
-    <div className="mapws">
+    <div style={{ display: "flex", flexDirection: "column", height: "auto", minHeight: "calc(100vh - 110px)", gap: 16 }}>
+      {/* ---------------- Top Stats ---------------- */}
+      <div style={{ display: "flex", gap: 14, flexWrap: "wrap", zIndex: 10, flex: "none" }}>
+        {/* Total Cities */}
+        <div className="card" style={{ flex: 1, minWidth: 180, padding: "16px 20px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <span style={{ fontSize: 10, letterSpacing: "0.1em", color: "var(--ink-3)", fontFamily: "var(--font-mono)" }}>TOTAL CITIES</span>
+            <span style={{ color: "var(--aqi-1)", fontSize: 16 }}>🏢</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+            <span style={{ fontSize: 28, fontWeight: 700, lineHeight: 1 }}>{cities.length}</span>
+            <span style={{ fontSize: 11, color: "var(--aqi-1)" }}>~Live</span>
+          </div>
+        </div>
+        {/* Active Alerts */}
+        <div className="card" style={{ flex: 1, minWidth: 180, padding: "16px 20px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <span style={{ fontSize: 10, letterSpacing: "0.1em", color: "var(--ink-3)", fontFamily: "var(--font-mono)" }}>ACTIVE ALERTS</span>
+            <span style={{ color: "var(--aqi-3)", fontSize: 16 }}>● 🔔</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+            <span style={{ fontSize: 28, fontWeight: 700, lineHeight: 1 }}>{alerts.length}</span>
+            <span style={{ fontSize: 11, color: "var(--aqi-3)" }}>~Live</span>
+          </div>
+        </div>
+        {/* Critical Alerts */}
+        <div className="card" style={{ flex: 1, minWidth: 180, padding: "16px 20px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <span style={{ fontSize: 10, letterSpacing: "0.1em", color: "var(--ink-3)", fontFamily: "var(--font-mono)" }}>CRITICAL ALERTS</span>
+            <span style={{ color: "var(--aqi-4)", fontSize: 16 }}>↗</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+            <span style={{ fontSize: 28, fontWeight: 700, lineHeight: 1 }}>{criticalAlerts}</span>
+            <span style={{ fontSize: 11, color: "var(--aqi-4)" }}>~Live</span>
+          </div>
+        </div>
+        {/* Monitored Districts */}
+        <div className="card" style={{ flex: 1, minWidth: 180, padding: "16px 20px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+            <span style={{ fontSize: 10, letterSpacing: "0.1em", color: "var(--ink-3)", fontFamily: "var(--font-mono)" }}>MONITORED DISTRICTS</span>
+            <span style={{ color: "var(--aqi-2)", fontSize: 16 }}>↘</span>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+            <span style={{ fontSize: 28, fontWeight: 700, lineHeight: 1 }}>{districts?.meta?.n_districts ?? "--"}</span>
+            <span style={{ fontSize: 11, color: "var(--aqi-1)" }}>~Live</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="mapws" style={{ height: "auto", flex: 1, minHeight: 350 }}>
       {/* ---------------- left: cities ---------------- */}
       <aside className="card mapws-col">
         <div className="mapws-head">
@@ -173,20 +224,31 @@ export default function MapWorkspace({
 
           <div className="mapws-legend card">
             <div className="crumb" style={{ marginBottom: 6 }}>
-              {t("US AQI")}
+              {t("US AQI Scale")}
             </div>
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-              {AQI_BANDS.map((b) => (
-                <span
-                  key={b.label}
-                  style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 10.5 }}
-                >
-                  <span
-                    style={{ width: 13, height: 8, borderRadius: 3, background: b.hex, flex: "none" }}
-                  />
-                  <span style={{ color: "var(--ink-2)" }}>{t(b.label)}</span>
-                </span>
-              ))}
+            <div style={{ width: 220 }}>
+              <div
+                style={{
+                  height: 12,
+                  background: "linear-gradient(to right, #00e400, #ffff00, #ff0000)",
+                  marginBottom: 6,
+                  borderRadius: 4,
+                }}
+              />
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: 10.5,
+                  color: "var(--ink-2)",
+                  fontFamily: "var(--font-mono)",
+                }}
+              >
+                <span>0</span>
+                <span>50</span>
+                <span>100</span>
+                <span>150+</span>
+              </div>
             </div>
           </div>
         </div>
@@ -298,6 +360,7 @@ export default function MapWorkspace({
         )}
       </aside>
       )}
+      </div>
     </div>
   );
 }

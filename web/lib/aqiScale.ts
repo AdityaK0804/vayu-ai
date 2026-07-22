@@ -21,28 +21,34 @@ export interface AqiBand {
 export const AQI_BANDS: AqiBand[] = [
   { max: 50, label: "Good", short: "0–50", hex: "#00c26e", rgb: [0, 194, 110] },
   { max: 100, label: "Moderate", short: "51–100", hex: "#f2d024", rgb: [242, 208, 36] },
-  { max: 150, label: "Unhealthy (sensitive)", short: "101–150", hex: "#f97316", rgb: [249, 115, 22] },
+  { max: 150, label: "Unhealthy (sensitive)", short: "101–150", hex: "#e11d48", rgb: [225, 29, 72] },
   { max: 200, label: "Unhealthy", short: "151–200", hex: "#e11d48", rgb: [225, 29, 72] },
   { max: 300, label: "Very unhealthy", short: "201–300", hex: "#9333ea", rgb: [147, 51, 234] },
   { max: Infinity, label: "Hazardous", short: "301+", hex: "#7f1d1d", rgb: [127, 29, 29] },
 ];
 
 /**
- * Continuous colour stops.
+ * Continuous colour stops: green -> yellow -> red, no orange in the middle.
  *
- * Chhattisgarh currently sits between AQI 25 and 75 — inside just two official
- * categories — so colouring straight from AQI_BANDS painted the entire state
- * one shade of green and one of yellow. These extra stops give the 0-100 range
- * real separation (deep green -> lime -> yellow -> amber) while keeping the
- * official hue at each category boundary, so the legend still reads true.
+ * Two things this has to solve at once. Chhattisgarh's districts currently sit
+ * between AQI 25 and 75 — inside just two official categories — so a plain
+ * three-stop ramp still leaves most of the state a similar yellow-green. The
+ * extra stops below 100 spread that band across visibly different hues.
+ *
+ * Above 100 the ramp keeps darkening (deep red -> crimson -> purple -> maroon)
+ * instead of flattening to one red, so a genuinely hazardous district can never
+ * look the same as a merely unhealthy one.
  */
 const STOPS: [number, [number, number, number]][] = [
-  [0, [0, 168, 107]],     // deep green
-  [25, [99, 209, 58]],    // lime
-  [50, [242, 208, 36]],   // yellow  (Good | Moderate boundary)
-  [75, [247, 144, 32]],   // amber
-  [100, [249, 115, 22]],  // orange  (Moderate | Sensitive boundary)
-  [150, [225, 29, 72]],   // red
+  [0, [0, 208, 88]],      // green
+  [20, [124, 222, 40]],   // yellow-green
+  [38, [238, 226, 20]],   // yellow
+  [50, [245, 205, 20]],   // gold      (Good | Moderate boundary)
+  [58, [235, 60, 45]],    // red — the ramp crosses to red in 8 points, so the
+                          // orange in between is a thin transition, not a band
+  [78, [222, 26, 40]],    // red
+  [100, [201, 12, 34]],   // deep red  (Moderate | Sensitive boundary)
+  [150, [166, 10, 58]],   // crimson
   [200, [147, 51, 234]],  // purple
   [300, [127, 29, 29]],   // maroon
   [500, [90, 12, 20]],

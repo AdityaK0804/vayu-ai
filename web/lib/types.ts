@@ -141,17 +141,27 @@ export interface Stations {
 export interface HorizonMetric {
   horizon_h: number;
   model_rmse: number | null;
+  model_mae?: number | null;
   persistence_rmse: number | null;
   cams_bc_rmse: number | null;
   vs_persistence_pct: number | null;
   vs_cams_bc_pct: number | null;
+  /** Improvement vs frozen v1 baseline (positive = better) */
+  vs_v1_pct?: number | null;
+  v1_rmse?: number | null;
+  champion?: string | null;
+  quantile_p50_rmse?: number | null;
+  quantile_picp?: number | null;
+  quantile_mpiw?: number | null;
 }
 export interface Metrics {
   city: CityId;
+  model_version?: string;
   dataset: {
     pooled_target_rows: number | null;
     stations: number | null;
     window: [string, string] | null;
+    n_features?: number | null;
   };
   forecast_vs_baselines: HorizonMetric[];
   zero_station_loso: {

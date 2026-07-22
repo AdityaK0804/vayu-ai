@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { useDistricts } from "@/components/DistrictMap";
+import { useDistricts } from "@/lib/districts";
 import { useLive, useMetrics, usePriority } from "@/lib/data";
 import { aqiLabel } from "@/lib/aqiScale";
 import { useT, useLangStore, type Lang } from "@/lib/i18n";

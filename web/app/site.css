@@ -223,26 +223,251 @@
   .alert-preview > div:last-child { order: -1; }
 }
 
-/* hero-side live dashboard preview */
-.dash-preview { display: block; padding: 0; overflow: hidden; max-width: 520px; margin-left: auto; }
-.dash-preview-bar {
-  display: flex; align-items: center; gap: 8px;
-  padding: 10px 13px; border-bottom: 1px solid var(--line);
+/* hero-side dashboard sidebar preview (Climate Saathi style) */
+.dash-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 260px;
+  padding: 16px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  text-decoration: none;
+  color: var(--ink);
+  transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease, border-color 0.35s ease;
+  will-change: transform;
+  flex-shrink: 0;
+}
+.dash-sidebar:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 24px 50px -18px rgba(0, 0, 0, 0.45);
+  border-color: color-mix(in oklch, var(--accent), transparent 55%);
+}
+
+.dash-sidebar-group {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: .16em;
+  color: var(--ink-3);
+  padding: 14px 12px 6px;
+  text-transform: uppercase;
+}
+
+.dash-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  cursor: pointer;
+  color: var(--ink-2);
+  font-weight: 500;
+  font-size: 14px;
+  transition: background 0.18s, color 0.18s, border-color 0.18s;
+  border: 1px solid transparent;
+}
+.dash-sidebar-item:hover {
   background: var(--surface-2);
+  color: var(--ink);
 }
-.dash-preview-body {
-  display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
-  gap: 14px; padding: 13px;
+.dash-sidebar-item.active {
+  background: color-mix(in oklch, var(--accent), transparent 88%);
+  color: var(--accent);
+  border-color: color-mix(in oklch, var(--accent), transparent 70%);
 }
-.dash-preview-row {
-  display: flex; align-items: center; gap: 8px;
-  padding: 5px 8px; border-radius: 7px; background: var(--surface-2);
+
+.dash-sidebar-icon {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  display: grid;
+  place-items: center;
 }
-.dash-preview-stat {
-  padding: 7px 9px; border-radius: 8px;
-  background: var(--surface-2); border: 1px solid var(--line);
+.dash-sidebar-icon svg {
+  width: 18px;
+  height: 18px;
 }
-.dash-preview-foot {
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 10px; padding: 10px 13px; border-top: 1px solid var(--line);
+
+.dash-sidebar-label {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dash-sidebar-badge {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: var(--surface-2);
+  color: var(--ink-3);
+  flex-shrink: 0;
+}
+.dash-sidebar-item.active .dash-sidebar-badge {
+  background: var(--accent);
+  color: #fff;
+}
+.dash-sidebar-badge.accent {
+  background: #e6443a;
+  color: #fff;
+}
+
+.dash-sidebar-aqi {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 11px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  margin: 8px 0 0;
+}
+
+.dash-sidebar-foot {
+  padding: 10px 12px 2px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+  line-height: 1.5;
+  margin-top: auto;
+}
+
+@media (max-width: 900px) {
+  .dash-sidebar {
+    display: none;
+  }
+}
+
+/* ===========================================================================
+   Hero dashboard preview — the real command centre rendered in miniature
+   inside the tilted browser frame. Sizes are deliberately fixed in px rather
+   than inherited, so the mock stays legible at ~40% of dashboard scale.
+   =========================================================================== */
+.dash-win-body {
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr);
+  background: var(--bg);
+  min-height: 268px;
+  transition: grid-template-columns 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.dash-win-body.rail { grid-template-columns: 44px minmax(0, 1fr); }
+
+.dash-win-side {
+  border-right: 1px solid var(--line);
+  background: var(--surface);
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+.dash-win-brand { display: flex; align-items: center; gap: 7px; padding: 2px 4px 10px; }
+.dash-win-logo {
+  width: 20px; height: 20px; border-radius: 6px; flex: none; display: grid; place-items: center;
+  background: linear-gradient(140deg, var(--accent), var(--accent-2));
+}
+.dash-win-logo span { width: 5px; height: 5px; border-radius: 50%; background: #fff; }
+.dash-win-brand b {
+  display: block; font-family: var(--font-display); font-size: 11.5px; letter-spacing: 0.08em;
+}
+.dash-win-brand small {
+  display: block; font-family: var(--font-mono); font-size: 6.5px;
+  letter-spacing: 0.18em; color: var(--ink-3);
+}
+
+.dash-win-nav { display: grid; gap: 1px; }
+.dash-win-grp {
+  display: flex; align-items: center; gap: 4px; width: 100%; padding: 8px 5px 4px;
+  background: transparent; border: 0; cursor: pointer;
+  font-family: var(--font-mono); font-size: 7.5px; letter-spacing: 0.14em; color: var(--ink-3);
+}
+.dash-win-grp .caret { margin-left: auto; font-size: 9px; transition: transform 0.25s; }
+.dash-win-grp .caret.closed { transform: rotate(-90deg); }
+
+/* the expanding group: collapses to zero height, clipped */
+.dash-win-items {
+  display: grid; gap: 1px; overflow: hidden;
+  max-height: 200px; opacity: 1;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s;
+}
+.dash-win-items.closed { max-height: 0; opacity: 0; }
+
+.dash-win-item {
+  display: flex; align-items: center; gap: 7px; width: 100%;
+  padding: 5px 6px; border-radius: 7px; border: 1px solid transparent;
+  background: transparent; color: var(--ink-2); cursor: pointer;
+  font-size: 10px; text-align: left; transition: 0.15s;
+}
+.dash-win-item .ico { width: 11px; text-align: center; flex: none; font-size: 10px; }
+.dash-win-item .lab {
+  flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dash-win-item .badge {
+  flex: none; font-family: var(--font-mono); font-size: 7.5px; padding: 1px 5px;
+  border-radius: 20px; background: var(--surface-2); color: var(--ink-3);
+}
+.dash-win-item:hover { background: var(--surface-2); color: var(--ink); }
+.dash-win-item.active {
+  background: color-mix(in oklch, var(--accent), transparent 88%);
+  color: var(--accent);
+  border-color: color-mix(in oklch, var(--accent), transparent 70%);
+}
+.dash-win-item.active .badge { background: var(--accent); color: #fff; }
+
+.dash-win-collapse {
+  margin-top: auto; display: flex; align-items: center; gap: 7px;
+  padding: 6px; border-radius: 7px; border: 1px solid var(--line);
+  background: var(--surface-2); color: var(--ink-3); cursor: pointer;
+  font-size: 9.5px; transition: 0.15s;
+}
+.dash-win-collapse:hover { color: var(--ink); }
+.dash-win-collapse .chev { transition: transform 0.3s; flex: none; }
+
+/* rail mode: labels leave the flow so the column is genuinely narrow */
+.dash-win-body.rail .lab { display: none; }
+.dash-win-body.rail .dash-win-brand { justify-content: center; padding: 2px 0 10px; }
+.dash-win-body.rail .dash-win-item,
+.dash-win-body.rail .dash-win-collapse { justify-content: center; padding: 6px 0; gap: 0; }
+.dash-win-body.rail .dash-win-grp { justify-content: center; padding: 8px 0 4px; }
+.dash-win-body.rail .dash-win-collapse .chev { transform: rotate(180deg); }
+
+/* --- content pane --- */
+.dash-win-main { padding: 12px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.dash-win-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+.dash-win-stat {
+  padding: 8px 9px; border-radius: 9px;
+  background: var(--surface); border: 1px solid var(--line);
+}
+.dash-win-stat .v { font-size: 15px; font-weight: 600; line-height: 1; }
+.dash-win-stat .k { font-size: 7.5px; color: var(--ink-3); margin-top: 3px; line-height: 1.3; }
+
+/* one column per district, height and colour both carrying the AQI */
+.dash-win-strip {
+  display: flex; align-items: flex-end; gap: 2px; height: 46px;
+  padding: 7px 9px; border-radius: 9px;
+  background: var(--surface); border: 1px solid var(--line);
+}
+.dash-win-strip i { flex: 1; min-width: 2px; border-radius: 2px 2px 0 0; }
+
+.dash-win-rows { display: grid; gap: 3px; }
+.dash-win-row {
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 9px; border-radius: 8px;
+  background: var(--surface); border: 1px solid var(--line);
+}
+.dash-win-row .dot { width: 6px; height: 6px; border-radius: 50%; flex: none; }
+.dash-win-row .nm {
+  flex: 1; min-width: 0; font-size: 10px; color: var(--ink-2);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.dash-win-row .v { font-size: 11px; font-weight: 600; flex: none; }
+
+@media (max-width: 700px) {
+  .dash-win-body { grid-template-columns: 1fr; }
+  .dash-win-side { display: none; }
 }
