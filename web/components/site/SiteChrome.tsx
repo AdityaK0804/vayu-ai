@@ -303,14 +303,9 @@ function SiteNav() {
         </span>
         <span style={{ display: "flex", flexDirection: "column", lineHeight: 1 }}>
           <span className="display" style={{ fontWeight: 700, fontSize: 19, letterSpacing: ".16em" }}>
-            VAYU
+            Vayu AI
           </span>
-          <span
-            className="figure"
-            style={{ fontSize: 9.5, letterSpacing: ".22em", color: "var(--ink-3)", marginTop: 3 }}
-          >
-            {t("AIR INTELLIGENCE")}
-          </span>
+
         </span>
       </Link>
 
@@ -396,8 +391,8 @@ export function SiteFooter() {
         >
           <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#fff" }} />
         </span>
-        <span className="display" style={{ fontWeight: 700, letterSpacing: ".14em" }}>
-          VAYU
+        <span className="display" style={{ fontWeight: 700, letterSpacing: ".08em" }}>
+          Vayu AI
         </span>
         <span style={{ fontSize: 13, color: "var(--ink-3)" }}>{t("Urban Air Quality Intelligence")}</span>
       </div>

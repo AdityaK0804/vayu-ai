@@ -79,7 +79,7 @@ export default function Dashboard() {
             <span />
           </span>
           <span>
-            <b>VAYU</b>
+            <b style={{ letterSpacing: ".08em" }}>Vayu AI</b>
             <small>{t("COMMAND CENTER")}</small>
           </span>
         </Link>
@@ -129,7 +129,7 @@ export default function Dashboard() {
           </div>
         ))}
         <div className="side-foot">
-          VAYU · demo build
+          Vayu AI · demo build
           <br />
           Real data · CPCB · Sentinel-5P
           <br />

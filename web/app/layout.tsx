@@ -5,7 +5,7 @@ import { Providers } from "./providers";
 import ThemeShell from "@/components/ThemeShell";
 
 export const metadata: Metadata = {
-  title: "VAYU — Air Intelligence",
+  title: "Vayu AI — Air Intelligence",
   description:
     "Forecast, attribute and act on urban air quality across Chhattisgarh — including cities with no ground sensors.",
 };
