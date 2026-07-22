@@ -13,6 +13,7 @@ import {
   ReportsView,
 } from "@/components/dashboard/views";
 import AnalyticsView from "@/components/dashboard/AnalyticsView";
+import AdvisoriesView from "@/components/dashboard/AdvisoriesView";
 import Chatbot from "@/components/Chatbot";
 import LangToggle from "@/components/LangToggle";
 import { useT } from "@/lib/i18n";
@@ -39,6 +40,7 @@ const NAV: {
     group: "ACT",
     items: [
       { id: "interventions", label: "Interventions", ico: "◎", badge: "count" },
+      { id: "advisories", label: "Citizen advisory", ico: "♡" },
       { id: "alerts", label: "Alerts", ico: "◔", badge: "count" },
     ],
   },
@@ -157,6 +159,7 @@ export default function Dashboard() {
         {view === "overview" && <OverviewView />}
         {view === "forecast" && <ForecastView />}
         {view === "interventions" && <InterventionsView />}
+        {view === "advisories" && <AdvisoriesView />}
         {view === "alerts" && <AlertsView />}
         {view === "network" && <NetworkView />}
         {view === "reports" && <ReportsView />}

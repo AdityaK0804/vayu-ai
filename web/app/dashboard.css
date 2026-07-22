@@ -372,3 +372,142 @@
   /* keep the bars — just stop them moving */
   [style*="barGrow"], [style*="barFade"] { animation: none !important; }
 }
+
+
+/* Citizen advisory */
+
+/* ===========================================================================
+   CITIZEN HEALTH ADVISORY
+   The screen answers three questions in order, and the layout follows them:
+     1. how bad is it, and who must act        -> .adv-banner
+     2. what exactly should they do            -> .adv-grid-2 (message | receptors)
+     3. which real facilities are affected     -> the register lists
+   The risk colour is passed in as --adv-risk so one AQI value tints the whole
+   section without any component needing to know the AQI scale.
+   =========================================================================== */
+
+/* --- toolbar: city chips left, language toggle pinned right --- */
+.adv-toolbar {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; align-items: center;
+}
+.adv-lang {
+  margin-left: auto; display: flex; gap: 4px; padding: 3px;
+  border-radius: 11px; background: var(--surface-2); border: 1px solid var(--line);
+}
+.adv-lang .chip { border: 0; background: transparent; padding: 6px 12px; }
+.adv-lang .chip.on { background: var(--ink); color: var(--bg); }
+.adv-chip-meta { margin-left: 7px; opacity: 0.65; font-size: 10.5px; }
+
+/* --- the banner: single strongest signal on the page --- */
+.adv-banner {
+  position: relative; overflow: hidden;
+  display: grid; grid-template-columns: minmax(0, 1.15fr) auto; gap: 20px; align-items: center;
+  padding: 20px 22px; margin-bottom: 16px;
+  border-radius: 18px; border: 1px solid var(--line);
+  background:
+    linear-gradient(120deg,
+      color-mix(in oklch, var(--adv-risk, var(--accent)), transparent 88%),
+      transparent 62%),
+    var(--surface);
+}
+/* colour rail keyed to the live risk band */
+.adv-banner::before {
+  content: ""; position: absolute; inset: 0 auto 0 0; width: 4px;
+  background: var(--adv-risk, var(--accent));
+}
+.adv-banner-band {
+  font-family: var(--font-display); font-weight: 700;
+  font-size: clamp(22px, 3vw, 32px); line-height: 1.05; letter-spacing: -0.02em;
+  color: var(--adv-risk, var(--ink));
+}
+.adv-banner-sub { font-size: 13px; color: var(--ink-2); margin-top: 7px; line-height: 1.5; }
+.adv-banner-figs { display: flex; gap: 26px; flex-wrap: wrap; }
+.adv-fig .v {
+  font-family: var(--font-display); font-weight: 700; font-size: 26px; line-height: 1;
+}
+.adv-fig .k {
+  font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--ink-3); margin-top: 6px;
+}
+.adv-basis {
+  display: inline-flex; align-items: center; gap: 6px; margin-top: 10px;
+  padding: 3px 10px; border-radius: 100px; font-size: 10.5px; font-weight: 600;
+  font-family: var(--font-mono); letter-spacing: 0.06em;
+  background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line);
+}
+
+.adv-grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px; }
+.adv-mt { margin-top: 16px; }
+.adv-card-body { padding: 16px 18px 20px; }
+
+/* --- the advisory copy: this is what a citizen actually reads --- */
+.adv-msg {
+  font-size: 15px; line-height: 1.6; margin: 0; color: var(--ink);
+  padding: 14px 16px; border-radius: 12px;
+  background: var(--surface-2);
+  border-left: 3px solid var(--adv-risk, var(--accent));
+}
+.adv-actions-title { margin: 18px 0 10px; }
+/* custom markers: a default disc reads as filler, a coloured tick reads as an
+   instruction, which is what these are */
+.adv-actions { margin: 0; padding: 0; list-style: none; display: grid; gap: 9px; }
+.adv-actions li {
+  position: relative; padding-left: 25px;
+  font-size: 13.5px; line-height: 1.5; color: var(--ink-2);
+}
+.adv-actions li::before {
+  content: "✓"; position: absolute; left: 0; top: 0;
+  width: 17px; height: 17px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 9.5px; font-weight: 700;
+  background: color-mix(in oklch, var(--adv-risk, var(--accent)), transparent 82%);
+  color: var(--adv-risk, var(--accent));
+}
+.adv-source-mix { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+
+/* --- receptor counts --- */
+.adv-kpis-inner { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); margin-bottom: 16px; }
+.adv-kpi-flat {
+  box-shadow: none; background: var(--surface-2); padding: 14px 16px;
+}
+.adv-kpi-flat .lab { font-size: 11.5px; color: var(--ink-2); font-weight: 500; }
+.adv-kpi-flat .val { font-size: 27px; margin-top: 8px; }
+.adv-kpi-flat .sub { font-size: 11px; margin-top: 5px; }
+.adv-note {
+  font-size: 13px; color: var(--ink-2); line-height: 1.55; margin: 0 0 16px;
+  padding: 12px 14px; border-radius: 11px;
+  background: color-mix(in oklch, var(--adv-risk, var(--accent)), transparent 94%);
+  border: 1px solid color-mix(in oklch, var(--adv-risk, var(--accent)), transparent 82%);
+}
+.adv-audience { display: flex; flex-wrap: wrap; gap: 7px; }
+.adv-chip-static {
+  cursor: default; font-size: 11.5px; padding: 6px 12px;
+  background: var(--surface-2);
+}
+
+/* --- facility registers --- */
+.adv-list { padding: 4px 0 8px; max-height: 340px; overflow-y: auto; }
+.adv-list-row {
+  padding: 10px 18px; border-top: 1px solid var(--line);
+  transition: background 0.15s, padding-left 0.15s;
+}
+.adv-list-row:first-child { border-top: 0; }
+.adv-list-row:hover { background: var(--surface-2); padding-left: 22px; }
+.adv-list-name {
+  font-weight: 600; font-size: 12.5px; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.adv-list-row .sub { margin-top: 3px; font-size: 11px; }
+.adv-count {
+  font-family: var(--font-mono); font-size: 10px; padding: 2px 8px;
+  border-radius: 20px; background: var(--surface-2); color: var(--ink-3);
+}
+
+.adv-foot {
+  margin-top: 18px; line-height: 1.55; padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 720px) {
+  .adv-banner { grid-template-columns: 1fr; gap: 16px; }
+  .adv-lang { margin-left: 0; }
+}

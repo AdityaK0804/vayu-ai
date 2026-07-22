@@ -126,3 +126,33 @@
 .thin-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
 .thin-scroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
 .thin-scroll::-webkit-scrollbar-track { background: transparent; }
+
+/* ===========================================================================
+   Bklit chart tokens -> Vayu design tokens.
+
+   The registry ships its palette under `:root` / `.dark`, but this app themes
+   via [data-vayu][data-theme] on a wrapper element, so `.dark` never matches
+   and every chart would render the light-mode greys on our dark surface.
+   Mapping the chart vars onto our own tokens fixes both themes at once, since
+   --surface/--ink/--line already flip with data-theme.
+   =========================================================================== */
+[data-vayu] {
+  --chart-background: var(--surface);
+  --chart-foreground: var(--ink-2);
+  --chart-foreground-muted: var(--ink-3);
+  --chart-label: var(--ink-3);
+  --chart-grid: var(--line);
+  --chart-crosshair: var(--ink-3);
+  --chart-brush-border: var(--line);
+
+  --chart-line-primary: var(--accent);
+  --chart-line-secondary: var(--accent-2);
+
+  --chart-tooltip-background: var(--surface);
+  --chart-tooltip-foreground: var(--ink);
+  --chart-tooltip-muted: var(--ink-3);
+
+  --chart-marker-background: var(--surface-2);
+  --chart-marker-border: var(--line);
+  --chart-marker-foreground: var(--ink);
+}
