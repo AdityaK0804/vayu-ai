@@ -69,6 +69,24 @@ const HI: Dict = {
   Alerts: "चेतावनियाँ",
   "Sensor Network": "सेंसर नेटवर्क",
   "Reports & Export": "रिपोर्ट और निर्यात",
+
+  // analytics view + collapsible sidebar
+  Analytics: "विश्लेषण",
+  "Collapse sidebar": "साइडबार छोटा करें",
+  "Expand sidebar": "साइडबार बड़ा करें",
+  "Distribution, source mix and model performance across all districts.":
+    "सभी ज़िलों में वितरण, स्रोत मिश्रण और मॉडल प्रदर्शन।",
+  "Districts by AQI category": "AQI श्रेणी के अनुसार ज़िले",
+  "Measured vs modelled": "मापा गया बनाम मॉडल",
+  "Most polluted districts": "सर्वाधिक प्रदूषित ज़िले",
+  "RMSE µg/m³ · lower is better": "RMSE µg/m³ · कम बेहतर है",
+  "People above AQI 100": "AQI 100 से ऊपर की आबादी",
+  "Measured live": "लाइव मापा गया",
+  "population-weighted SHAP": "जनसंख्या-भारित SHAP",
+  "Enforcement pipeline": "प्रवर्तन पाइपलाइन",
+  "signal → dossier": "सिग्नल → डोज़ियर",
+  "No metrics yet.": "अभी कोई मेट्रिक नहीं।",
+  coverage: "कवरेज",
   "COMMAND CENTER": "कमांड सेंटर",
   "Search wards, stations, sources…": "वार्ड, स्टेशन, स्रोत खोजें…",
 

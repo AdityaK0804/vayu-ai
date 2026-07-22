@@ -19,12 +19,33 @@ export interface AqiBand {
 }
 
 export const AQI_BANDS: AqiBand[] = [
-  { max: 50, label: "Good", short: "0–50", hex: "#00b96b", rgb: [0, 185, 107] },
-  { max: 100, label: "Moderate", short: "51–100", hex: "#c9b21c", rgb: [201, 178, 28] },
-  { max: 150, label: "Unhealthy (sensitive)", short: "101–150", hex: "#ff7e00", rgb: [255, 126, 0] },
-  { max: 200, label: "Unhealthy", short: "151–200", hex: "#e02020", rgb: [224, 32, 32] },
-  { max: 300, label: "Very unhealthy", short: "201–300", hex: "#8f3f97", rgb: [143, 63, 151] },
-  { max: Infinity, label: "Hazardous", short: "301+", hex: "#7e0023", rgb: [126, 0, 35] },
+  { max: 50, label: "Good", short: "0–50", hex: "#00c26e", rgb: [0, 194, 110] },
+  { max: 100, label: "Moderate", short: "51–100", hex: "#f2d024", rgb: [242, 208, 36] },
+  { max: 150, label: "Unhealthy (sensitive)", short: "101–150", hex: "#f97316", rgb: [249, 115, 22] },
+  { max: 200, label: "Unhealthy", short: "151–200", hex: "#e11d48", rgb: [225, 29, 72] },
+  { max: 300, label: "Very unhealthy", short: "201–300", hex: "#9333ea", rgb: [147, 51, 234] },
+  { max: Infinity, label: "Hazardous", short: "301+", hex: "#7f1d1d", rgb: [127, 29, 29] },
+];
+
+/**
+ * Continuous colour stops.
+ *
+ * Chhattisgarh currently sits between AQI 25 and 75 — inside just two official
+ * categories — so colouring straight from AQI_BANDS painted the entire state
+ * one shade of green and one of yellow. These extra stops give the 0-100 range
+ * real separation (deep green -> lime -> yellow -> amber) while keeping the
+ * official hue at each category boundary, so the legend still reads true.
+ */
+const STOPS: [number, [number, number, number]][] = [
+  [0, [0, 168, 107]],     // deep green
+  [25, [99, 209, 58]],    // lime
+  [50, [242, 208, 36]],   // yellow  (Good | Moderate boundary)
+  [75, [247, 144, 32]],   // amber
+  [100, [249, 115, 22]],  // orange  (Moderate | Sensitive boundary)
+  [150, [225, 29, 72]],   // red
+  [200, [147, 51, 234]],  // purple
+  [300, [127, 29, 29]],   // maroon
+  [500, [90, 12, 20]],
 ];
 
 export const NO_DATA_RGB: [number, number, number] = [96, 106, 114];
@@ -34,28 +55,23 @@ export function aqiBand(aqi: number | null | undefined): AqiBand | null {
   return AQI_BANDS.find((b) => aqi <= b.max) ?? AQI_BANDS[AQI_BANDS.length - 1];
 }
 
-/** Smooth ramp within/between bands so neighbouring districts stay separable. */
+/** Linear interpolation across the stop table above. */
 export function aqiColor(aqi: number | null | undefined): [number, number, number] {
   if (aqi == null || Number.isNaN(aqi)) return NO_DATA_RGB;
-  const a = Math.max(0, aqi);
-  let lo = 0;
-  for (let i = 0; i < AQI_BANDS.length; i++) {
-    const b = AQI_BANDS[i];
-    if (a <= b.max) {
-      const hi = b.max === Infinity ? 500 : b.max;
-      const prev = i === 0 ? b : AQI_BANDS[i - 1];
-      const t = Math.min(1, Math.max(0, (a - lo) / Math.max(1, hi - lo)));
-      // blend 35% from the previous band so the transition is not a hard step
-      const mix = 0.35 * (1 - t);
+  const a = Math.max(0, Math.min(500, aqi));
+  for (let i = 0; i < STOPS.length - 1; i++) {
+    const [x0, c0] = STOPS[i];
+    const [x1, c1] = STOPS[i + 1];
+    if (a >= x0 && a <= x1) {
+      const t = x1 === x0 ? 0 : (a - x0) / (x1 - x0);
       return [
-        Math.round(b.rgb[0] * (1 - mix) + prev.rgb[0] * mix),
-        Math.round(b.rgb[1] * (1 - mix) + prev.rgb[1] * mix),
-        Math.round(b.rgb[2] * (1 - mix) + prev.rgb[2] * mix),
+        Math.round(c0[0] + (c1[0] - c0[0]) * t),
+        Math.round(c0[1] + (c1[1] - c0[1]) * t),
+        Math.round(c0[2] + (c1[2] - c0[2]) * t),
       ];
     }
-    lo = b.max;
   }
-  return AQI_BANDS[AQI_BANDS.length - 1].rgb;
+  return STOPS[STOPS.length - 1][1];
 }
 
 export const aqiCss = (aqi: number | null | undefined) => `rgb(${aqiColor(aqi).join(",")})`;
