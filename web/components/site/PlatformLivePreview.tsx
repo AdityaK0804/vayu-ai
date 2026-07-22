@@ -1,10 +1,88 @@
 "use client";
 
+import dynamic from "next/dynamic";
+import { useEffect, useRef, useState } from "react";
+
 import { aqiCss } from "@/lib/aqiScale";
 import { useLive, useMetrics } from "@/lib/data";
 import { useDistricts } from "@/lib/districts";
 import { useT } from "@/lib/i18n";
 import { PAD } from "./SiteChrome";
+
+const DistrictMap = dynamic(() => import("@/components/DistrictMap"), {
+  ssr: false,
+  loading: () => null,
+});
+
+/**
+ * The real deck.gl district map, mounted only once this section scrolls into
+ * view.
+ *
+ * It has to be the real map — a grid of coloured squares is not "how it opens
+ * when you click Dashboard", which is the whole claim this section makes. But
+ * DistrictMap drags in deck.gl + maplibre (~250 KB), and eagerly importing it
+ * here would undo the landing-page bundle work. An IntersectionObserver with a
+ * 300px margin means the chunk starts downloading just before the section is
+ * reached, so first paint stays cheap and the map is ready by the time it is
+ * actually on screen.
+ */
+function LiveMapPanel() {
+  const { t } = useT();
+  const ref = useRef<HTMLDivElement | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    // no IntersectionObserver (very old browser) -> just show it
+    if (typeof IntersectionObserver === "undefined") {
+      setMounted(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setMounted(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: "300px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} style={{ position: "relative", minHeight: 380, background: "var(--surface-2)" }}>
+      <div
+        className="figure"
+        style={{
+          position: "absolute",
+          top: 12,
+          left: 14,
+          zIndex: 2,
+          fontSize: 11,
+          color: "var(--ink-2)",
+          padding: "4px 10px",
+          borderRadius: 100,
+          background: "color-mix(in oklch, var(--surface), transparent 12%)",
+          border: "1px solid var(--line)",
+          pointerEvents: "none",
+        }}
+      >
+        <span className="live-dot" /> LIVE · {t("Chhattisgarh districts")}
+      </div>
+
+      {mounted ? (
+        <DistrictMap selected={null} onSelect={() => {}} showCities openCityOnFocus={false} />
+      ) : (
+        <div style={{ display: "grid", placeItems: "center", height: 380 }}>
+          <span className="sub">{t("Loading live map…")}</span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * Full-width platform preview BELOW the hero (Climate Saathi style).
@@ -17,14 +95,8 @@ export default function PlatformLivePreview() {
   const { data: live } = useLive();
   const { data: metrics } = useMetrics("korba");
 
-  const feats = districts?.features ?? [];
   const cities = districts?.cities ?? [];
   const h24 = metrics?.forecast_vs_baselines.find((x) => x.horizon_h === 24);
-
-  // simple grid of districts as "map cells" sorted roughly by name
-  const cells = [...feats]
-    .map((f) => f.properties)
-    .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
   return (
     <section
@@ -105,7 +177,7 @@ export default function PlatformLivePreview() {
             <div className="lab" style={{ fontSize: 10, letterSpacing: ".14em", marginBottom: 10 }}>
               MONITOR
             </div>
-            {["Live Map", "Analytics", "AI Forecast", "Citizen advisory"].map((lab, i) => (
+            {["Live Map", "Analytics", "Overview", "AI Forecast", "Interventions", "Citizen advisory", "Alerts"].map((lab, i) => (
               <div
                 key={lab}
                 style={{
@@ -140,74 +212,8 @@ export default function PlatformLivePreview() {
             </div>
           </aside>
 
-          {/* map canvas */}
-          <div
-            style={{
-              position: "relative",
-              background:
-                "radial-gradient(ellipse at 30% 20%, color-mix(in oklab, var(--accent) 12%, transparent), transparent 50%), var(--surface-2)",
-              padding: 16,
-              minHeight: 360,
-            }}
-          >
-            <div
-              className="figure"
-              style={{
-                position: "absolute",
-                top: 12,
-                left: 14,
-                fontSize: 11,
-                color: "var(--ink-3)",
-                zIndex: 2,
-              }}
-            >
-              ● LIVE · Chhattisgarh districts
-            </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(52px, 1fr))",
-                gap: 6,
-                marginTop: 28,
-                maxHeight: 300,
-                overflow: "hidden",
-              }}
-            >
-              {cells.map((p) => {
-                const aqi = p.display_aqi ?? p.us_aqi ?? 0;
-                return (
-                  <div
-                    key={p.name}
-                    title={`${p.name}: AQI ${aqi}`}
-                    style={{
-                      aspectRatio: "1",
-                      borderRadius: 8,
-                      background: aqiCss(aqi),
-                      opacity: 0.88,
-                      border: "1px solid color-mix(in oklab, #000 15%, transparent)",
-                      display: "flex",
-                      alignItems: "flex-end",
-                      padding: 4,
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: 8,
-                        lineHeight: 1.1,
-                        color: "#0b1220",
-                        fontWeight: 600,
-                        textShadow: "0 0 4px rgba(255,255,255,.5)",
-                        overflow: "hidden",
-                        maxHeight: 22,
-                      }}
-                    >
-                      {(p.name || "").slice(0, 8)}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          {/* map canvas — the real deck.gl map, not a mock */}
+          <LiveMapPanel />
 
           {/* city list */}
           <aside

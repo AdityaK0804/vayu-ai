@@ -104,6 +104,8 @@ const HI: Dict = {
   "Enforcement pipeline": "प्रवर्तन पाइपलाइन",
   "signal → dossier": "सिग्नल → डोज़ियर",
   "No metrics yet.": "अभी कोई मेट्रिक नहीं।",
+  "Chhattisgarh districts": "छत्तीसगढ़ ज़िले",
+  "Loading live map…": "लाइव मानचित्र लोड हो रहा है…",
   "facilities exposed": "प्रभावित सुविधाएँ",
   "model estimate": "मॉडल अनुमान",
   "time-ordered test split · real CPCB labels": "समय-क्रमित परीक्षण विभाजन · वास्तविक CPCB लेबल",
