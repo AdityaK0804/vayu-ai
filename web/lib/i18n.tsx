@@ -215,6 +215,41 @@ const HI: Dict = {
   "This page is ready for the custom workflow you'll define. Tell me what to show here and I'll build it into this space.":
     "यह पृष्ठ आपके तय किए गए कस्टम वर्कफ़्लो के लिए तैयार है। बताइए यहाँ क्या दिखाना है, मैं इसी जगह बना दूँगा।",
 
+
+  /* ---- flow steps ---- */
+  "STEP 01": "चरण 01",
+  "STEP 02": "चरण 02",
+  "STEP 03": "चरण 03",
+  "Data Ingestion": "डेटा संग्रहण",
+  "ML Processing": "ML प्रसंस्करण",
+  "Act & Enforce": "कार्रवाई और प्रवर्तन",
+  "Sensors & Satellite": "सेंसर और उपग्रह",
+  "AI Risk Scoring": "AI जोखिम आकलन",
+  "Alerts & Actions": "चेतावनी और कार्रवाई",
+  "14 CPCB reference stations via OpenAQ, Open-Meteo weather and CAMS, Sentinel-5P NO₂/SO₂ and MODIS AOD, EDGAR v8.1 emissions, WorldPop and OSM roads — harmonised onto one H3 grid and hourly clock.":
+    "OpenAQ से 14 CPCB संदर्भ स्टेशन, Open-Meteo मौसम व CAMS, Sentinel-5P NO₂/SO₂ और MODIS AOD, EDGAR v8.1 उत्सर्जन, WorldPop और OSM सड़कें — सब एक H3 ग्रिड और प्रति-घंटा घड़ी पर एकीकृत।",
+  "Gradient-boosted models forecast PM2.5 at +24/48/72 h, while a no-lag spatial model scores districts with no sensor at all. SHAP splits every cell into industry, traffic, fire and dust.":
+    "ग्रेडिएंट-बूस्टेड मॉडल +24/48/72 घंटे का PM2.5 पूर्वानुमान देते हैं, और बिना-लैग स्थानिक मॉडल उन ज़िलों को आँकता है जहाँ कोई सेंसर ही नहीं। SHAP हर कोशिका को उद्योग, यातायात, आग और धूल में बाँटता है।",
+  "Wards are ranked by exceedance × population × vulnerability, each with the named upwind plant, schools and hospitals exposed, and a templated inspection order — in English or Hindi.":
+    "वार्ड अतिक्रमण × जनसंख्या × संवेदनशीलता के आधार पर क्रमबद्ध होते हैं — नामित अपवात संयंत्र, प्रभावित स्कूल-अस्पताल और तैयार निरीक्षण आदेश के साथ, अंग्रेज़ी या हिन्दी में।",
+  "Forecast horizon": "पूर्वानुमान अवधि",
+  "µg/m³ with no sensor": "µg/m³ बिना सेंसर",
+  Languages: "भाषाएँ",
+
+  /* ---- map workspace ---- */
+  Cities: "शहर",
+  "Search city…": "शहर खोजें…",
+  "No match": "कोई मिलान नहीं",
+  "Live Alerts": "लाइव चेतावनियाँ",
+  "No active alerts": "कोई सक्रिय चेतावनी नहीं",
+  "No district is above AQI 100 right now.": "अभी कोई ज़िला AQI 100 से ऊपर नहीं है।",
+  people: "लोग",
+  districts: "ज़िले",
+  live: "लाइव",
+  model: "मॉडल",
+  View: "दृश्य",
+  Wards: "वार्ड",
+
   /* ---- chatbot ---- */
   "VAYU Assistant": "VAYU सहायक",
   "Online · air quality help": "ऑनलाइन · वायु गुणवत्ता सहायता",

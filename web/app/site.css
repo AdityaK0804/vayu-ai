@@ -186,3 +186,26 @@
   ::view-transition-old(*),
   ::view-transition-new(*) { animation: none !important; }
 }
+
+/* ---------------------------------------------------------------------------
+   "How it works" flow: three cards joined by arrows. The arrows are laid out
+   as row items rather than absolutely positioned so they survive any card
+   height and simply drop away when the row wraps on narrow screens.
+--------------------------------------------------------------------------- */
+.flow-row { display: flex; align-items: stretch; gap: 0; flex-wrap: wrap; }
+.flow-item { display: flex; align-items: center; flex: 1 1 300px; min-width: 280px; }
+.flow-card { position: relative; overflow: hidden; height: 100%; flex: 1; }
+.flow-arrow { opacity: 0.9; }
+
+.flow-stats {
+  display: flex; justify-content: center; flex-wrap: wrap;
+  gap: clamp(28px, 6vw, 74px);
+  margin-top: 34px; padding-top: 26px;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 900px) {
+  /* stacked: point the arrows down instead of across */
+  .flow-item { flex-direction: column; }
+  .flow-arrow { transform: rotate(90deg); padding: 10px 0; }
+}
