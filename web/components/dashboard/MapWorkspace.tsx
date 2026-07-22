@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 
 import { useDistricts, type CityPoint, type DistrictProps } from "@/components/DistrictMap";
+import CityDetail from "@/components/dashboard/CityDetail";
 import { AQI_BANDS, aqiCss, aqiLabel } from "@/lib/aqiScale";
 import { useLive, usePriority } from "@/lib/data";
 import { useT } from "@/lib/i18n";
@@ -37,9 +38,13 @@ type Focus = {
 export default function MapWorkspace({
   onSelectDistrict,
   selected,
+  openCity,
+  setOpenCity,
 }: {
   onSelectDistrict: (d: DistrictProps | null) => void;
   selected: DistrictProps | null;
+  openCity: CityPoint | null;
+  setOpenCity: (c: CityPoint | null) => void;
 }) {
   const { t } = useT();
   const { city, setCity } = useApp();
@@ -59,6 +64,8 @@ export default function MapWorkspace({
 
   const goCity = (c: CityPoint) => {
     setCity(c.id as CityId);
+    onSelectDistrict(null);   // city and district panels are mutually exclusive
+    setOpenCity(c);
     setFocus({ kind: "city", name: c.name, nonce: Date.now() });
   };
 
@@ -153,7 +160,21 @@ export default function MapWorkspace({
         </div>
 
         <div style={{ position: "relative", flex: 1, minHeight: 0 }}>
-          <DistrictMap selected={selected?.name ?? null} onSelect={onSelectDistrict} focus={focus} />
+          <DistrictMap
+            selected={selected?.name ?? null}
+            onSelect={(d) => {
+              setOpenCity(null);
+              onSelectDistrict(d);
+            }}
+            focus={focus}
+            openCityOnFocus={false}
+          />
+
+          {openCity && (
+            <div className="card mapws-detail">
+              <CityDetail city={openCity} onClose={() => setOpenCity(null)} />
+            </div>
+          )}
 
           <div className="mapws-legend card">
             <div className="crumb" style={{ marginBottom: 6 }}>
@@ -221,6 +242,7 @@ export default function MapWorkspace({
               <button
                 key={p.name}
                 onClick={() => {
+                  setOpenCity(null);
                   onSelectDistrict(p);
                   setFocus({ kind: "district", name: p.name, nonce: Date.now() });
                 }}

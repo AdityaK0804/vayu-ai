@@ -8,6 +8,7 @@ import CityIndex from "@/components/landing/CityIndex";
 import SiteShell, { PAD } from "@/components/site/SiteChrome";
 import { FeatureGrid, Section } from "@/components/site/blocks";
 import FlowSteps from "@/components/site/FlowSteps";
+import AlertPreview from "@/components/site/AlertPreview";
 import { useMetrics } from "@/lib/data";
 import { useT } from "@/lib/i18n";
 
@@ -206,6 +207,9 @@ export default function Landing() {
 
       {/* ---------------- how it works ---------------- */}
       <FlowSteps />
+
+      {/* ---------------- multilingual alerts ---------------- */}
+      <AlertPreview />
 
       {/* ---------------- CTA ---------------- */}
       <Section pt={20} pb={70}>
