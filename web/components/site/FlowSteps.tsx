@@ -30,7 +30,7 @@ const STEPS = [
     icon: "🧠",
     title: "AI Risk Scoring",
     body: "Gradient-boosted models forecast PM2.5 at +24/48/72 h, while a no-lag spatial model scores districts with no sensor at all. SHAP splits every cell into industry, traffic, fire and dust.",
-    accent: "#f2933a",
+    accent: "#e11d48",
   },
   {
     n: "03",
@@ -94,7 +94,7 @@ export default function FlowSteps() {
       style={{
         position: "relative",
         zIndex: 1,
-        maxWidth: 1220,
+        maxWidth: 1400,
         margin: "0 auto",
         padding: `56px ${PAD}`,
       }}

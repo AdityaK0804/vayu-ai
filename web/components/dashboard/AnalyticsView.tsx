@@ -1,102 +1,60 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
-import { useDistricts } from "@/components/DistrictMap";
+import { PieWithLegend, type PieData } from "@/components/charts/PieChart";
 import { AQI_BANDS, aqiCss, aqiLabel } from "@/lib/aqiScale";
 import { SOURCE_LABEL } from "@/lib/aqi";
-import { useMetrics, usePriority } from "@/lib/data";
+import { useMetrics, usePriority, useStationsLive } from "@/lib/data";
+import { useDistricts } from "@/lib/districts";
 import { useT } from "@/lib/i18n";
 import { useApp } from "@/lib/store";
 import { Head } from "./views";
 
-/* ------------------------------------------------------------------ charts
-   Hand-rolled SVG rather than a charting library: every series here is tiny
-   (a handful of districts or horizons), and a dependency would add ~120 KB
-   plus its own theming layer to fight with our CSS variables.
-------------------------------------------------------------------------- */
+/* --------------------------------------------------------------- constants
+   CPCB National Ambient Air Quality Standards. These are the real limits the
+   sub-index below is computed against — not invented reference points.
+   PM2.5/PM10/NO2/SO2 are 24-hour averages; O3 and CO are 8-hour.
+   CO arrives from OpenAQ in mg/m³, everything else in µg/m³.
+--------------------------------------------------------------------------- */
+const NAAQS: Record<string, { limit: number; unit: string; label: string; color: string }> = {
+  pm25: { limit: 60, unit: "µg/m³", label: "PM2.5", color: "#f43f5e" },
+  pm10: { limit: 100, unit: "µg/m³", label: "PM10", color: "#fb923c" },
+  no2: { limit: 80, unit: "µg/m³", label: "NO₂", color: "#38bdf8" },
+  so2: { limit: 80, unit: "µg/m³", label: "SO₂", color: "#a78bfa" },
+  o3: { limit: 100, unit: "µg/m³", label: "O₃", color: "#34d399" },
+  co: { limit: 2, unit: "mg/m³", label: "CO", color: "#fbbf24" },
+};
 
-function Donut({
-  slices,
-  size = 168,
-  thickness = 26,
-  centre,
-  sub,
-}: {
-  slices: { label: string; value: number; color: string }[];
-  size?: number;
-  thickness?: number;
-  centre: string;
-  sub: string;
-}) {
-  const total = slices.reduce((a, s) => a + s.value, 0) || 1;
-  const r = (size - thickness) / 2;
-  const c = 2 * Math.PI * r;
-  let offset = 0;
+/** EDGAR v8.1 emission sectors, in the order the bake writes them. */
+const EDGAR_SECTORS: { key: string; label: string; color: string }[] = [
+  { key: "edgar_share_ene", label: "Power generation", color: "#f43f5e" },
+  { key: "edgar_share_ind", label: "Industry", color: "#fb923c" },
+  { key: "edgar_share_tro", label: "Road transport", color: "#38bdf8" },
+  { key: "edgar_share_rco", label: "Residential", color: "#a78bfa" },
+  { key: "edgar_share_awb", label: "Ag. burning", color: "#fbbf24" },
+  { key: "edgar_share_ags", label: "Agriculture", color: "#34d399" },
+];
 
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 18, flexWrap: "wrap" }}>
-      <svg width={size} height={size} style={{ flex: "none" }}>
-        <g transform={`translate(${size / 2},${size / 2}) rotate(-90)`}>
-          <circle r={r} fill="none" stroke="var(--surface-2)" strokeWidth={thickness} />
-          {slices.map((s) => {
-            const frac = s.value / total;
-            const dash = `${frac * c} ${c - frac * c}`;
-            const el = (
-              <circle
-                key={s.label}
-                r={r}
-                fill="none"
-                stroke={s.color}
-                strokeWidth={thickness}
-                strokeDasharray={dash}
-                strokeDashoffset={-offset * c}
-              />
-            );
-            offset += frac;
-            return el;
-          })}
-        </g>
-        <text
-          x="50%"
-          y="47%"
-          textAnchor="middle"
-          className="figure"
-          style={{ fontSize: 26, fill: "var(--ink)", fontWeight: 600 }}
-        >
-          {centre}
-        </text>
-        <text
-          x="50%"
-          y="61%"
-          textAnchor="middle"
-          style={{ fontSize: 10, fill: "var(--ink-3)" }}
-        >
-          {sub}
-        </text>
-      </svg>
-      <div style={{ display: "grid", gap: 6, minWidth: 0 }}>
-        {slices.map((s) => (
-          <div key={s.label} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5 }}>
-            <span
-              style={{ width: 10, height: 10, borderRadius: 3, background: s.color, flex: "none" }}
-            />
-            <span style={{ color: "var(--ink-2)", flex: 1 }}>{s.label}</span>
-            <span className="figure">{s.value}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
+/* ------------------------------------------------------------------- bars */
 function Bars({ rows }: { rows: { label: string; value: number; color: string }[] }) {
   const max = Math.max(...rows.map((r) => r.value), 1);
   return (
     <div style={{ display: "grid", gap: 8 }}>
       {rows.map((r) => (
-        <div key={r.label} style={{ display: "grid", gridTemplateColumns: "110px 1fr 44px", gap: 10, alignItems: "center" }}>
-          <span style={{ fontSize: 11.5, color: "var(--ink-2)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+        <div
+          key={r.label}
+          style={{ display: "grid", gridTemplateColumns: "110px 1fr 44px", gap: 10, alignItems: "center" }}
+        >
+          <span
+            style={{
+              fontSize: 11.5,
+              color: "var(--ink-2)",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
             {r.label}
           </span>
           <div style={{ height: 9, background: "var(--surface-2)", borderRadius: 5 }}>
@@ -176,34 +134,84 @@ export default function AnalyticsView() {
   const { data: districts } = useDistricts();
   const { data: metrics } = useMetrics(city);
   const { data: priority } = usePriority(city);
+  const { data: stationsLive } = useStationsLive();
 
   const props = useMemo(
     () => (districts?.features ?? []).map((f) => f.properties),
     [districts],
   );
 
-  // districts per AQI category
-  const byBand = useMemo(() => {
+  /* ---- which cities actually report multi-pollutant data right now ---- */
+  const pollutantCities = useMemo(() => {
+    const ids = new Set<string>();
+    for (const s of stationsLive?.stations ?? []) if (s.city_id) ids.add(s.city_id);
+    return Array.from(ids).sort();
+  }, [stationsLive]);
+
+  const [pCity, setPCity] = useState<string | null>(null);
+  const activeCity = pCity && pollutantCities.includes(pCity) ? pCity : pollutantCities[0] ?? null;
+
+  /**
+   * Pollutant load for the selected city, as a share of each pollutant's own
+   * CPCB limit. Averaging raw µg/m³ across pollutants and pie-charting it would
+   * be meaningless — 10 µg/m³ of SO2 and 10 of PM2.5 are not comparable amounts
+   * of harm. Normalising each by its standard is exactly how CPCB builds its
+   * sub-indices, so the slice sizes answer a real question: which pollutant is
+   * closest to breaching its limit here?
+   */
+  const pollutantMix = useMemo<PieData[]>(() => {
+    const rows = (stationsLive?.stations ?? []).filter((s) => s.city_id === activeCity);
+    if (!rows.length) return [];
+    const out: PieData[] = [];
+    for (const [key, cfg] of Object.entries(NAAQS)) {
+      const vals = rows
+        .map((r) => (r as any)[key])
+        .filter((v): v is number => typeof v === "number" && v > 0);
+      if (!vals.length) continue;
+      const mean = vals.reduce((a, b) => a + b, 0) / vals.length;
+      const pct = Math.round((mean / cfg.limit) * 1000) / 10; // % of limit, 1dp
+      if (pct > 0) {
+        out.push({
+          label: cfg.label,
+          value: pct,
+          color: cfg.color,
+          note: `${mean.toFixed(1)} ${cfg.unit}`,
+        });
+      }
+    }
+    return out;
+  }, [stationsLive, activeCity]);
+
+  const worstPollutant = useMemo(
+    () => [...pollutantMix].sort((a, b) => b.value - a.value)[0],
+    [pollutantMix],
+  );
+
+  /* ---- districts per AQI category ---- */
+  const byBand = useMemo<PieData[]>(() => {
     const counts = new Map<string, number>();
     for (const p of props) {
       const lbl = aqiLabel(p.display_aqi);
       counts.set(lbl, (counts.get(lbl) ?? 0) + 1);
     }
-    return AQI_BANDS.filter((b) => counts.get(b.label))
-      .map((b) => ({ label: t(b.label), value: counts.get(b.label) ?? 0, color: b.hex }));
+    return AQI_BANDS.filter((b) => counts.get(b.label)).map((b) => ({
+      label: t(b.label),
+      value: counts.get(b.label) ?? 0,
+      color: b.hex,
+    }));
   }, [props, t]);
 
-  // measured vs modelled coverage
-  const coverage = useMemo(() => {
+  /* ---- measured vs modelled coverage ---- */
+  const coverage = useMemo<PieData[]>(() => {
     const m = props.filter((p) => p.display_basis === "measured").length;
     return [
-      { label: t("measured"), value: m, color: "var(--aqi-1)" },
-      { label: t("model"), value: props.length - m, color: "var(--accent-2)" },
-    ];
+      { label: t("measured"), value: m, color: "#34d399" },
+      { label: t("model"), value: props.length - m, color: "#38bdf8" },
+    ].filter((d) => d.value > 0);
   }, [props, t]);
 
-  // statewide source mix, weighted by population
-  const sourceMix = useMemo(() => {
+  /* ---- statewide source mix from SHAP, population-weighted ---- */
+  const sourceMix = useMemo<PieData[]>(() => {
     const acc: Record<string, number> = { industry: 0, traffic: 0, fire: 0, dust: 0 };
     let tot = 0;
     for (const p of props) {
@@ -212,9 +220,9 @@ export default function AnalyticsView() {
       for (const k of Object.keys(acc)) acc[k] += (p.shares?.[k] ?? 0) * w;
     }
     const colors: Record<string, string> = {
-      industry: "#f97316",
+      industry: "#fb923c",
       traffic: "#38bdf8",
-      fire: "#e11d48",
+      fire: "#f43f5e",
       dust: "#a78bfa",
     };
     return Object.entries(acc)
@@ -223,7 +231,28 @@ export default function AnalyticsView() {
         value: Math.round((v / (tot || 1)) * 100),
         color: colors[k],
       }))
+      .filter((d) => d.value > 0)
       .sort((a, b) => b.value - a.value);
+  }, [props, t]);
+
+  /* ---- EDGAR emission sectors for the district holding the selected city ---- */
+  const sectorMix = useMemo<PieData[]>(() => {
+    if (!props.length) return [];
+    // population-weighted statewide average of the per-district sector shares
+    const acc = new Map<string, number>();
+    let tot = 0;
+    for (const p of props) {
+      const w = p.population || 1;
+      tot += w;
+      for (const s of EDGAR_SECTORS) {
+        acc.set(s.key, (acc.get(s.key) ?? 0) + ((p as any)[s.key] ?? 0) * w);
+      }
+    }
+    return EDGAR_SECTORS.map((s) => ({
+      label: t(s.label),
+      value: Math.round(((acc.get(s.key) ?? 0) / (tot || 1)) * 1000) / 10,
+      color: s.color,
+    })).filter((d) => d.value > 0);
   }, [props, t]);
 
   const topDistricts = useMemo(
@@ -231,11 +260,7 @@ export default function AnalyticsView() {
       [...props]
         .sort((a, b) => (b.display_aqi ?? 0) - (a.display_aqi ?? 0))
         .slice(0, 8)
-        .map((p) => ({
-          label: p.name,
-          value: p.display_aqi ?? 0,
-          color: aqiCss(p.display_aqi),
-        })),
+        .map((p) => ({ label: p.name, value: p.display_aqi ?? 0, color: aqiCss(p.display_aqi) })),
     [props],
   );
 
@@ -255,12 +280,14 @@ export default function AnalyticsView() {
     [props],
   );
 
+  const nStations = (stationsLive?.stations ?? []).filter((s) => s.city_id === activeCity).length;
+
   return (
     <div className="section">
       <Head
         crumb="Monitor / Analytics"
         title="Analytics"
-        sub={t("Distribution, source mix and model performance across all districts.")}
+        sub={t("Pollutant load, source mix and model performance — all from live measurements.")}
       />
 
       <div className="grid kpis" style={{ marginBottom: 16 }}>
@@ -268,7 +295,7 @@ export default function AnalyticsView() {
           { lab: t("Districts"), val: String(props.length) },
           {
             lab: t("Measured live"),
-            val: `${coverage[0]?.value ?? 0}/${props.length}`,
+            val: `${props.filter((p) => p.display_basis === "measured").length}/${props.length}`,
           },
           {
             lab: t("People above AQI 100"),
@@ -276,7 +303,9 @@ export default function AnalyticsView() {
           },
           {
             lab: t("µg/m³ RMSE @24h"),
-            val: String(metrics?.forecast_vs_baselines.find((h) => h.horizon_h === 24)?.model_rmse ?? "—"),
+            val: String(
+              metrics?.forecast_vs_baselines.find((h) => h.horizon_h === 24)?.model_rmse ?? "—",
+            ),
           },
         ].map((k) => (
           <div key={k.lab} className="card kpi">
@@ -288,18 +317,92 @@ export default function AnalyticsView() {
         ))}
       </div>
 
-      <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(330px,1fr))" }}>
+      {/* ---------------- pollutant breakdown (hero chart) ---------------- */}
+      <div className="card" style={{ marginBottom: 16 }}>
+        <div className="card-h" style={{ flexWrap: "wrap" }}>
+          <div>
+            <h3>{t("Pollutant load by city")}</h3>
+            <span className="sub">
+              {t("share of each pollutant's CPCB 24h limit")}
+              {nStations ? ` · ${nStations} ${t("stations")}` : ""}
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {pollutantCities.map((c) => (
+              <button
+                key={c}
+                className={`chip${c === activeCity ? " on" : ""}`}
+                onClick={() => setPCity(c)}
+                style={{ textTransform: "capitalize" }}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div style={{ padding: "18px 18px 20px" }}>
+          {pollutantMix.length ? (
+            <div style={{ display: "flex", gap: 26, flexWrap: "wrap", alignItems: "center" }}>
+              <PieWithLegend
+                data={pollutantMix}
+                size={220}
+                innerRadius={66}
+                centerLabel={t("of CPCB limit")}
+                centerSuffix="%"
+                centerDecimals={1}
+                formatValue={(v) => `${v}%`}
+              />
+              {worstPollutant && (
+                <div
+                  style={{
+                    flex: "1 1 220px",
+                    minWidth: 200,
+                    padding: "14px 16px",
+                    borderRadius: 12,
+                    background: "var(--surface-2)",
+                    border: "1px solid var(--line)",
+                  }}
+                >
+                  <div className="crumb" style={{ fontSize: 10 }}>
+                    {t("Closest to its limit")}
+                  </div>
+                  <div
+                    className="figure"
+                    style={{
+                      fontSize: 27,
+                      fontWeight: 600,
+                      marginTop: 6,
+                      color: worstPollutant.color,
+                    }}
+                  >
+                    {worstPollutant.label}
+                  </div>
+                  <div style={{ fontSize: 12.5, color: "var(--ink-2)", marginTop: 4 }}>
+                    {worstPollutant.note} — {worstPollutant.value}% {t("of the permissible limit")}
+                  </div>
+                  <p style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 12, lineHeight: 1.5 }}>
+                    {t(
+                      "Slices are each pollutant's concentration divided by its own CPCB standard. Raw µg/m³ are not comparable across pollutants, so this normalisation is what makes the comparison meaningful.",
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <span className="sub">{t("No live pollutant readings for this city right now.")}</span>
+          )}
+        </div>
+      </div>
+
+      {/* ---------------- the rest ---------------- */}
+      <div className="grid" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(340px,1fr))" }}>
         <div className="card">
           <div className="card-h">
             <h3>{t("Districts by AQI category")}</h3>
             <span className="sub">{t("live")}</span>
           </div>
           <div style={{ padding: "16px 18px 20px" }}>
-            <Donut
-              slices={byBand}
-              centre={String(props.length)}
-              sub={t("districts")}
-            />
+            <PieWithLegend data={byBand} centerLabel={t("districts")} />
           </div>
         </div>
 
@@ -309,11 +412,7 @@ export default function AnalyticsView() {
             <span className="sub">{t("coverage")}</span>
           </div>
           <div style={{ padding: "16px 18px 20px" }}>
-            <Donut
-              slices={coverage}
-              centre={`${Math.round(((coverage[0]?.value ?? 0) / (props.length || 1)) * 100)}%`}
-              sub={t("measured")}
-            />
+            <PieWithLegend data={coverage} centerLabel={t("districts")} />
           </div>
         </div>
 
@@ -323,10 +422,27 @@ export default function AnalyticsView() {
             <span className="sub">{t("population-weighted SHAP")}</span>
           </div>
           <div style={{ padding: "16px 18px 20px" }}>
-            <Donut
-              slices={sourceMix}
-              centre={`${sourceMix[0]?.value ?? 0}%`}
-              sub={sourceMix[0]?.label ?? ""}
+            <PieWithLegend
+              data={sourceMix}
+              centerLabel={t("attributed")}
+              centerSuffix="%"
+              formatValue={(v) => `${v}%`}
+            />
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-h">
+            <h3>{t("Emissions by sector")}</h3>
+            <span className="sub">EDGAR v8.1</span>
+          </div>
+          <div style={{ padding: "16px 18px 20px" }}>
+            <PieWithLegend
+              data={sectorMix}
+              centerLabel={t("of emissions")}
+              centerSuffix="%"
+              centerDecimals={1}
+              formatValue={(v) => `${v}%`}
             />
           </div>
         </div>
@@ -341,7 +457,7 @@ export default function AnalyticsView() {
           </div>
         </div>
 
-        <div className="card" style={{ gridColumn: "span 2", minWidth: 0 }}>
+        <div className="card">
           <div className="card-h">
             <h3>{t("Model vs baselines")}</h3>
             <span className="sub">{t("RMSE µg/m³ · lower is better")}</span>

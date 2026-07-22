@@ -62,7 +62,7 @@
 /* --- sidebar --- */
 .side {
   border-right: 1px solid var(--line); background: var(--surface);
-  display: flex; flex-direction: column; padding: 16px 12px; gap: 3px; overflow-y: auto;
+  display: flex; flex-direction: column; padding: 16px 12px; gap: 3px; overflow: hidden;
 }
 .side .grp {
   font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.16em;
