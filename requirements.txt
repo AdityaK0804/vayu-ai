@@ -3,6 +3,8 @@ requests>=2.31
 pyyaml>=6.0
 pandas>=2.0
 h3>=3.7
+duckdb>=1.0
+pyarrow>=14.0
 
 # OSM (step 02)
 osmnx>=1.9

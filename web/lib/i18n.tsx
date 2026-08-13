@@ -37,9 +37,9 @@ const HI: Dict = {
   Language: "भाषा",
 
   /* ---- landing hero ---- */
-  "No sensors.": "सेंसर नहीं।",
-  "No problem.": "कोई बात नहीं।",
-  "AI fills the gaps.": "AI कमी पूरी करता है।",
+  "No sensors": "सेंसर नहीं।",
+  "No problem": "कोई बात नहीं।",
+  "AI fix the gaps": "AI कमी पूरी करता है।",
   "Launch the platform →": "प्लेटफ़ॉर्म शुरू करें →",
   "Explore the live map": "लाइव मानचित्र देखें",
   "forecast horizon": "पूर्वानुमान अवधि",

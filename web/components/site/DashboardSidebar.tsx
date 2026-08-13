@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 
 import { useDistricts } from "@/lib/districts";
-import { aqiCss } from "@/lib/aqiScale";
+import { cpcbAqiFromPm25, cpcbPm25Css } from "@/lib/aqiScale";
 import { useLive } from "@/lib/data";
 import { useT } from "@/lib/i18n";
 
@@ -92,14 +92,16 @@ export default function DashboardSidebar() {
 
   const stationCount = districts?.meta?.n_stations ?? 14;
   const alertCount = (districts?.features ?? []).filter(
-    (f) => (f.properties.display_aqi ?? 0) > 150,
+    (f) => (cpcbAqiFromPm25(f.properties.display_pm25 ?? f.properties.pm25) ?? 0) > 200,
   ).length || 4;
   const interventionCount = (districts?.features ?? []).filter(
-    (f) => (f.properties.display_aqi ?? 0) > 100,
+    (f) => (cpcbAqiFromPm25(f.properties.display_pm25 ?? f.properties.pm25) ?? 0) > 100,
   ).length || 6;
 
   const worstCity = live?.[0];
-  const worstAqi = worstCity?.current_us_aqi ?? 0;
+  const worstPm = worstCity?.measured_pm25_24h ?? worstCity?.current_pm25 ?? null;
+  const worstAqi = cpcbAqiFromPm25(worstPm) ?? worstCity?.current_us_aqi ?? 0;
+  const worstTone = cpcbPm25Css(worstPm);
 
   const groups: { title: string; items: NavItem[] }[] = [
     {
@@ -176,14 +178,14 @@ export default function DashboardSidebar() {
               width: 7,
               height: 7,
               borderRadius: "50%",
-              background: aqiCss(worstAqi),
+              background: worstTone,
               flexShrink: 0,
             }}
           />
           <span style={{ flex: 1, fontSize: 11, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
             {worstCity.name}
           </span>
-          <span className="figure" style={{ fontSize: 12, color: aqiCss(worstAqi), fontWeight: 600 }}>
+          <span className="figure" style={{ fontSize: 12, color: worstTone, fontWeight: 600 }}>
             {worstAqi}
           </span>
         </div>

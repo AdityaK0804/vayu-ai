@@ -1,39 +1,33 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans, Space_Grotesk } from "next/font/google";
+import { JetBrains_Mono, Outfit, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Providers } from "./providers";
 import ThemeShell from "@/components/ThemeShell";
 
 /**
- * Fonts from the design, self-hosted via next/font.
- *
- * These used to be a <link> to fonts.googleapis.com: two extra DNS+TLS
- * handshakes to a third party, and a render-blocking stylesheet before any text
- * could paint. next/font inlines the @font-face rules and serves the files from
- * our own origin, so text paints in one round trip. `display: swap` means a slow
- * font never holds the page hostage, and every stack still falls back to system
- * fonts, so the app renders with no network at all (demo-wifi safety).
+ * Dashboard-forward type stack (next/font, self-hosted).
+ * Outfit — geometric display; Plus Jakarta Sans — UI body; JetBrains Mono — data.
  */
-const display = Space_Grotesk({
+const display = Outfit({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   display: "swap",
-  variable: "--font-space-grotesk",
+  variable: "--font-outfit",
 });
 
-const body = IBM_Plex_Sans({
+const body = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
-  variable: "--font-plex-sans",
+  variable: "--font-jakarta",
 });
 
-const mono = IBM_Plex_Mono({
+const mono = JetBrains_Mono({
   subsets: ["latin"],
   weight: ["400", "500"],
   display: "swap",
-  variable: "--font-plex-mono",
+  variable: "--font-jetbrains",
 });
 
 export const metadata: Metadata = {

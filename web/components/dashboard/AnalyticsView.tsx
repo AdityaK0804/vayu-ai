@@ -8,7 +8,7 @@ import { BarXAxis } from "@/components/charts/bar-x-axis";
 import { Grid } from "@/components/charts/grid";
 import { ChartTooltip } from "@/components/charts/tooltip";
 import { PieWithLegend, type PieData } from "@/components/charts/PieChart";
-import { aqiCss } from "@/lib/aqiScale";
+import { cpcbPm25Css } from "@/lib/aqiScale";
 import { SOURCE_LABEL } from "@/lib/aqi";
 import { useAttribution, useInterventions, useMetrics, usePriority, useStationsLive } from "@/lib/data";
 import { useDistricts } from "@/lib/districts";
@@ -477,7 +477,7 @@ export default function AnalyticsView() {
               rows={priority.dossiers.slice(0, 6).map((d) => ({
                 label: d.ward,
                 value: Math.round(d.predicted_pm25),
-                color: aqiCss(d.predicted_pm25 * 2),
+                color: cpcbPm25Css(d.predicted_pm25),
               }))}
             />
           ) : (

@@ -15,6 +15,7 @@ import {
 import AnalyticsView from "@/components/dashboard/AnalyticsView";
 import AdminLogin from "@/components/dashboard/AdminLogin";
 import AdvisoriesView from "@/components/dashboard/AdvisoriesView";
+import DashboardSideNav, { type NavGroup } from "@/components/dashboard/DashboardSideNav";
 import Chatbot from "@/components/Chatbot";
 import LangToggle from "@/components/LangToggle";
 import { useT } from "@/lib/i18n";
@@ -32,27 +33,33 @@ import type { CityId } from "@/lib/types";
  * else is public-interest information a citizen should simply be able to read.
  */
 const NAV: {
+  id: string;
   group: string;
   items: { id: ViewId; label: string; ico: string; badge?: "count" | "72h"; admin?: boolean }[];
 }[] = [
   {
+    id: "monitor",
     group: "MONITOR",
     items: [
-      { id: "map", label: "Live Map", ico: "◍" },
-      { id: "analytics", label: "Analytics", ico: "◑" },
-      { id: "overview", label: "Overview", ico: "◫" },
-      { id: "forecast", label: "AI Forecast", ico: "◈", badge: "72h" },
+      { id: "map", label: "Live Map", ico: "🗺️" },
+      { id: "analytics", label: "Analytics", ico: "📊" },
+      { id: "overview", label: "Overview", ico: "📚" },
+      { id: "forecast", label: "AI Forecast", ico: "🎯", badge: "72h" },
     ],
   },
   {
+    id: "act",
     group: "ACT",
     items: [
-      { id: "advisories", label: "Citizen advisory", ico: "♡" },
-      { id: "interventions", label: "Interventions", ico: "◎", badge: "count", admin: true },
+      { id: "advisories", label: "Citizen advisory", ico: "🆘" },
+      // public for demo — same dossiers citizens can learn from; admin still
+      // owns Alerts / Network / Reports
+      { id: "interventions", label: "Interventions", ico: "👨‍⚕️", badge: "count" },
       { id: "alerts", label: "Alerts", ico: "◔", badge: "count", admin: true },
     ],
   },
   {
+    id: "system",
     group: "SYSTEM",
     items: [
       { id: "network", label: "Sensor Network", ico: "◇", admin: true },
@@ -127,30 +134,26 @@ export default function Dashboard() {
 
       {/* ---------------- sidebar ---------------- */}
       <aside className={`side${sideOpen ? " open" : ""}${sideCollapsed ? " rail" : ""}`}>
-        {NAV.map((grp) => {
-          const items = grp.items.filter((it) => !it.admin || isAdmin);
-          if (!items.length) return null;
-          return (
-          <div key={grp.group}>
-            <div className="grp">{sideCollapsed ? t(grp.group).slice(0, 3) : t(grp.group)}</div>
-            {items.map((it) => {
-              const val = badgeVal(it.badge);
-              return (
-                <button
-                  key={it.id}
-                  className={`nav${view === it.id ? " active" : ""}${val ? " has-badge" : ""}`}
-                  onClick={() => setView(it.id)}
-                  title={t(it.label)}
-                >
-                  <span className="ico">{it.ico}</span>
-                  <span className="lab">{t(it.label)}</span>
-                  {val && <span className="n-badge">{val}</span>}
-                </button>
-              );
-            })}
-          </div>
-          );
-        })}
+        <DashboardSideNav
+          collapsed={sideCollapsed}
+          view={view}
+          onSelect={setView}
+          groups={
+            NAV.map((grp) => ({
+              id: grp.id,
+              group: grp.group,
+              items: grp.items
+                .filter((it) => !it.admin || isAdmin)
+                .map((it) => ({
+                  id: it.id,
+                  label: it.label,
+                  ico: it.ico,
+                  badge: badgeVal(it.badge),
+                  admin: it.admin,
+                })),
+            })).filter((g) => g.items.length > 0) as NavGroup[]
+          }
+        />
 
         {/* sign-in / out lives with the nav, not the topbar: it changes what
             the nav contains, so it belongs next to it */}
@@ -196,7 +199,7 @@ export default function Dashboard() {
         {view === "analytics" && <AnalyticsView />}
         {view === "overview" && <OverviewView />}
         {view === "forecast" && <ForecastView />}
-        {view === "interventions" && isAdmin && <InterventionsView />}
+        {view === "interventions" && <InterventionsView />}
         {view === "advisories" && <AdvisoriesView />}
         {view === "alerts" && isAdmin && <AlertsView />}
         {view === "network" && isAdmin && <NetworkView />}

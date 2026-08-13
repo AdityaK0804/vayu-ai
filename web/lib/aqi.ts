@@ -1,4 +1,9 @@
-/** CPCB PM2.5 bands (ug/m3) -> the green->maroon ramp declared in theme.css. */
+/**
+ * CPCB PM2.5 helpers used by hex / attribution UI.
+ * Colours come from the unified continuous scale in aqiScale.ts.
+ */
+
+import { CPCB_PM25_BANDS, cpcbPm25Band, cpcbPm25Color } from "@/lib/aqiScale";
 
 export interface Band {
   max: number;
@@ -7,22 +12,23 @@ export interface Band {
   rgb: [number, number, number];
 }
 
-export const BANDS: Band[] = [
-  { max: 30, label: "Good", hex: "#2f9e6b", rgb: [47, 158, 107] },
-  { max: 60, label: "Satisfactory", hex: "#a8c23a", rgb: [168, 194, 58] },
-  { max: 90, label: "Moderate", hex: "#e0a33a", rgb: [224, 163, 58] },
-  { max: 120, label: "Poor", hex: "#d9702f", rgb: [217, 112, 47] },
-  { max: 250, label: "Very Poor", hex: "#b03030", rgb: [176, 48, 48] },
-  { max: Infinity, label: "Severe", hex: "#6d1420", rgb: [109, 20, 32] },
-];
+export const BANDS: Band[] = CPCB_PM25_BANDS.map((b) => ({
+  max: b.max,
+  label: b.label,
+  hex: b.hex,
+  rgb: b.rgb,
+}));
 
 export function bandFor(pm25: number): Band {
-  return BANDS.find((b) => pm25 <= b.max) ?? BANDS[BANDS.length - 1];
+  const b = cpcbPm25Band(pm25);
+  if (!b) return BANDS[BANDS.length - 1];
+  return { max: b.max, label: b.label, hex: b.hex, rgb: b.rgb };
 }
 
-export function colorFor(pm25: number): [number, number, number, number] {
-  const b = bandFor(pm25);
-  return [b.rgb[0], b.rgb[1], b.rgb[2], 185];
+/** deck.gl fill colour — continuous CPCB ramp, semi-transparent for basemap bleed-through. */
+export function colorFor(pm25: number, alpha = 168): [number, number, number, number] {
+  const [r, g, b] = cpcbPm25Color(pm25);
+  return [r, g, b, alpha];
 }
 
 export const SOURCE_LABEL: Record<string, string> = {

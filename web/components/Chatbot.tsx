@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { useDistricts } from "@/lib/districts";
 import { useLive, useMetrics, usePriority } from "@/lib/data";
-import { aqiLabel } from "@/lib/aqiScale";
+import { cpcbAqiFromPm25, cpcbPm25Label } from "@/lib/aqiScale";
 import { useT, useLangStore, type Lang } from "@/lib/i18n";
 
 /**
@@ -85,10 +85,10 @@ export default function Chatbot() {
     if (d) {
       const p = d.properties;
       const pm = p.display_pm25 ?? p.pm25;
-      const aq = p.display_aqi ?? p.us_aqi;
+      const aq = cpcbAqiFromPm25(pm) ?? p.display_aqi ?? p.us_aqi;
       const drv = Object.entries(p.shares ?? {}).sort((a, b) => b[1] - a[1])[0];
       return [
-        `<b>${p.name}</b> is at <b>${pm} µg/m³ (AQI ${aq}, ${aqiLabel(aq)})</b>.`,
+        `<b>${p.name}</b> is at <b>${pm} µg/m³ (CPCB AQI ${aq}, ${cpcbPm25Label(pm)})</b>.`,
         p.display_basis === "measured"
           ? `That is measured live by ${p.live_stations} CPCB station${p.live_stations > 1 ? "s" : ""}.`
           : `There is no ground sensor here — it is predicted from satellite, meteorology and emissions geography.`,
@@ -101,7 +101,7 @@ export default function Chatbot() {
     if (c) {
       const l = live?.find((x) => x.city_id === c.id);
       return [
-        `<b>${c.name}</b> — model predicts <b>${c.pm25} µg/m³ (AQI ${c.us_aqi})</b>.`,
+        `<b>${c.name}</b> — model predicts <b>${c.pm25} µg/m³ (CPCB AQI ${cpcbAqiFromPm25(c.pm25) ?? c.us_aqi})</b>.`,
         l?.measured_pm25_24h != null
           ? `Live CPCB stations read ${l.measured_pm25_24h} µg/m³ over 24 h (AQI ${l.measured_us_aqi}).`
           : c.has_stations

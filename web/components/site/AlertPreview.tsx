@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 
 import { useDistricts } from "@/lib/districts";
 import { Iphone } from "@/components/magicui/iphone";
-import { aqiCss, aqiLabel } from "@/lib/aqiScale";
+import { cpcbAqiFromPm25, cpcbPm25Css, cpcbPm25Label } from "@/lib/aqiScale";
 import { useT } from "@/lib/i18n";
 import { PAD } from "./SiteChrome";
 
@@ -106,9 +106,11 @@ export default function AlertPreview() {
   const [lang, setLang] = useState<AlertLang>("hi");
 
   const facts: Facts = useMemo(() => {
-    const worst = [...(data?.features ?? [])].sort(
-      (a, b) => (b.properties.display_aqi ?? 0) - (a.properties.display_aqi ?? 0),
-    )[0]?.properties;
+    const worst = [...(data?.features ?? [])].sort((a, b) => {
+      const ap = a.properties.display_pm25 ?? a.properties.pm25 ?? 0;
+      const bp = b.properties.display_pm25 ?? b.properties.pm25 ?? 0;
+      return bp - ap;
+    })[0]?.properties;
     if (!worst)
       return {
         place: "—",
@@ -121,11 +123,12 @@ export default function AlertPreview() {
         stations: 0,
       };
     const top = Object.entries(worst.shares ?? {}).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "industry";
+    const pm25 = worst.display_pm25 ?? worst.pm25;
     return {
       place: worst.name,
-      aqi: worst.display_aqi ?? worst.us_aqi,
-      pm25: worst.display_pm25 ?? worst.pm25,
-      band: aqiLabel(worst.display_aqi ?? worst.us_aqi),
+      aqi: cpcbAqiFromPm25(pm25) ?? worst.display_aqi ?? worst.us_aqi,
+      pm25,
+      band: cpcbPm25Label(pm25),
       people: worst.population.toLocaleString("en-IN"),
       source: top,
       basis: worst.display_basis ?? "model",
@@ -134,7 +137,7 @@ export default function AlertPreview() {
   }, [data]);
 
   const msg = build(facts, channel, lang);
-  const tone = aqiCss(facts.aqi);
+  const tone = cpcbPm25Css(facts.pm25);
 
   return (
     <section
@@ -149,8 +152,16 @@ export default function AlertPreview() {
     >
       <div style={{ textAlign: "center", marginBottom: 40 }}>
         <div
-          className="figure"
-          style={{ fontSize: 12, letterSpacing: ".18em", color: "var(--accent)", marginBottom: 12 }}
+          className="section-eyebrow"
+          style={{
+            fontFamily: "var(--font-display)",
+            fontSize: "clamp(13px, 1.35vw, 15px)",
+            fontWeight: 700,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            color: "var(--eyebrow)",
+            marginBottom: 14,
+          }}
         >
           {t("BILINGUAL ALERTS")}
         </div>
@@ -221,11 +232,9 @@ export default function AlertPreview() {
               { v: facts.aqi ? `${facts.aqi}` : "—", k: t("Live worst AQI") },
               { v: "3x", k: t("Auto-retry on no ACK") },
             ].map((s) => (
-              <div key={s.k} className="card" style={{ padding: "10px 14px" }}>
-                <div className="figure" style={{ fontSize: 18, fontWeight: 600, color: "var(--accent)" }}>
-                  {s.v}
-                </div>
-                <div style={{ fontSize: 11, color: "var(--ink-2)", marginTop: 2 }}>{s.k}</div>
+              <div key={s.k} className="alert-stat">
+                <div className="alert-stat-v">{s.v}</div>
+                <div className="alert-stat-k">{s.k}</div>
               </div>
             ))}
           </div>

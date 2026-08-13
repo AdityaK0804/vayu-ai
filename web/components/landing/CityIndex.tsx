@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useLive } from "@/lib/data";
 import { useT } from "@/lib/i18n";
-import { aqiCss, aqiLabel } from "@/lib/aqiScale";
+import { cpcbAqiFromPm25, cpcbPm25Css, cpcbPm25Label } from "@/lib/aqiScale";
 import { SectionHead } from "@/components/site/blocks";
 import type { LiveCity } from "@/lib/types";
 
@@ -69,10 +69,10 @@ export default function CityIndex() {
         {data?.map((c: LiveCity) => {
           // measured (24h CPCB mean) when stations exist, model only when they
           // do not — the same rule the map paints by
-          const aqi = c.measured_us_aqi ?? c.current_us_aqi ?? null;
           const pm25 = c.measured_pm25_24h ?? c.current_pm25 ?? null;
+          const aqi = cpcbAqiFromPm25(pm25);
           const measured = c.measured === true;
-          const band = { c: aqiCss(aqi), label: aqiLabel(aqi) };
+          const band = { c: cpcbPm25Css(pm25), label: cpcbPm25Label(pm25) };
           const zeroStation = !measured;
           return (
             <Link

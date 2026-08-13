@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import { aqiCss, aqiLabel, cpcbPm25Label } from "@/lib/aqiScale";
+import { cpcbAqiFromPm25, cpcbPm25Css, cpcbPm25Label } from "@/lib/aqiScale";
 import { useAdvisory, useAdvisoryIndex } from "@/lib/data";
 import { useT } from "@/lib/i18n";
 import { useApp } from "@/lib/store";
@@ -42,8 +42,9 @@ export default function AdvisoriesView() {
   const air = row.air;
   const msg = row.messages[lang];
   const actions = row.actions[lang];
-  const aqiColor = aqiCss(air.us_aqi ?? (air.pm25 != null ? air.pm25 * 2 : null));
+  const aqiColor = cpcbPm25Css(air.pm25);
   const cpcb = cpcbPm25Label(air.pm25);
+  const cpcbAqi = cpcbAqiFromPm25(air.pm25);
 
   return (
     <div className="section">
@@ -145,7 +146,7 @@ export default function AdvisoriesView() {
       </div>
 
       <p className="sub adv-foot">
-        AQI display: {aqiLabel(air.us_aqi)}. CPCB PM2.5 class: {cpcb}. Named school lists +
+        CPCB AQI: {cpcbAqi ?? "—"}. CPCB PM2.5 class: {cpcb}. Named school lists +
         source remedies are on the Interventions screen.
       </p>
     </div>

@@ -30,7 +30,7 @@ export default function PlatformLivePreview() {
         eyebrow={t("LIVE PLATFORM PREVIEW")}
         title={t("The command centre — live map, not a static mock")}
         lede={t(
-          "This is a preview only. District colours and city AQI come from the same live feed the dashboard reads. Click Launch to open the full platform.",
+          "This is a preview only. District colours and city AQI come from the same live feed the dashboard reads.",
         )}
         mb={34}
       />
