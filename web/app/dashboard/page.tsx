@@ -7,6 +7,7 @@ import {
   AlertsView,
   ForecastView,
   InterventionsView,
+  EnforcementView,
   MapView,
   NetworkView,
   OverviewView,
@@ -57,6 +58,7 @@ const NAV: {
       // owns Alerts / Network / Reports
       { id: "interventions", label: "Interventions", ico: "👨‍⚕️", badge: "count" },
       { id: "alerts", label: "Alerts", ico: "◔", badge: "count", admin: true },
+      { id: "enforcement", label: "Enforcement", ico: "📋", admin: true },
     ],
   },
   {
@@ -203,6 +205,7 @@ export default function Dashboard() {
         {view === "interventions" && <InterventionsView />}
         {view === "advisories" && <AdvisoriesView />}
         {view === "alerts" && isAdmin && <AlertsView />}
+        {view === "enforcement" && isAdmin && <EnforcementView />}
         {view === "network" && isAdmin && <NetworkView />}
         {view === "reports" && isAdmin && <ReportsView />}
       </main>

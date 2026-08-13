@@ -6,45 +6,17 @@
  */
 
 import { useEffect, useState } from "react";
-import { API } from "@/lib/api";
-
-type ToastPayload = {
-  type?: string;
-  title?: string;
-  detail?: string;
-  severity?: string;
-  ts?: string;
-  id?: number;
-};
+import { useLiveAlerts } from "@/lib/data";
+import type { AlertEvent } from "@/lib/data";
 
 export default function AlertToast() {
-  const [toast, setToast] = useState<ToastPayload | null>(null);
-  const [hiddenId, setHiddenId] = useState<number | string | null>(null);
+  const { alerts } = useLiveAlerts();
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    let alive = true;
-    const tick = async () => {
-      try {
-        const res = await fetch(API.ALERTS.TOAST, { cache: "no-store" });
-        if (!res.ok) return;
-        const j = (await res.json()) as { toast: ToastPayload | null };
-        if (!alive || !j.toast) return;
-        const id = j.toast.id ?? j.toast.ts ?? j.toast.title;
-        if (id != null && id === hiddenId) return;
-        setToast(j.toast);
-      } catch {
-        /* API optional */
-      }
-    };
-    tick();
-    const t = setInterval(tick, 15_000);
-    return () => {
-      alive = false;
-      clearInterval(t);
-    };
-  }, [hiddenId]);
+  // Find the most recent alert that hasn't been dismissed
+  const visibleAlert = alerts.find(a => !hiddenIds.has(a.id));
 
-  if (!toast) return null;
+  if (!visibleAlert) return null;
 
   return (
     <div
@@ -65,21 +37,20 @@ export default function AlertToast() {
     >
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginBottom: 6 }}>
         <b style={{ fontSize: 13, color: "var(--aqi-4, #f87171)" }}>
-          {toast.severity === "critical" ? "Critical alert" : "Alert"} · {toast.title}
+          {visibleAlert.type === "critical" ? "Critical alert" : "Alert"} · {visibleAlert.city_id}
         </b>
         <button
           type="button"
           className="chip"
           style={{ padding: "2px 8px", fontSize: 11 }}
           onClick={() => {
-            setHiddenId(toast.id ?? toast.ts ?? toast.title ?? "x");
-            setToast(null);
+            setHiddenIds((prev) => new Set(prev).add(visibleAlert.id));
           }}
         >
           Dismiss
         </button>
       </div>
-      <div style={{ fontSize: 12, lineHeight: 1.45, color: "var(--ink-2, #b6c2c6)" }}>{toast.detail}</div>
+      <div style={{ fontSize: 12, lineHeight: 1.45, color: "var(--ink-2, #b6c2c6)" }}>{visibleAlert.message}</div>
     </div>
   );
 }

@@ -7,7 +7,7 @@ export type LayerKind = "forecast" | "priority";
 export type Theme = "light" | "dark";
 export type ViewId =
   | "map" | "overview" | "analytics" | "forecast"
-  | "interventions" | "advisories" | "alerts" | "network" | "reports";
+  | "interventions" | "advisories" | "alerts" | "network" | "reports" | "enforcement";
 
 /**
  * In-memory only. No localStorage / sessionStorage anywhere in this app —
