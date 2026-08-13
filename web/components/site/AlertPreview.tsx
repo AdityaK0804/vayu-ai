@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { useDistricts } from "@/lib/districts";
 import { Iphone } from "@/components/magicui/iphone";
+import { useApp } from "@/lib/store";
 import { cpcbAqiFromPm25, cpcbPm25Css, cpcbPm25Label } from "@/lib/aqiScale";
 import { useT } from "@/lib/i18n";
 import { PAD } from "./SiteChrome";
@@ -102,6 +103,7 @@ function build(f: Facts, ch: Channel, lang: AlertLang) {
 export default function AlertPreview() {
   const { t } = useT();
   const { data } = useDistricts();
+  const { setChatMessage } = useApp();
   const [channel, setChannel] = useState<Channel>("whatsapp");
   const [lang, setLang] = useState<AlertLang>("hi");
 
@@ -238,6 +240,13 @@ export default function AlertPreview() {
               </div>
             ))}
           </div>
+
+          <button
+            onClick={() => setChatMessage(`Discuss this alert for ${facts.place} (AQI ${facts.aqi}, ${facts.source} source).`)}
+            style={{ marginTop: 16, display: "inline-flex", alignItems: "center", gap: 8, padding: "10px 18px", background: "var(--ink)", color: "var(--bg)", border: "none", cursor: "pointer", borderRadius: 10, fontWeight: 600, fontSize: 13.5 }}
+          >
+            <span style={{ fontSize: 16 }}>✨</span> {t("Discuss this alert")}
+          </button>
 
           <p style={{ fontSize: 11.5, lineHeight: 1.6, color: "var(--ink-3)", marginTop: 18 }}>
             {t(

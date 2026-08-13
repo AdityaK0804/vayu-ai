@@ -461,3 +461,32 @@ export function useWhatIf() {
     staleTime: Infinity,
   });
 }
+
+/* -------------------- Phase 5: Dynamic RAG Advisory -------------------- */
+export interface AdvisoryRequest {
+  city_id: string;
+  pm25: number;
+  aqi: number;
+  top_source: string;
+  asthma: boolean;
+  child: boolean;
+  elderly: boolean;
+}
+
+export function useAdvisoryQuery(req: AdvisoryRequest | null) {
+  return useQuery({
+    queryKey: ["agents_advisory", req],
+    queryFn: async (): Promise<{ en: string; hi: string }> => {
+      if (!req) throw new Error("No req");
+      const res = await fetch(API.AGENTS.ADVISORY, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(req),
+      });
+      if (!res.ok) throw new Error("Advisory failed");
+      return res.json();
+    },
+    enabled: !!req,
+    staleTime: Infinity,
+  });
+}

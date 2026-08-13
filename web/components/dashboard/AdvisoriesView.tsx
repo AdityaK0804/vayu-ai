@@ -8,6 +8,7 @@ import { useT } from "@/lib/i18n";
 import { useApp } from "@/lib/store";
 import type { CityId } from "@/lib/types";
 import { Head } from "./views";
+import AdvisoryCard from "./AdvisoryCard";
 
 /**
  * Citizen health advisory — messaging only.
@@ -93,23 +94,13 @@ export default function AdvisoriesView() {
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 20, alignItems: "stretch", marginBottom: 20 }}>
-        <div className="card" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-          <div className="card-h">
-            <h3>{t("Advisory message")}</h3>
-            <span className="sub">
-              {air.basis === "measured" ? t("measured") : t("model estimate")}
-            </span>
-          </div>
-          <div className="adv-card-body" style={{ display: "flex", flexDirection: "column", flex: 1, padding: "18px 20px 22px" }}>
-            <p className="adv-msg" style={{ fontSize: 13.5, lineHeight: 1.6, marginBottom: 16 }}>{msg}</p>
-            <div className="crumb adv-actions-title" style={{ marginTop: "auto", paddingTop: 14 }}>{t("Recommended actions")}</div>
-            <ul className="adv-actions">
-              {actions.map((a, i) => (
-                <li key={i}>{a}</li>
-              ))}
-            </ul>
-          </div>
-        </div>
+        <AdvisoryCard
+          city_id={activeId}
+          pm25={air.pm25 ?? 0}
+          aqi={cpcbAqi ?? 0}
+          top_source={air.top_source ?? "Unknown"}
+          lang={lang}
+        />
 
         <div className="card" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
           <div className="card-h">

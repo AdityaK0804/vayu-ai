@@ -34,6 +34,9 @@ interface AppState {
     ward_sprinkling: boolean;
   };
 
+  // Chatbot Auto-Fill
+  chatMessage: string | null;
+
   setCity: (c: CityId) => void;
   setTimeIndex: (i: number) => void;
   setLayer: (l: LayerKind) => void;
@@ -47,6 +50,7 @@ interface AppState {
   toggleTheme: () => void;
   setScenarioActive: (a: boolean) => void;
   setScenario: (s: Partial<AppState["scenario"]>) => void;
+  setChatMessage: (m: string | null) => void;
 }
 
 export const useApp = create<AppState>((set) => ({
@@ -67,6 +71,7 @@ export const useApp = create<AppState>((set) => ({
     fire_reduction: 0,
     ward_sprinkling: false,
   },
+  chatMessage: null,
 
   // switching city resets the scrub + selection; reveal re-arms for jagdalpur
   setCity: (city) =>
@@ -83,4 +88,5 @@ export const useApp = create<AppState>((set) => ({
   toggleTheme: () => set((s) => ({ theme: s.theme === "dark" ? "light" : "dark" })),
   setScenarioActive: (scenarioActive) => set({ scenarioActive }),
   setScenario: (partial) => set((s) => ({ scenario: { ...s.scenario, ...partial } })),
+  setChatMessage: (chatMessage) => set({ chatMessage }),
 }));

@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useChat } from "ai/react";
+import ReactMarkdown from "react-markdown";
 
+import { useApp } from "@/lib/store";
 import { useDistricts } from "@/lib/districts";
 import { useLive, useMetrics, usePriority } from "@/lib/data";
 import { cpcbAqiFromPm25, cpcbPm25Label } from "@/lib/aqiScale";
@@ -20,12 +23,9 @@ import { useT, useLangStore, type Lang } from "@/lib/i18n";
  *      no network, or a bad completion.
  */
 
-interface Msg {
-  role: "user" | "bot";
-  text: string;
-  chips?: string[];
-  pending?: boolean;
-  model?: string;
+interface ChatbotProps {
+  initialAlertText?: string;
+  onClearAlert?: () => void;
 }
 
 const GREETING: Record<Lang, string> = {
@@ -48,111 +48,23 @@ const CLOSE_ICON = <path d="M18 6 6 18M6 6l12 12" />;
 
 export default function Chatbot() {
   const [open, setOpen] = useState(false);
-  const [msgs, setMsgs] = useState<Msg[]>([]);
-  const [q, setQ] = useState("");
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const { t } = useT();
   const { lang, setLang } = useLangStore();
+  
+  // Connect to global chat payload trigger
+  const { chatMessage, setChatMessage } = useApp();
 
   const { data: districts } = useDistricts();
   const { data: live } = useLive();
   const { data: metrics } = useMetrics("korba");
   const { data: priority } = usePriority("korba");
 
-  useEffect(() => {
-    if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
-  }, [msgs, open]);
+  const [hasGreeted, setHasGreeted] = useState(false);
 
-  // greet on first open, exactly as the design does
-  useEffect(() => {
-    if (open && msgs.length === 0) {
-      setMsgs([{ role: "bot", text: GREETING[lang], chips: CHIPS.map((c) => t(c)) }]);
-    }
-  }, [open, msgs.length, lang, t]);
-
-  // switching language mid-conversation re-greets rather than leaving a
-  // half-English, half-Hindi thread on screen
-  useEffect(() => {
-    if (msgs.length > 0) setMsgs([{ role: "bot", text: GREETING[lang], chips: CHIPS.map((c) => t(c)) }]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lang]);
-
-  /* ----------------------------------------------------- grounded answers */
-  function answer(raw: string): string {
-    const s = raw.toLowerCase().trim();
-    if (!s) return "Ask me about a district, a city, or the model.";
-
-    if (/^(hi|hello|hey|namaste)/.test(s))
-      return "Namaste! Ask me about air quality in any Chhattisgarh district or city, how the model performs, or where enforcement should go first.";
-
-    const d = districts?.features.find((f) => s.includes(f.properties.name.toLowerCase()));
-    const c = districts?.cities?.find((x) => s.includes(x.name.toLowerCase()));
-
-    if (d) {
-      const p = d.properties;
-      const pm = p.display_pm25 ?? p.pm25;
-      const aq = cpcbAqiFromPm25(pm) ?? p.display_aqi ?? p.us_aqi;
-      const drv = Object.entries(p.shares ?? {}).sort((a, b) => b[1] - a[1])[0];
-      return [
-        `<b>${p.name}</b> is at <b>${pm} µg/m³ (CPCB AQI ${aq}, ${cpcbPm25Label(pm)})</b>.`,
-        p.display_basis === "measured"
-          ? `That is measured live by ${p.live_stations} CPCB station${p.live_stations > 1 ? "s" : ""}.`
-          : `There is no ground sensor here — it is predicted from satellite, meteorology and emissions geography.`,
-        drv ? `Main driver: <b>${drv[0]}</b> (${Math.round(drv[1] * 100)}% of attribution).` : "",
-        `Population ${p.population.toLocaleString()}.`,
-      ]
-        .filter(Boolean)
-        .join(" ");
-    }
-    if (c) {
-      const l = live?.find((x) => x.city_id === c.id);
-      return [
-        `<b>${c.name}</b> — model predicts <b>${c.pm25} µg/m³ (CPCB AQI ${cpcbAqiFromPm25(c.pm25) ?? c.us_aqi})</b>.`,
-        l?.measured_pm25_24h != null
-          ? `Live CPCB stations read ${l.measured_pm25_24h} µg/m³ over 24 h (AQI ${l.measured_us_aqi}).`
-          : c.has_stations
-            ? ""
-            : `It has no ground sensor at all — this is the zero-station prediction.`,
-      ]
-        .filter(Boolean)
-        .join(" ");
-    }
-
-    if (/(worst|highest|most pollut|dangerous)/.test(s) && districts) {
-      const t = [...districts.features].sort(
-        (a, b) => (b.properties.display_aqi ?? 0) - (a.properties.display_aqi ?? 0),
-      )[0].properties;
-      return `Worst right now is <b>${t.name}</b> at <b>AQI ${t.display_aqi}</b> (${t.display_pm25} µg/m³), affecting ${t.population.toLocaleString()} people.`;
-    }
-    if (/(cleanest|best|lowest)/.test(s) && districts) {
-      const t = [...districts.features].sort(
-        (a, b) => (a.properties.display_aqi ?? 0) - (b.properties.display_aqi ?? 0),
-      )[0].properties;
-      return `Cleanest is <b>${t.name}</b> at <b>AQI ${t.display_aqi}</b> (${t.display_pm25} µg/m³).`;
-    }
-    if (/(forecast|predict|72|tomorrow|accura|rmse|perform)/.test(s) && metrics) {
-      const h = metrics.forecast_vs_baselines.find((x) => x.horizon_h === 24);
-      return `The model forecasts <b>72 hours ahead</b>. At 24 h its RMSE is <b>${h?.model_rmse} µg/m³</b> — ${h?.vs_persistence_pct}% better than persistence and ${h?.vs_cams_bc_pct}% better than bias-corrected CAMS. On a station it has never seen it still reaches ${metrics.zero_station_loso.rmse_satellite_subset} µg/m³.`;
-    }
-    if (/(no sensor|zero.?station|unmonitored|jagdalpur)/.test(s) && districts) {
-      const none = districts.features.filter((f) => f.properties.n_stations === 0).length;
-      return `<b>${none} of ${districts.features.length}</b> districts have no CPCB station — including Bastar, where Jagdalpur sits. Their air quality is predicted entirely from satellite, weather and emissions data.`;
-    }
-    if (/(alert|warning)/.test(s) && priority) {
-      return `<b>${priority.cells_over_threshold.toLocaleString()}</b> of ${priority.cells_scored.toLocaleString()} cells are forecast over the ${priority.threshold_ug_m3} µg/m³ standard in Korba. The Alerts view lists each one.`;
-    }
-    if (/(interven|action|reduce|fix|enforce|priorit|inspect)/.test(s) && priority?.dossiers?.[0]) {
-      const t = priority.dossiers[0];
-      return `Top priority is <b>${t.ward}</b> — forecast ${t.predicted_pm25} µg/m³, ${t.top_source}-driven, ${t.population_affected.toLocaleString()} residents and ${t.vulnerable_sites} schools/hospitals exposed.${t.named_upwind_source ? ` Nearest upwind source: ${t.named_upwind_source}.` : ""}`;
-    }
-    if (/(data|source|where.*from|dataset)/.test(s)) {
-      return "Everything is measured: CPCB stations via OpenAQ, Open-Meteo weather + CAMS, Sentinel-5P and MODIS, EDGAR v8.1, WorldPop and the Global Power Plant Database. Nothing here is simulated.";
-    }
-    return 'I can help with live AQI, 72h forecasts, source attribution and enforcement priorities. Try a district like <b>Korba</b> or <b>Raigarh</b>, or ask "which district is worst". I would rather say I do not know than invent a number.';
-  }
-
-  function buildContext() {
-    return {
+  const contextBody = {
+    lang,
+    context: {
       generated_at: districts?.meta_live?.origin ?? null,
       mode: districts?.meta_live?.mode ?? null,
       districts: (districts?.features ?? []).map((f) => {
@@ -171,40 +83,45 @@ export default function Chatbot() {
       live_city_readings: live ?? [],
       model_metrics: metrics ?? null,
       top_dossiers: (priority?.dossiers ?? []).slice(0, 3),
-    };
-  }
-
-  async function send(text: string) {
-    const t2 = text.trim();
-    if (!t2) return;
-    const history = msgs.slice(-6).map((m) => ({ role: m.role, content: m.text }));
-    setMsgs((m) => [...m, { role: "user", text: t2 }, { role: "bot", text: t("typing…"), pending: true }]);
-    setQ("");
-
-    let reply: string | null = null;
-    let modelName: string | undefined = undefined;
-    try {
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: t2, context: buildContext(), history, lang }),
-      });
-      const j = await res.json();
-      if (j?.ok && j.text) {
-        reply = String(j.text).replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
-        modelName = j.model ?? "gemini-2.0-flash";
-      } else if (j?.reason || j?.detail || j?.hint) {
-        const errorDetail = j?.detail ? (typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail)) : j?.hint ?? j?.reason;
-        reply = `⚠️ <b>Gemini API Note (${j?.status || j?.reason})</b>: ${errorDetail}`;
-      }
-    } catch (err) {
-      console.warn("[Vayu Assist Fetch Error]:", err);
     }
-    setMsgs((m) => [
-      ...m.filter((x) => !x.pending),
-      { role: "bot", text: reply ?? answer(t2), model: reply && !reply.startsWith("⚠️") ? modelName : undefined },
-    ]);
-  }
+  };
+
+  const { messages, input, handleInputChange, handleSubmit, setMessages, append, isLoading } = useChat({
+    api: "/api/chat",
+    body: contextBody,
+  });
+
+  // Open and append initial alert from global state
+  useEffect(() => {
+    if (chatMessage) {
+      setOpen(true);
+      append({ role: "user", content: chatMessage });
+      setChatMessage(null); // clear it so it doesn't re-trigger
+    }
+  }, [chatMessage, append, setChatMessage]);
+
+  useEffect(() => {
+    if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
+  }, [messages, open]);
+
+  // greet on first open, exactly as the design does
+  useEffect(() => {
+    if (open && !hasGreeted && messages.length === 0) {
+      setHasGreeted(true);
+      setMessages([
+        { id: "greet", role: "assistant", content: GREETING[lang] }
+      ]);
+    }
+  }, [open, hasGreeted, messages.length, lang, setMessages]);
+
+  // switching language mid-conversation re-greets rather than leaving a
+  // half-English, half-Hindi thread on screen
+  useEffect(() => {
+    if (messages.length > 0 && messages[0].id === "greet") {
+      setMessages([{ id: "greet", role: "assistant", content: GREETING[lang] }]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang]);
 
   /* --------------------------------------------------------------- render */
   return (
@@ -375,10 +292,10 @@ export default function Chatbot() {
             fontSize: 13.5,
           }}
         >
-          {msgs.map((m, i) => {
+          {messages.map((m: any) => {
             const me = m.role === "user";
             return (
-              <div key={i} style={{ display: "contents" }}>
+              <div key={m.id} style={{ display: "contents" }}>
                 <div style={{ display: "flex", flexDirection: "column", alignSelf: me ? "flex-end" : "flex-start", maxWidth: "82%" }}>
                   <div
                     style={{
@@ -390,35 +307,29 @@ export default function Chatbot() {
                       border: me ? "0" : "1px solid var(--line)",
                       borderBottomRightRadius: me ? 4 : 14,
                       borderBottomLeftRadius: me ? 14 : 4,
-                      opacity: m.pending ? 0.6 : 1,
                     }}
-                    dangerouslySetInnerHTML={{ __html: m.text }}
-                  />
-                  {!me && m.model && (
-                    <div
-                      style={{
-                        fontSize: 10,
-                        opacity: 0.65,
-                        marginTop: 3,
-                        marginLeft: 4,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 4,
-                        fontFamily: "monospace",
+                  >
+                    <ReactMarkdown
+                      components={{
+                        p: ({node, ...props}) => <p style={{margin: 0}} {...props} />,
+                        a: ({node, ...props}) => <a style={{color: me ? "#fff" : "var(--accent)"}} {...props} />,
+                        strong: ({node, ...props}) => <b style={{fontWeight: 600}} {...props} />,
+                        ul: ({node, ...props}) => <ul style={{margin: 0, paddingLeft: 18}} {...props} />,
+                        ol: ({node, ...props}) => <ol style={{margin: 0, paddingLeft: 18}} {...props} />,
                       }}
                     >
-                      <span style={{ color: "var(--accent, #3B82F6)" }}>✨</span> {m.model}
-                    </div>
-                  )}
+                      {m.content}
+                    </ReactMarkdown>
+                  </div>
                 </div>
-                {m.chips && (
+                {!me && m.id === "greet" && CHIPS.length > 0 && (
                   <div
-                    style={{ display: "flex", flexWrap: "wrap", gap: 7, alignSelf: "flex-start" }}
+                    style={{ display: "flex", flexWrap: "wrap", gap: 7, alignSelf: "flex-start", marginTop: 4 }}
                   >
-                    {m.chips.map((t) => (
+                    {CHIPS.map((chipText) => (
                       <button
-                        key={t}
-                        onClick={() => send(t)}
+                        key={chipText}
+                        onClick={() => append({ role: "user", content: t(chipText) })}
                         style={{
                           padding: "7px 12px",
                           borderRadius: 100,
@@ -431,7 +342,7 @@ export default function Chatbot() {
                           cursor: "pointer",
                         }}
                       >
-                        {t}
+                        {t(chipText)}
                       </button>
                     ))}
                   </div>
@@ -439,6 +350,11 @@ export default function Chatbot() {
               </div>
             );
           })}
+          {isLoading && (
+            <div style={{ alignSelf: "flex-start", opacity: 0.6, fontSize: 12, marginLeft: 6 }}>
+              {t("typing…")}
+            </div>
+          )}
         </div>
 
         {/* composer */}
@@ -451,11 +367,17 @@ export default function Chatbot() {
             background: "var(--surface)",
           }}
         >
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && send(q)}
-            placeholder={t("Ask about AQI, alerts, cities…")}
+          <form
+            onSubmit={handleSubmit}
+            style={{
+              flex: 1,
+              display: "flex",
+            }}
+          >
+            <input
+              value={input}
+              onChange={handleInputChange}
+              placeholder={t("Ask about AQI, alerts, cities…")}
             aria-label="Ask the assistant"
             style={{
               flex: 1,
@@ -470,8 +392,7 @@ export default function Chatbot() {
             }}
           />
           <button
-            aria-label="Send"
-            onClick={() => send(q)}
+            type="submit"
             style={{
               width: 42,
               border: 0,
@@ -496,6 +417,7 @@ export default function Chatbot() {
               <path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z" />
             </svg>
           </button>
+          </form>
         </div>
       </div>
     </>

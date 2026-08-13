@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
+import { streamText } from "ai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createOpenAI } from "@ai-sdk/openai";
 
 /**
  * Gemini-backed chat with multi-key pool & rate-limit auto-failover.
@@ -103,19 +106,21 @@ export async function POST(req: Request) {
     ? "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
     : "https://api.groq.com/openai/v1/chat/completions";
 
-  let body: { message?: string; context?: unknown; history?: { role: string; content: string }[] };
+  let body: { messages?: { role: string; content: string }[]; context?: unknown; lang?: string };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ ok: false, reason: "bad_request" }, { status: 400 });
   }
-  const lang = (body as { lang?: string }).lang === "hi" ? "hi" : "en";
+  
+  const lang = body.lang === "hi" ? "hi" : "en";
   const langLine =
     lang === "hi"
       ? "LANGUAGE: Reply in Hindi (Devanagari script). Keep place names and units as-is."
       : "LANGUAGE: Reply in English.";
-  const message = (body.message ?? "").toString().slice(0, 1000);
-  if (!message.trim()) return NextResponse.json({ ok: false, reason: "empty" }, { status: 400 });
+
+  const messages = body.messages ?? [];
+  if (messages.length === 0) return NextResponse.json({ ok: false, reason: "empty" }, { status: 400 });
 
   // Shuffle starting key index so load is spread across keys
   const startIdx = Math.floor(Math.random() * keys.length);
@@ -130,103 +135,38 @@ export async function POST(req: Request) {
 
     for (const mTarget of modelsToTry) {
       try {
-        if (isGemini) {
-          // Native Google Generative AI REST Endpoint
-          const nativeUrl = `https://generativelanguage.googleapis.com/v1beta/models/${mTarget}:generateContent?key=${currentKey}`;
-          const nativeRes = await fetch(nativeUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              system_instruction: {
-                parts: [
-                  {
-                    text: `${SYSTEM}\n\nCONTEXT (the dashboard's real current data):\n${JSON.stringify(
-                      body.context ?? {},
-                    ).slice(0, 24000)}`,
-                  },
-                ],
-              },
-              contents: [
-                ...(body.history ?? []).slice(-6).map((m) => ({
-                  role: m.role === "bot" ? "model" : "user",
-                  parts: [{ text: String(m.content).slice(0, 800) }],
-                })),
-                { role: "user", parts: [{ text: message }] },
-              ],
-              generationConfig: {
-                temperature: 0.2,
-                maxOutputTokens: 400,
-              },
-            }),
-          });
+        const provider = isGemini 
+          ? createGoogleGenerativeAI({ apiKey: currentKey }) 
+          : createOpenAI({ apiKey: currentKey, baseURL: "https://api.groq.com/openai/v1" });
 
-          if (nativeRes.ok) {
-            const json = await nativeRes.json();
-            const text = json?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-            if (text) {
-              return NextResponse.json({ ok: true, text, model: mTarget });
-            }
+        const result = await streamText({
+          model: provider(mTarget) as any,
+          system: `${SYSTEM}\n\n${langLine}\n\nCONTEXT (the dashboard's real current data):\n${JSON.stringify(
+            body.context ?? {},
+          ).slice(0, 24000)}`,
+          messages: messages.map(m => ({
+            role: m.role as "user" | "assistant",
+            content: m.content
+          })),
+        });
+
+        // Add model name to custom headers so client knows which model succeeded
+        return result.toTextStreamResponse({
+          headers: {
+            "x-vayu-model": mTarget,
           }
+        });
 
-          lastStatus = nativeRes.status;
-          const errText = await nativeRes.text();
-          lastErrorDetail = errText;
-
-          // If status is 404 or 400, try next Gemini model
-          if ((nativeRes.status === 404 || nativeRes.status === 400) && mTarget !== modelsToTry[modelsToTry.length - 1]) {
-            continue;
-          }
-          if (nativeRes.status !== 429 && nativeRes.status !== 403) {
-            break;
-          }
-        } else {
-          // Groq / OpenAI Compatible Endpoint
-          const res = await fetch(endpoint, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${currentKey}`,
-            },
-            body: JSON.stringify({
-              model: mTarget,
-              temperature: 0.2,
-              max_tokens: 400,
-              messages: [
-                { role: "system", content: `${SYSTEM}
-
-${langLine}` },
-                {
-                  role: "system",
-                  content: `CONTEXT (the dashboard's real current data):\n${JSON.stringify(
-                    body.context ?? {},
-                  ).slice(0, 24000)}`,
-                },
-                ...(body.history ?? []).slice(-6).map((m) => ({
-                  role: m.role === "bot" ? "assistant" : "user",
-                  content: String(m.content).slice(0, 800),
-                })),
-                { role: "user", content: message },
-              ],
-            }),
-          });
-
-          if (res.ok) {
-            const json = await res.json();
-            const text = json?.choices?.[0]?.message?.content?.trim();
-            if (text) {
-              return NextResponse.json({ ok: true, text, model: mTarget });
-            }
-          }
-
-          lastStatus = res.status;
-          lastErrorDetail = await res.text();
-
-          if (res.status !== 429 && res.status !== 403) {
-            break;
-          }
+      } catch (e: any) {
+        lastErrorDetail = String(e.message || e);
+        lastStatus = e.statusCode || 500;
+        
+        if (lastStatus === 404 || lastStatus === 400) {
+          if (mTarget !== modelsToTry[modelsToTry.length - 1]) continue;
         }
-      } catch (e) {
-        lastErrorDetail = String(e);
+        if (lastStatus !== 429 && lastStatus !== 403) {
+          break; // Hard fail on non-rate-limit errors
+        }
       }
     }
   }
