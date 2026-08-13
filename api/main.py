@@ -24,6 +24,7 @@ if str(_ROOT / "src") not in sys.path:
 
 from airsight.config import OUTPUTS, load_cities
 from airsight.io.stations import load_stations
+from api.schemas_agents import AnalyzeRequest, AnalyzeResponse
 
 app = FastAPI(title="AirSight Backend API", version="0.3.0")
 
@@ -115,19 +116,14 @@ def _json_clean(obj: Any) -> Any:
 
 
 @app.post("/api/v1/agents/analyze")
-def agents_analyze(body: dict[str, Any] | None = None) -> dict[str, Any]:
-    """Run Scout → Forecaster? → Policy for a city.
+def agents_analyze(
+    body: AnalyzeRequest,
+    include_state: bool = False,
+) -> AnalyzeResponse:
+    """Run Scout → Forecaster? → Policy for a city (LangGraph).
 
-    Body::
-        {"city_id": "korba", "mode": "live"|"demo"|"offline", "request_id": "..."}
+    Set ``include_state=true`` to embed the full agent blackboard in the response.
     """
-    from api.schemas_agents import AnalyzeRequest, AnalyzeResponse
-
-    try:
-        req = AnalyzeRequest.model_validate(body or {})
-    except Exception as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-
     try:
         from airsight.agents.graph import InstallError, run_analysis
     except ImportError as exc:
@@ -135,9 +131,9 @@ def agents_analyze(body: dict[str, Any] | None = None) -> dict[str, Any]:
 
     try:
         state = run_analysis(
-            req.city_id,
-            mode=req.mode,
-            request_id=req.request_id or str(uuid4()),
+            body.city_id.strip().lower(),
+            mode=body.mode,
+            request_id=body.request_id or str(uuid4()),
         )
     except InstallError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
@@ -145,9 +141,9 @@ def agents_analyze(body: dict[str, Any] | None = None) -> dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"agent graph failed: {exc}") from exc
 
     clean = _json_clean(dict(state))
-    resp = AnalyzeResponse(
-        city_id=str(clean.get("city_id", req.city_id)),
-        mode=str(clean.get("mode", req.mode)),
+    return AnalyzeResponse(
+        city_id=str(clean.get("city_id", body.city_id)),
+        mode=str(clean.get("mode", body.mode)),
         anomaly_score=clean.get("anomaly_score"),
         anomaly_detected=clean.get("anomaly_detected"),
         needs_forecast=clean.get("needs_forecast"),
@@ -162,9 +158,8 @@ def agents_analyze(body: dict[str, Any] | None = None) -> dict[str, Any]:
         policy_notes=list(clean.get("policy_notes") or []),
         errors=list(clean.get("errors") or []),
         trace=list(clean.get("trace") or []),
-        state=clean,
+        state=clean if include_state else None,
     )
-    return resp.model_dump()
 
 
 @app.get("/api/v1/agents/health")
