@@ -29,32 +29,38 @@ Vayu is a **command-centre + citizen layer** for regional air quality:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-|                         DATA SOURCES                            |
-|  CPCB/OpenAQ · Open-Meteo/CAMS · Sentinel-5P/MODIS · EDGAR     |
-|  WorldPop · OSM · GPPD · FIRMS · TomTom (optional) · GEE        |
+│                         DATA SOURCES                            │
+│  CPCB/OpenAQ · Open-Meteo/CAMS · FIRMS · Sentinel-5P · EDGAR   │
 └────────────────────────────┬────────────────────────────────────┘
                              │
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-|                    PYTHON PIPELINE (scripts/)                     |
-|  fetch → clean → H3 harmonize → train (LGBM/CatBoost) → bake    |
-|  outputs: metrics, forecasts, districts GeoJSON, interventions  |
-└────────────────────────────┬────────────────────────────────────┘
-                             │ static JSON / parquet under
-                             │ data/  +  web/public/data/
-                             ▼
-┌──────────────────────┐    ┌─────────────────────────────────────┐
-|  FastAPI (api/)      |    |  Next.js 14 dashboard (web/)          |
-|  optional live API   |◄──►|  React · MapLibre · deck.gl · Zustand|
-|  uvicorn :8000       |    |  TanStack Query · Magic UI motion     |
-└──────────────────────┘    └─────────────────────────────────────┘
-                             │
-                             ▼
-                    Browser :3000 / :5000
-                    Landing + /dashboard
+              ┌──────────────┼──────────────┐
+              ▼              ▼              ▼
+     DuckDB H3 pipeline   Live ingestor   Offline LGBM bake
+     (scripts/)           (services/)     (scripts/models)
+              │              │              │
+              │       ┌──────┴──────┐       │
+              │       ▼             ▼       │
+              │  TimescaleDB     Redis      │
+              │  (history)     (hot snap)   │
+              │       └──────┬──────┘       │
+              ▼              ▼              ▼
+┌──────────────────────┐  ┌─────────────────────────────────────┐
+│  FastAPI (api/)      │  │  Next.js 14 dashboard (web/)          │
+│  /live/*             │◄─►│  TanStack Query · live-first + bake  │
+│  /agents/analyze     │  │  MapLibre · deck.gl (stations/fires) │
+│  /agents/whatif      │  │  What-if · RAG advisory · toasts     │
+│  /agents/advisory    │  └─────────────────────────────────────┘
+│  /alerts/*           │
+│  LangGraph agents    │
+│  STGNN + calibration │
+└──────────────────────┘
 ```
 
-**Design principle:** Many UI numbers are **baked** from the ML pipeline into static JSON so the demo runs without a heavy backend. Live hooks (OpenAQ, etc.) can refresh when available.
+**Live path:** ingestor → TimescaleDB + Redis → FastAPI `/api/v1/live/*` → Next rewrite `/backend-api` → dashboard.
+
+**Intelligence path:** Scout → Forecaster (STGNN) → Policy (LangGraph) · What-if hex deltas · RAG EN/HI advisories (template without LLM keys).
+
+**Design principle:** Demo must run without external LLM keys; baked JSON remains the fallback when live services are down.
 
 ---
 
@@ -65,15 +71,24 @@ Vayu is a **command-centre + citizen layer** for regional air quality:
 | `web/` | Next.js 14 app (landing + command centre) |
 | `web/app/` | App Router pages, theme, global CSS |
 | `web/components/` | UI: dashboard, site/landing, charts, magicui |
-| `web/lib/` | Data hooks, AQI scales, auth store, i18n, types |
-| `web/public/data/` | Baked JSON the UI fetches (districts, forecasts, live snapshots) |
-| `api/` | FastAPI entry (`main.py`) for optional live/serving endpoints |
-| `scripts/` | Data collection, processing, model training, bake jobs |
-| `src/` | Python package (`airsight` / shared libs) |
-| `data/` | Raw + processed datasets (often large; may be gitignored) |
+| `web/lib/` | Data hooks, liveClient, AQI scales, auth, i18n, types |
+| `web/public/data/` | Baked JSON fallback (districts, forecasts, live snapshots) |
+| `api/` | FastAPI: live, agents, what-if, advisory, alerts |
+| `services/ingestor/` | Scheduled multi-source live ingestion |
+| `src/airsight/agents/` | LangGraph Scout / Forecaster / Policy |
+| `src/airsight/models/` | STGNN, calibration, ensemble, virtual stations |
+| `src/airsight/whatif/` | Scenario → per-H3 PM2.5 deltas |
+| `src/airsight/rag/` | Chunk retrieval + EN/HI template advisories |
+| `src/airsight/alerts/` | Threshold watcher, Timescale + Redis fan-out |
+| `scripts/` | Pipeline, DuckDB, retrain, db/init.sql |
+| `scripts/db/init.sql` | Timescale hypertables + policies |
+| `docker-compose.yml` | TimescaleDB + Redis |
+| `docs/DEMO_SCRIPT_3MIN.md` | 3-minute live demo script |
+| `data/` | Raw + processed datasets (often gitignored) |
 | `config/` | Cities, stations, pipeline config |
 | `tests/` | Pytest suite for loaders / grid utils |
-| `docs/`, `Vayu_Project_Document.md`, `RUN_NOW.md` | Narrative + operator docs |
+
+**Stack keywords:** agents · timescaledb · redis · ingestor · RAG · what-if · STGNN · DuckDB · LangGraph
 
 **Branches commonly used:** `frontend` (UI), `backend`, `main`.
 

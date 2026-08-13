@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { SOURCE_LABEL, bandFor } from "@/lib/aqi";
 import { useAttribution, useForecast, usePriority } from "@/lib/data";
 import { useApp } from "@/lib/store";
@@ -12,6 +13,7 @@ export default function AttributionCard() {
   const { data: attribution } = useAttribution(city);
   const { data: priority } = usePriority(city);
   const { data: forecast } = useForecast(city);
+  const [copied, setCopied] = useState(false);
 
   if (!selectedCell) {
     return (
@@ -28,6 +30,14 @@ export default function AttributionCard() {
   const attr = attribution?.cells.find((c) => c.cell === selectedCell);
   const dossier = priority?.dossiers.find((d) => d.cell === selectedCell);
   const cellNow = selectFrame(forecast, timeIndex).find((c) => c.h3 === selectedCell);
+
+  const handleCopyOrder = () => {
+    if (!attr) return;
+    const text = `[VAYU ENFORCEMENT ORDER]\nWard: ${attr.ward}\nH3 Cell: ${attr.cell}\nPM2.5: ${attr.predicted_pm25} µg/m³\nTop Source: ${attr.top_source}\nConfidence: ${(attr.confidence * 100).toFixed(0)}%\nUpwind Source: ${attr.named_upwind_source || 'N/A'}\nRecommended Action: ${dossier?.recommended_action || 'Inspect local industrial stacks and dust suppression.'}`;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   // A cell can be on the map but outside the top-N attributed set — say so
   // plainly rather than rendering an empty chart.
@@ -135,6 +145,13 @@ export default function AttributionCard() {
           {dossier.recommended_action}
         </p>
       )}
+
+      <button
+        onClick={handleCopyOrder}
+        className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-accentdim bg-surface2 py-2 text-[11.5px] font-semibold text-accent transition hover:bg-accent hover:text-white"
+      >
+        <span>{copied ? "✓ Copied Order!" : "📋 Export Inspector Order"}</span>
+      </button>
     </div>
   );
 }

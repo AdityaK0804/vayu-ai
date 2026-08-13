@@ -165,6 +165,17 @@ export function cpcbPm25Css(pm25: number | null | undefined): string {
   return `rgb(${cpcbPm25Color(pm25).join(",")})`;
 }
 
+/** High-contrast CSS text colour for AQI numbers in light/dark themes */
+export function cpcbPm25CssReadable(pm25: number | null | undefined): string {
+  if (pm25 == null || Number.isNaN(pm25)) return "var(--ink-2)";
+  if (pm25 <= 30) return "#047857"; // Deep high-contrast emerald green
+  if (pm25 <= 60) return "#15803d"; // Dark green
+  if (pm25 <= 90) return "#d97706"; // Amber gold
+  if (pm25 <= 120) return "#ea580c"; // Orange
+  if (pm25 <= 250) return "#dc2626"; // Red
+  return "#991b1b"; // Dark red
+}
+
 export function cpcbPm25Label(pm25: number | null | undefined): string {
   return cpcbPm25Band(pm25)?.label ?? "No data";
 }

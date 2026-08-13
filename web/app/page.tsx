@@ -69,11 +69,23 @@ export default function Landing() {
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
           gap: "clamp(24px, 4vw, 56px)",
-          // top-aligned, not centred: the left column is much taller than the
-          // preview, so centring pushed the frame down past the headline
           alignItems: "start",
         }}
       >
+        <div
+          aria-hidden
+          style={{
+            position: "absolute",
+            top: "5%",
+            left: "10%",
+            width: 450,
+            height: 450,
+            background: "radial-gradient(circle, color-mix(in oklch, var(--accent), transparent 82%) 0%, transparent 70%)",
+            filter: "blur(60px)",
+            pointerEvents: "none",
+            zIndex: -1,
+          }}
+        />
         {/* ---------- left: hero text ---------- */}
         <div style={{ minWidth: 0 }}>
           <div

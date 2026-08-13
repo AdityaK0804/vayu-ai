@@ -26,8 +26,9 @@ from airsight.config import OUTPUTS, load_cities
 from airsight.io.stations import load_stations
 from api.live import router as live_router
 from api.schemas_agents import AnalyzeRequest, AnalyzeResponse
+from api.schemas_phase5 import AdvisoryRequest, AlertInjectRequest, WhatIfRequest
 
-app = FastAPI(title="AirSight Backend API", version="0.4.0")
+app = FastAPI(title="AirSight Backend API", version="0.5.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -174,3 +175,103 @@ def agents_health() -> dict[str, Any]:
         return {"status": "ok", "langgraph": bool(_HAS_LANGGRAPH)}
     except Exception as exc:
         return {"status": "degraded", "langgraph": False, "detail": str(exc)}
+
+
+# ---------------------------------------------------------------------------
+# Phase 5 — what-if, RAG advisory, alerts
+# ---------------------------------------------------------------------------
+
+
+@app.post("/api/v1/agents/whatif")
+def agents_whatif(body: WhatIfRequest) -> dict[str, Any]:
+    """Run a scenario and return per-H3 PM2.5 deltas + exposure estimates."""
+    try:
+        from airsight.whatif.engine import Scenario, run_whatif
+
+        sc = body.scenario
+        result = run_whatif(
+            Scenario(
+                traffic_delta=sc.traffic_delta,
+                industry_delta=sc.industry_delta,
+                construction_dust_delta=sc.construction_dust_delta,
+                fire_reduction=sc.fire_reduction,
+                ward_sprinkling=sc.ward_sprinkling,
+                ward=sc.ward,
+                city_id=sc.city_id,
+                n_hex=sc.n_hex,
+            )
+        )
+        return _json_clean(result)
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"whatif failed: {exc}") from exc
+
+
+@app.post("/api/v1/agents/advisory")
+def agents_advisory(body: AdvisoryRequest) -> dict[str, Any]:
+    """RAG-style bilingual advisory — template mode without LLM keys."""
+    try:
+        from airsight.rag.advisory import generate_advisory
+
+        return _json_clean(
+            generate_advisory(
+                city_id=body.city_id,
+                pm25=body.pm25,
+                aqi=body.aqi,
+                top_source=body.top_source,
+                asthma=body.asthma,
+                child=body.child,
+                elderly=body.elderly,
+            )
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"advisory failed: {exc}") from exc
+
+
+@app.post("/api/v1/alerts/inject")
+def alerts_inject(body: AlertInjectRequest) -> dict[str, Any]:
+    """Inject a sustained AQI breach → Timescale + Redis pub/sub + UI toast."""
+    try:
+        from airsight.alerts.watcher import inject_breach
+
+        return _json_clean(
+            inject_breach(
+                city_id=body.city_id,
+                aqi=body.aqi,
+                pm25=body.pm25,
+                station_id=body.station_id,
+                hours=body.hours,
+            )
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"alert inject failed: {exc}") from exc
+
+
+@app.post("/api/v1/alerts/watch")
+def alerts_watch() -> dict[str, Any]:
+    """Run one threshold pass over latest station readings."""
+    try:
+        from airsight.alerts.watcher import run_watcher_once
+
+        return _json_clean(run_watcher_once())
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+
+@app.get("/api/v1/alerts/recent")
+def alerts_recent(limit: int = 20) -> dict[str, Any]:
+    from airsight.alerts.watcher import list_recent_alerts
+
+    items = list_recent_alerts(limit=limit)
+    return {"n": len(items), "alerts": items}
+
+
+@app.get("/api/v1/ui/toast")
+def ui_toast() -> dict[str, Any]:
+    """Latest toast payload for the dashboard (Redis)."""
+    try:
+        from services.ingestor import cache
+
+        t = cache.get_json("vayu:ui:toast")
+        return {"toast": t}
+    except Exception as exc:
+        return {"toast": None, "detail": str(exc)}

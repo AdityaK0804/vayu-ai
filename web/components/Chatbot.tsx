@@ -33,7 +33,13 @@ const GREETING: Record<Lang, string> = {
   hi: "नमस्ते! 🌱 मैं <b>Vayu Assist</b> हूँ। आज क्षेत्र की हवा के बारे में कैसे मदद करूँ?",
 };
 
-const CHIPS = ["Korba AQI", "72h forecast", "Worst district", "Recommend actions"];
+const CHIPS = [
+  "Korba AQI",
+  "72h forecast",
+  "Zero-station Jagdalpur",
+  "Enforcement targets",
+  "Model accuracy RMSE",
+];
 
 const BUBBLE_ICON = (
   <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />

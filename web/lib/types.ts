@@ -189,3 +189,57 @@ export interface LiveCity {
   measured_us_aqi?: number | null;
   n_stations?: number;
 }
+
+/* ------------------------------------------------- FastAPI /api/v1/live/* */
+export interface LiveApiStation {
+  ts: string;
+  station_id: string;
+  city_id: string | null;
+  source: string;
+  pm25: number | null;
+  pm10?: number | null;
+  no2?: number | null;
+  aqi?: number | null;
+  aqi_basis?: string | null;
+  lat: number | null;
+  lon: number | null;
+  quality_flag?: number;
+  is_virtual?: boolean;
+}
+
+export interface LiveApiFire {
+  ts: string;
+  lat: number;
+  lon: number;
+  frp: number | null;
+  confidence?: number | null;
+  source: string;
+  h3_cell?: string | null;
+  city_id?: string | null;
+}
+
+export interface LiveSnapshot {
+  generated_at: string;
+  n_stations: number;
+  n_fires: number;
+  stations: LiveApiStation[];
+  fires: LiveApiFire[];
+  cache?: "redis" | "timescale" | "baked";
+}
+
+export interface LiveStationsResponse {
+  generated_at: string;
+  cache: string;
+  n: number;
+  n_virtual: number;
+  stations: LiveApiStation[];
+  virtual_stations: LiveApiStation[];
+}
+
+export interface LiveFiresResponse {
+  generated_at: string;
+  cache: string;
+  hours: number;
+  n: number;
+  fires: LiveApiFire[];
+}

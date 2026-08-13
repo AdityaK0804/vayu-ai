@@ -18,6 +18,7 @@ import {
   NO_DATA_RGB,
 } from "@/lib/aqiScale";
 import { useDistricts, type CityPoint, type DistrictProps } from "@/lib/districts";
+import type { LiveApiFire, LiveApiStation } from "@/lib/types";
 
 // Types and fetch hooks live in lib/districts so non-map components can
 // read district data without pulling deck.gl in.
@@ -61,6 +62,10 @@ export default function DistrictMap({
   basemap = "dark",
   onBasemapChange,
   showBasemapToggle = true,
+  liveStations = [],
+  liveFires = [],
+  showLiveStations = true,
+  showLiveFires = true,
 }: {
   selected: string | null;
   onSelect: (d: DistrictProps | null) => void;
@@ -81,16 +86,48 @@ export default function DistrictMap({
   basemap?: BasemapId;
   onBasemapChange?: (id: BasemapId) => void;
   showBasemapToggle?: boolean;
+  /** Phase 5.1 live overlays from FastAPI (optional) */
+  liveStations?: LiveApiStation[];
+  liveFires?: LiveApiFire[];
+  showLiveStations?: boolean;
+  showLiveFires?: boolean;
 }) {
   const mapRef = useRef<MapRef | null>(null);
   const [hover, setHover] = useState<string | null>(null);
   const [internalBasemap, setInternalBasemap] = useState<BasemapId>(basemap);
+  const [is3D, setIs3D] = useState(false);
+  const [pulse, setPulse] = useState(false);
   const { data } = useDistricts();
+
+  useEffect(() => {
+    const timer = setInterval(() => setPulse((p) => !p), 1200);
+    return () => clearInterval(timer);
+  }, []);
 
   const activeBasemap = onBasemapChange ? basemap : internalBasemap;
   const setBasemap = (id: BasemapId) => {
     if (onBasemapChange) onBasemapChange(id);
     else setInternalBasemap(id);
+  };
+
+  const toggle3D = () => {
+    const next3D = !is3D;
+    setIs3D(next3D);
+    mapRef.current?.flyTo({
+      pitch: next3D ? 45 : 0,
+      bearing: next3D ? -12 : 0,
+      duration: 1000,
+    });
+  };
+
+  const resetDistrictView = () => {
+    mapRef.current?.flyTo({
+      center: [82.1, 21.2],
+      zoom: initialZoom,
+      pitch: is3D ? 45 : 0,
+      bearing: is3D ? -12 : 0,
+      duration: 1000,
+    });
   };
 
   const mapStyle = useMemo(() => resolveBasemapStyle(activeBasemap), [activeBasemap]);
@@ -159,12 +196,17 @@ export default function DistrictMap({
 
     const out: any[] = [
       new GeoJsonLayer({
-        id: "cg-districts",
+        id: `cg-districts-${is3D ? "3d" : "2d"}`,
         data: data as any,
         pickable: interactive,
         stroked: true,
         filled: true,
-        extruded: false,
+        extruded: is3D,
+        wireframe: is3D,
+        getElevation: (f: any) => {
+          const pm = pmOf(f.properties);
+          return pm == null ? 0 : pm * 450;
+        },
         getFillColor: (f: any) => {
           const pm = pmOf(f.properties);
           const c = pm == null ? NO_DATA_RGB : cpcbPm25Color(pm);
@@ -197,9 +239,10 @@ export default function DistrictMap({
           getLineColor: { duration: 200 },
         },
         updateTriggers: {
-          getFillColor: [selected, hover, isHybrid],
-          getLineColor: [selected, hover, isHybrid],
+          getFillColor: [selected, hover, isHybrid, is3D],
+          getLineColor: [selected, hover, isHybrid, is3D],
           getLineWidth: [selected, hover],
+          getElevation: [is3D],
         },
         onHover: (info: any) => setHover(info?.object?.properties?.name ?? null),
         onClick: (info: any) => {
@@ -213,56 +256,112 @@ export default function DistrictMap({
     if (showCities && data.cities?.length) {
       out.push(
         new ScatterplotLayer({
+          id: "cg-cities-pulse",
+          data: data.cities,
+          pickable: false,
+          stroked: false,
+          filled: true,
+          radiusUnits: "pixels",
+          getPosition: (d: CityPoint) => [d.lon, d.lat],
+          getRadius: pulse ? 18 : 11,
+          getFillColor: (d: CityPoint) =>
+            d.has_stations
+              ? [249, 115, 22, pulse ? 70 : 160]
+              : [251, 146, 60, pulse ? 55 : 120],
+          transitions: {
+            getRadius: { duration: 1100 },
+            getFillColor: { duration: 1100 },
+          },
+          updateTriggers: {
+            getRadius: [pulse],
+            getFillColor: [pulse],
+          },
+        }),
+        new ScatterplotLayer({
           id: "cg-cities",
           data: data.cities,
+          pickable: interactive,
+          stroked: false,
+          filled: true,
+          radiusUnits: "pixels",
+          getPosition: (d: CityPoint) => [d.lon, d.lat],
+          getRadius: 9.5,
+          getFillColor: (d: CityPoint) =>
+            d.has_stations ? [249, 115, 22, 255] : [251, 146, 60, 240],
+          onClick: (info: any) => {
+            if (!info?.object) return;
+            const c = info.object;
+            const host = data.features.find((f: any) => {
+              const [[w, s2], [e, n]] = bboxOf(f.geometry);
+              return c.lon >= w && c.lon <= e && c.lat >= s2 && c.lat <= n;
+            });
+            if (host) onSelect(host.properties);
+            mapRef.current?.flyTo({ center: [c.lon, c.lat], zoom: 9.6, duration: 1200 });
+          },
+        }),
+      );
+    }
+
+    // Live station pulses (FastAPI / Redis snapshot)
+    const stations = (liveStations || []).filter(
+      (s) => s.lat != null && s.lon != null && Number.isFinite(s.lat) && Number.isFinite(s.lon),
+    );
+    if (showLiveStations && stations.length) {
+      out.push(
+        new ScatterplotLayer({
+          id: "live-stations-pulse",
+          data: stations,
+          pickable: false,
+          stroked: false,
+          filled: true,
+          radiusUnits: "pixels",
+          getPosition: (d: LiveApiStation) => [Number(d.lon), Number(d.lat)],
+          getRadius: pulse ? 22 : 12,
+          getFillColor: [45, 212, 191, pulse ? 90 : 160],
+          transitions: { getRadius: { duration: 1100 }, getFillColor: { duration: 1100 } },
+          updateTriggers: { getRadius: [pulse], getFillColor: [pulse] },
+        }),
+        new ScatterplotLayer({
+          id: "live-stations",
+          data: stations,
           pickable: interactive,
           stroked: true,
           filled: true,
           radiusUnits: "pixels",
-          getPosition: (d: CityPoint) => [d.lon, d.lat],
-          getRadius: 6.5,
-          getFillColor: [255, 255, 255, 245],
-          getLineColor: (d: CityPoint) =>
-            d.has_stations ? [8, 14, 13, 245] : [64, 214, 197, 255],
+          getPosition: (d: LiveApiStation) => [Number(d.lon), Number(d.lat)],
+          getRadius: 7,
+          getLineWidth: 1.5,
           lineWidthUnits: "pixels",
-          getLineWidth: (d: CityPoint) => (d.has_stations ? 2 : 3),
+          getFillColor: (d: LiveApiStation) => {
+            const rgb = cpcbPm25Color(d.pm25 ?? null);
+            return [...rgb, 230] as [number, number, number, number];
+          },
+          getLineColor: [255, 255, 255, 180],
+          updateTriggers: { getFillColor: [stations.length] },
         }),
       );
-
-      if (showCityLabels) {
-        out.push(
-          new TextLayer({
-            id: "cg-city-labels",
-            data: data.cities,
-            pickable: false,
-            getPosition: (d: CityPoint) => [d.lon, d.lat],
-            getText: (d: CityPoint) => {
-              const pm = pmOf(d);
-              const caqi = cpcbAqiFromPm25(pm);
-              return caqi != null ? `${d.name} · ${caqi}` : d.name;
-            },
-            getSize: 12,
-            sizeUnits: "pixels",
-            getColor: [255, 255, 255, 252],
-            getTextAnchor: "start",
-            getAlignmentBaseline: "center",
-            getPixelOffset: [13, 0],
-            background: true,
-            getBackgroundColor: isHybrid ? [10, 14, 18, 210] : [6, 12, 11, 225],
-            backgroundPadding: [7, 4, 7, 4],
-            getBorderColor: [255, 255, 255, 55],
-            getBorderWidth: 1,
-            fontWeight: 600,
-            characterSet: "auto",
-            fontSettings: { sdf: true, buffer: 8 },
-            updateTriggers: {
-              getText: [data.cities],
-              getBackgroundColor: [isHybrid],
-            },
-          }),
-        );
-      }
     }
+
+    // Live FIRMS fire markers
+    const fires = (liveFires || [])
+      .filter((f) => Number.isFinite(f.lat) && Number.isFinite(f.lon))
+      .slice(0, 400);
+    if (showLiveFires && fires.length) {
+      out.push(
+        new ScatterplotLayer({
+          id: "live-fires",
+          data: fires,
+          pickable: interactive,
+          stroked: false,
+          filled: true,
+          radiusUnits: "pixels",
+          getPosition: (d: LiveApiFire) => [d.lon, d.lat],
+          getRadius: (d: LiveApiFire) => Math.min(14, 4 + Math.sqrt(Math.max(d.frp ?? 1, 1))),
+          getFillColor: [239, 68, 68, 200],
+        }),
+      );
+    }
+
     return out;
   }, [
     data,
@@ -271,9 +370,14 @@ export default function DistrictMap({
     onSelect,
     flyToFeature,
     showCities,
-    showCityLabels,
     interactive,
     isHybrid,
+    is3D,
+    pulse,
+    liveStations,
+    liveFires,
+    showLiveStations,
+    showLiveFires,
   ]);
 
   return (
@@ -302,38 +406,15 @@ export default function DistrictMap({
             if (!object) return null;
             const p = object.properties ?? object;
             if (p?.name == null) return null;
-            const pm = pmOf(p);
-            const caqi = cpcbAqiFromPm25(pm);
-            const cat = cpcbPm25Label(pm);
-            const c = pm == null ? NO_DATA_RGB : cpcbPm25Color(pm);
-            const measured = p.display_basis === "measured";
-            const pmTxt = pm == null ? "—" : `${Math.round(pm)}`;
-            const aqiTxt = caqi == null ? "—" : String(caqi);
             return {
-              html: `<div style="font-family:var(--font-body);font-size:12px;line-height:1.55;min-width:160px">
-                  <b style="font-size:13px">${p.name}</b><br/>
-                  <span style="font-family:var(--font-mono)">
-                    <span style="color:rgb(${c.join(",")})">AQI ${aqiTxt}</span>
-                    <span style="opacity:.75"> (CPCB)</span>
-                  </span><br/>
-                  <span style="font-family:var(--font-mono)">${pmTxt} µg/m³ · ${cat}</span><br/>
-                  <span style="opacity:.72">${
-                    measured
-                      ? `live · ${p.live_stations ?? 0} CPCB station${(p.live_stations ?? 0) > 1 ? "s" : ""}`
-                      : p.n_stations > 0
-                        ? `${p.n_stations} station(s) · model`
-                        : p.has_stations
-                          ? "city · stations"
-                          : "no ground sensor — predicted"
-                  }</span>
-                </div>`,
+              html: `<div style="font-family:var(--font-body);font-size:12.5px;font-weight:600;letter-spacing:0.02em">${p.name}</div>`,
               style: {
                 background: "var(--surface)",
                 color: "var(--ink)",
                 border: "1px solid var(--line)",
-                padding: "9px 12px",
-                borderRadius: "10px",
-                boxShadow: "var(--shadow)",
+                padding: "6px 10px",
+                borderRadius: "8px",
+                boxShadow: "0 6px 16px rgba(0,0,0,0.4)",
               },
             };
           }}
@@ -349,41 +430,86 @@ export default function DistrictMap({
             right: 12,
             zIndex: 5,
             display: "flex",
-            gap: 4,
-            padding: 4,
+            gap: 6,
+            alignItems: "center",
+            padding: "4px 6px",
             borderRadius: 10,
             background: "color-mix(in oklch, var(--surface) 92%, transparent)",
             border: "1px solid var(--line)",
             boxShadow: "var(--shadow)",
-            backdropFilter: "blur(8px)",
+            backdropFilter: "blur(10px)",
           }}
           title={`Basemap · ${basemapProviderLabel()}`}
         >
-          {BASEMAP_OPTIONS.map((opt) => {
-            const on = activeBasemap === opt.id;
-            return (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => setBasemap(opt.id)}
-                title={opt.label}
-                style={{
-                  border: 0,
-                  cursor: "pointer",
-                  borderRadius: 7,
-                  padding: "6px 10px",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  letterSpacing: "0.02em",
-                  fontFamily: "var(--font-body)",
-                  background: on ? "var(--ink)" : "transparent",
-                  color: on ? "var(--bg)" : "var(--ink-2)",
-                }}
-              >
-                {opt.short}
-              </button>
-            );
-          })}
+          <div style={{ display: "flex", gap: 3 }}>
+            {BASEMAP_OPTIONS.map((opt) => {
+              const on = activeBasemap === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setBasemap(opt.id)}
+                  title={opt.label}
+                  style={{
+                    border: 0,
+                    cursor: "pointer",
+                    borderRadius: 6,
+                    padding: "5px 9px",
+                    fontSize: 10.5,
+                    fontWeight: 600,
+                    letterSpacing: "0.02em",
+                    fontFamily: "var(--font-body)",
+                    background: on ? "var(--ink)" : "transparent",
+                    color: on ? "var(--bg)" : "var(--ink-2)",
+                  }}
+                >
+                  {opt.short}
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ width: 1, height: 16, background: "var(--line)" }} />
+
+          {/* 3D Extrusion toggle button */}
+          <button
+            type="button"
+            onClick={toggle3D}
+            title="Toggle 3D Extruded Districts"
+            style={{
+              border: "1px solid var(--line)",
+              cursor: "pointer",
+              borderRadius: 6,
+              padding: "5px 9px",
+              fontSize: 10.5,
+              fontWeight: 700,
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              background: is3D ? "var(--accent)" : "var(--surface-2)",
+              color: is3D ? "#fff" : "var(--ink)",
+            }}
+          >
+            <span>{is3D ? "🧊 3D On" : "🗺 2D"}</span>
+          </button>
+
+          {/* Reset View Button */}
+          <button
+            type="button"
+            onClick={resetDistrictView}
+            title="Reset Camera View"
+            style={{
+              border: "1px solid var(--line)",
+              cursor: "pointer",
+              borderRadius: 6,
+              padding: "5px 8px",
+              fontSize: 10.5,
+              background: "var(--surface-2)",
+              color: "var(--ink-2)",
+            }}
+          >
+            🎯 Recenter
+          </button>
         </div>
       )}
     </div>

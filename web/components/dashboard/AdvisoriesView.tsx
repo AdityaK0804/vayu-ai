@@ -47,14 +47,14 @@ export default function AdvisoriesView() {
   const cpcbAqi = cpcbAqiFromPm25(air.pm25);
 
   return (
-    <div className="section">
+    <div className="section" style={{ paddingBottom: 90, maxWidth: 1200, margin: "0 auto" }}>
       <Head
         crumb="Act / Citizen advisory"
         title={t("Citizen health advisory")}
         sub={t("EN/HI risk messages for the public — school-level action lists are under Interventions.")}
       />
 
-      <div className="adv-toolbar">
+      <div className="adv-toolbar" style={{ marginBottom: 18 }}>
         {cities.map((c) => (
           <button
             key={c.city_id}
@@ -73,7 +73,7 @@ export default function AdvisoriesView() {
         </div>
       </div>
 
-      <div className="grid kpis adv-kpis">
+      <div className="grid kpis adv-kpis" style={{ marginBottom: 20 }}>
         {[
           { lab: t("Risk band"), val: lang === "hi" ? air.band_hi : air.band_en, c: aqiColor },
           { lab: "PM2.5", val: air.pm25 != null ? `${air.pm25}` : "—", sub: "µg/m³" },
@@ -92,17 +92,17 @@ export default function AdvisoriesView() {
         ))}
       </div>
 
-      <div className="adv-grid-2">
-        <div className="card">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: 20, alignItems: "stretch", marginBottom: 20 }}>
+        <div className="card" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
           <div className="card-h">
             <h3>{t("Advisory message")}</h3>
             <span className="sub">
               {air.basis === "measured" ? t("measured") : t("model estimate")}
             </span>
           </div>
-          <div className="adv-card-body">
-            <p className="adv-msg">{msg}</p>
-            <div className="crumb adv-actions-title">{t("Recommended actions")}</div>
+          <div className="adv-card-body" style={{ display: "flex", flexDirection: "column", flex: 1, padding: "18px 20px 22px" }}>
+            <p className="adv-msg" style={{ fontSize: 13.5, lineHeight: 1.6, marginBottom: 16 }}>{msg}</p>
+            <div className="crumb adv-actions-title" style={{ marginTop: "auto", paddingTop: 14 }}>{t("Recommended actions")}</div>
             <ul className="adv-actions">
               {actions.map((a, i) => (
                 <li key={i}>{a}</li>
@@ -111,13 +111,13 @@ export default function AdvisoriesView() {
           </div>
         </div>
 
-        <div className="card">
+        <div className="card" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
           <div className="card-h">
             <h3>{t("Exposure context")}</h3>
             <span className="sub">{t("district register totals — no long lists")}</span>
           </div>
-          <div className="adv-card-body">
-            <div className="grid kpis adv-kpis-inner">
+          <div className="adv-card-body" style={{ display: "flex", flexDirection: "column", flex: 1, padding: "18px 20px 22px" }}>
+            <div className="grid kpis adv-kpis-inner" style={{ marginBottom: 14 }}>
               <div className="card kpi adv-kpi-flat">
                 <div className="lab">{t("Hospitals")}</div>
                 <div className="val">{row.exposure.hospitals_total.toLocaleString()}</div>
@@ -127,25 +127,41 @@ export default function AdvisoriesView() {
                 <div className="val">{row.exposure.schools_total.toLocaleString()}</div>
               </div>
             </div>
-            <p className="adv-note">
+            <p className="adv-note" style={{ fontSize: 12, lineHeight: 1.5, marginBottom: 14 }}>
               {lang === "hi" ? row.exposure.vulnerable_note_hi : row.exposure.vulnerable_note_en}
             </p>
-            <div className="crumb adv-actions-title">{t("Priority audiences")}</div>
-            <div className="adv-audience">
+            <div className="crumb adv-actions-title" style={{ margin: "10px 0 8px" }}>{t("Priority audiences")}</div>
+            <div className="adv-audience" style={{ marginBottom: 18 }}>
               {row.audience.map((a) => (
                 <span key={a.id} className="chip adv-chip-static">
                   {lang === "hi" ? a.hi : a.en}
                 </span>
               ))}
             </div>
-            <button type="button" className="btn pri" style={{ marginTop: 16 }} onClick={() => setView("interventions")}>
+            <button
+              type="button"
+              className="btn pri"
+              style={{
+                marginTop: "auto",
+                width: "100%",
+                padding: "11px 16px",
+                fontSize: 13,
+                fontWeight: 600,
+                borderRadius: 10,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+              }}
+              onClick={() => setView("interventions")}
+            >
               See schools & remedies in Interventions →
             </button>
           </div>
         </div>
       </div>
 
-      <p className="sub adv-foot">
+      <p className="sub adv-foot" style={{ marginTop: 14 }}>
         CPCB AQI: {cpcbAqi ?? "—"}. CPCB PM2.5 class: {cpcb}. Named school lists +
         source remedies are on the Interventions screen.
       </p>

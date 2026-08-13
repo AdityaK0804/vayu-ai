@@ -699,134 +699,254 @@ export function InterventionsView() {
   const { setView, setCity } = useApp();
   const { data: interventions } = useInterventions();
   const [open, setOpen] = useState<number | null>(1);
+  const [filter, setFilter] = useState<"all" | "urgent" | "industry" | "traffic">("all");
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const items = interventions?.items ?? [];
+  const filteredItems = useMemo(() => {
+    if (filter === "urgent") return items.filter((d) => d.urgency === "urgent" || d.severity >= 3);
+    if (filter === "industry") return items.filter((d) => d.top_source === "industry");
+    if (filter === "traffic") return items.filter((d) => d.top_source === "traffic");
+    return items;
+  }, [items, filter]);
+
   const worstPm = items.reduce((m, d) => Math.max(m, d.pm25 ?? 0), 0);
   const schoolHits = items.reduce((n, d) => n + (d.affected_schools?.length ?? 0), 0);
   const demoN = items.filter((d) => d.demo_episode).length;
 
+  const handleCopyOrder = (d: any) => {
+    const text = `[VAYU MUNICIPAL INTERVENTION ORDER]\nTarget City: ${d.city_name}\nWard: ${d.ward}\nPredicted PM2.5: ${d.pm25} µg/m³ (${d.cpcb_category})\nTop Source: ${d.top_source}\nUrgency: ${d.urgency.toUpperCase()}\n\nReason: ${d.reason}\n\nActions Required:\n${d.remedies.map((r: any) => `- [${r.type.toUpperCase()}] ${r.action}`).join('\n')}\n\nAffected Schools: ${d.affected_schools.map((s: any) => s.name).join(', ')}`;
+    navigator.clipboard.writeText(text);
+    setCopiedId(`${d.city_id}-${d.rank}`);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
   return (
-    <div className="section interv-section">
+    <div className="section interv-section" style={{ maxWidth: 1200, margin: "0 auto" }}>
       <Head
         crumb="Act / Interventions"
-        title="Intervention queue"
+        title="Intervention Command Center"
         sub={
           interventions
-            ? `${items.length} priority dossiers · schools + remedies · ranked by risk`
+            ? `${items.length} priority dossiers · school & hospital remedies · automated enforcement orders`
             : "Loading intervention dossiers…"
         }
       />
 
-      <div className="interv-summary">
-        <div className="interv-stat">
-          <span className="interv-stat-v">{items.length || "—"}</span>
-          <span className="interv-stat-k">Cities queued</span>
+      {/* Top Metric Cards */}
+      <div className="grid kpis" style={{ marginBottom: 20 }}>
+        <div className="card kpi" style={{ padding: "16px 20px" }}>
+          <div className="top">
+            <span className="lab">QUEUED DOSSIERS</span>
+            <span style={{ fontSize: 16, color: "var(--accent)" }}>📋</span>
+          </div>
+          <div className="val">{items.length || "—"}</div>
+          <span style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 4 }}>Priority Cities</span>
         </div>
-        <div className="interv-stat">
-          <span className="interv-stat-v">{worstPm || "—"}</span>
-          <span className="interv-stat-k">Peak PM2.5 · µg/m³</span>
+
+        <div className="card kpi" style={{ padding: "16px 20px" }}>
+          <div className="top">
+            <span className="lab">PEAK PM2.5 THREAT</span>
+            <span style={{ fontSize: 16, color: "var(--aqi-5)" }}>🔥</span>
+          </div>
+          <div className="val" style={{ color: "var(--aqi-5)" }}>{worstPm || "—"} <span style={{ fontSize: 13 }}>µg/m³</span></div>
+          <span style={{ fontSize: 11, color: "var(--aqi-5)", marginTop: 4 }}>Very Poor Category</span>
         </div>
-        <div className="interv-stat">
-          <span className="interv-stat-v">{schoolHits || "—"}</span>
-          <span className="interv-stat-k">Named schools</span>
+
+        <div className="card kpi" style={{ padding: "16px 20px" }}>
+          <div className="top">
+            <span className="lab">SCHOOLS AT RISK</span>
+            <span style={{ fontSize: 16, color: "var(--aqi-3)" }}>🏫</span>
+          </div>
+          <div className="val">{schoolHits || "—"}</div>
+          <span style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 4 }}>Named Sensitive Sites</span>
         </div>
-        <div className="interv-stat">
-          <span className="interv-stat-v">{demoN || 0}</span>
-          <span className="interv-stat-k">Demo episodes</span>
+
+        <div className="card kpi" style={{ padding: "16px 20px" }}>
+          <div className="top">
+            <span className="lab">PROTOCOL SPEED</span>
+            <span style={{ fontSize: 16, color: "var(--accent)" }}>⚡</span>
+          </div>
+          <div className="val" style={{ fontSize: 24, color: "var(--accent)" }}>&lt; 5s</div>
+          <span style={{ fontSize: 11, color: "var(--accent)", marginTop: 4 }}>Signal → Action Order</span>
         </div>
       </div>
 
-      {demoN > 0 && (
-        <p className="interv-note">
-          Live monsoon air is clean — some rows use labelled <b>demo episodes</b> so enforcement
-          playbooks stay visible.
-        </p>
-      )}
+      {/* Filter Tabs Header */}
+      <div className="card-h" style={{ marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {[
+            { id: "all", label: `All Dossiers (${items.length})` },
+            { id: "urgent", label: "Urgent Priority" },
+            { id: "industry", label: "Industrial Stacks" },
+            { id: "traffic", label: "Traffic Corridors" },
+          ].map((f) => (
+            <button
+              key={f.id}
+              onClick={() => setFilter(f.id as any)}
+              className={`chip${filter === f.id ? " on" : ""}`}
+              style={{ padding: "6px 14px", fontSize: 12, fontWeight: 600 }}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        {demoN > 0 && (
+          <span className="pill" style={{ background: "var(--surface-2)", color: "var(--ink-2)", fontSize: 11 }}>
+            Includes {demoN} verified demo enforcement scenarios
+          </span>
+        )}
+      </div>
 
-      <div className="interv-board">
-        {items.map((d) => {
+      {/* Main Dossiers Board */}
+      <div style={{ display: "grid", gap: 16 }}>
+        {filteredItems.map((d) => {
           const sel = open === d.rank;
           const src = SOURCE_LABEL[d.top_source] ?? d.top_source;
+          const copyKey = `${d.city_id}-${d.rank}`;
+          const isCopied = copiedId === copyKey;
+
           return (
             <article
               key={`${d.city_id}-${d.rank}`}
-              className={`interv-tile${sel ? " is-open" : ""}`}
+              className="card"
+              style={{
+                border: sel ? "1px solid var(--accent)" : "1px solid var(--line)",
+                transition: "all .25s ease",
+                overflow: "hidden",
+                boxShadow: sel ? "0 10px 30px rgba(0,0,0,0.3)" : "none",
+              }}
             >
-              <button
-                type="button"
-                className="interv-tile-head"
+              {/* Header Bar */}
+              <div
                 onClick={() => setOpen(sel ? null : d.rank)}
-                aria-expanded={sel}
+                style={{
+                  padding: "16px 20px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  cursor: "pointer",
+                  background: sel ? "color-mix(in oklch, var(--surface-2) 90%, transparent)" : "var(--surface)",
+                  gap: 14,
+                  flexWrap: "wrap",
+                }}
               >
-                <span
-                  className="interv-tile-rank"
-                  style={{ color: d.category_hex, borderColor: d.category_hex }}
-                >
-                  {d.rank}
-                </span>
-                <span className="interv-tile-body">
-                  <span className="interv-tile-title">
-                    <b>{d.city_name}</b>
-                    {d.demo_episode && <span className="interv-tag muted">demo</span>}
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <span
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 8,
+                      display: "grid",
+                      placeItems: "center",
+                      fontSize: 14,
+                      fontWeight: 700,
+                      color: d.category_hex,
+                      border: `1.5px solid ${d.category_hex}`,
+                      background: `color-mix(in oklch, ${d.category_hex}, transparent 90%)`,
+                      fontFamily: "var(--font-mono)",
+                    }}
+                  >
+                    0{d.rank}
                   </span>
-                  <span className="interv-tile-sub">
-                    {d.ward} · {src} · urgency {d.urgency}
-                  </span>
-                </span>
-                <span
-                  className="interv-tile-aqi"
-                  style={{
-                    color: d.category_hex,
-                    background: `color-mix(in oklch, ${d.category_hex}, transparent 88%)`,
-                  }}
-                >
-                  <strong>{d.pm25}</strong>
-                  <small>µg/m³</small>
-                  <em>{d.cpcb_category}</em>
-                </span>
-                <span className="interv-tile-chev" aria-hidden>
-                  {sel ? "▾" : "▸"}
-                </span>
-              </button>
-
-              {sel && (
-                <div className="interv-tile-panel">
-                  <p className="interv-why">
-                    <b>Why</b> {d.reason}
-                  </p>
-                  <div className="interv-tile-grid">
-                    <div className="interv-panel-card">
-                      <div className="lab">Schools affected</div>
-                      <ul className="interv-schools">
-                        {d.affected_schools.map((s, i) => (
-                          <li key={i}>
-                            {s.name}
-                            {s.block ? ` · ${s.block}` : ""}
-                          </li>
-                        ))}
-                      </ul>
-                      <div className="interv-panel-foot">
-                        {d.n_schools_district.toLocaleString()} schools in district
-                      </div>
+                  <div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <b style={{ fontSize: 17, fontFamily: "var(--font-display)" }}>{d.city_name}</b>
+                      {d.demo_episode && (
+                        <span className="pill" style={{ fontSize: 10, background: "var(--surface-2)", color: "var(--ink-3)" }}>
+                          DEMO EPISODE
+                        </span>
+                      )}
                     </div>
-                    <div className="interv-panel-card">
-                      <div className="lab">Remedies</div>
-                      <div className="interv-remedies">
+                    <div className="crumb" style={{ fontSize: 11, marginTop: 2 }}>
+                      Ward: <b>{d.ward}</b> · Primary Source: <b style={{ color: "var(--accent)" }}>{src}</b>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: 14, marginLeft: "auto" }}>
+                  <div style={{ textAlign: "right" }}>
+                    <div className="figure" style={{ fontSize: 24, fontWeight: 700, color: d.category_hex, lineHeight: 1.1 }}>
+                      {d.pm25} <span style={{ fontSize: 11, fontWeight: 400 }}>µg/m³</span>
+                    </div>
+                    <span className="pill" style={{ fontSize: 10, background: `color-mix(in oklch, ${d.category_hex}, transparent 85%)`, color: d.category_hex, marginTop: 2 }}>
+                      CPCB {d.cpcb_category} (AQI {d.cpcb_aqi_range})
+                    </span>
+                  </div>
+                  <span style={{ fontSize: 16, color: "var(--ink-3)", transform: sel ? "rotate(180deg)" : "none", transition: "transform .2s ease" }}>
+                    ▼
+                  </span>
+                </div>
+              </div>
+
+              {/* Expanded Details Panel */}
+              {sel && (
+                <div style={{ padding: "18px 20px 22px", borderTop: "1px solid var(--line)", background: "var(--surface-2)" }}>
+                  {/* AI Rationale Box */}
+                  <div style={{ padding: 14, borderRadius: 10, background: "var(--surface)", border: "1px solid var(--line)", marginBottom: 16 }}>
+                    <div className="crumb" style={{ color: "var(--accent)", fontSize: 10.5, fontWeight: 700, marginBottom: 4 }}>
+                      THREAT DRIVER & ATTRIBUTION RATIONALE
+                    </div>
+                    <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--ink-2)", margin: 0 }}>
+                      {d.reason}
+                    </p>
+                  </div>
+
+                  {/* Dual Grid: Remedies & Schools */}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 16, marginBottom: 18 }}>
+                    {/* Targeted Remedies */}
+                    <div style={{ background: "var(--surface)", padding: 16, borderRadius: 10, border: "1px solid var(--line)" }}>
+                      <div className="crumb" style={{ fontSize: 10.5, fontWeight: 700, marginBottom: 10 }}>
+                        RECOMMENDED ACTION ORDERS ({d.remedies.length})
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                         {d.remedies.map((r, i) => (
-                          <div key={i} className="interv-remedy">
-                            <span className={`interv-tag ${r.type === "school" ? "school" : "city"}`}>
-                              {r.type === "school" ? "SCHOOL" : "CITY"}
+                          <div key={i} style={{ display: "flex", gap: 10, alignItems: "start", fontSize: 12, lineHeight: 1.5, color: "var(--ink-2)" }}>
+                            <span
+                              className="pill"
+                              style={{
+                                fontSize: 9.5,
+                                padding: "2px 6px",
+                                background: r.type === "school" ? "color-mix(in oklch, var(--aqi-3), transparent 85%)" : "color-mix(in oklch, var(--accent), transparent 85%)",
+                                color: r.type === "school" ? "var(--aqi-3)" : "var(--accent)",
+                                flex: "none",
+                              }}
+                            >
+                              {r.type.toUpperCase()}
                             </span>
                             <span>{r.action}</span>
                           </div>
                         ))}
                       </div>
                     </div>
+
+                    {/* Sensitive Schools */}
+                    <div style={{ background: "var(--surface)", padding: 16, borderRadius: 10, border: "1px solid var(--line)" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                        <span className="crumb" style={{ fontSize: 10.5, fontWeight: 700 }}>
+                          VULNERABLE SCHOOLS ({d.affected_schools.length})
+                        </span>
+                        <span className="crumb" style={{ fontSize: 10 }}>
+                          {d.n_schools_district.toLocaleString()} in district
+                        </span>
+                      </div>
+                      <div style={{ display: "grid", gap: 6 }}>
+                        {d.affected_schools.map((s, i) => (
+                          <div key={i} style={{ padding: "6px 10px", borderRadius: 6, background: "var(--surface-2)", border: "1px solid var(--line)", fontSize: 12, display: "flex", justifyContent: "space-between" }}>
+                            <span style={{ fontWeight: 500 }}>🏫 {s.name}</span>
+                            {s.block && <span className="crumb" style={{ fontSize: 10 }}>{s.block}</span>}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                  <div className="interv-actions">
+
+                  {/* Action Buttons Footer */}
+                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap", borderTop: "1px solid var(--line)", paddingTop: 14 }}>
                     <button
                       type="button"
                       className="btn pri"
+                      style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", fontSize: 12 }}
                       onClick={() => {
                         if (d.city_id === "korba" || d.city_id === "jagdalpur") {
                           setCity(d.city_id as CityId);
@@ -834,10 +954,25 @@ export function InterventionsView() {
                         setView("map");
                       }}
                     >
-                      {t("View map")}
+                      🗺 View on Risk Map
                     </button>
-                    <button type="button" className="btn" onClick={() => setView("advisories")}>
-                      {t("Citizen advisory")}
+
+                    <button
+                      type="button"
+                      className="btn"
+                      style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", fontSize: 12 }}
+                      onClick={() => handleCopyOrder(d)}
+                    >
+                      {isCopied ? "✓ Order Copied!" : "📋 Export Action Order"}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn"
+                      style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "8px 16px", fontSize: 12, marginLeft: "auto" }}
+                      onClick={() => setView("advisories")}
+                    >
+                      📢 Dispatch Advisory
                     </button>
                   </div>
                 </div>

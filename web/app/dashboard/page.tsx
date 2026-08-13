@@ -15,6 +15,7 @@ import {
 import AnalyticsView from "@/components/dashboard/AnalyticsView";
 import AdminLogin from "@/components/dashboard/AdminLogin";
 import AdvisoriesView from "@/components/dashboard/AdvisoriesView";
+import AlertToast from "@/components/dashboard/AlertToast";
 import DashboardSideNav, { type NavGroup } from "@/components/dashboard/DashboardSideNav";
 import Chatbot from "@/components/Chatbot";
 import LangToggle from "@/components/LangToggle";
@@ -208,6 +209,7 @@ export default function Dashboard() {
 
       <AdminLogin />
       <Chatbot />
+      <AlertToast />
     </div>
   );
 }
