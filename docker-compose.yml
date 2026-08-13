@@ -1,0 +1,63 @@
+# Project Vayu / AirSight — Phase 4.1 storage stack
+# TimescaleDB (Postgres + hypertables) for history; Redis for hot snapshots.
+#
+# Start:
+#   docker compose up -d
+# Stop:
+#   docker compose down
+# Wipe volumes (destructive):
+#   docker compose down -v
+#
+# Defaults match .env.example — override via environment or a local .env file.
+
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: vayu-timescaledb
+    restart: unless-stopped
+    ports:
+      - "${TIMESCALE_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${TIMESCALE_USER:-vayu}
+      POSTGRES_PASSWORD: ${TIMESCALE_PASSWORD:-vayu_dev_change_me}
+      POSTGRES_DB: ${TIMESCALE_DB:-vayu}
+    volumes:
+      - vayu_ts_data:/var/lib/postgresql/data
+      - ./scripts/db/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${TIMESCALE_USER:-vayu} -d ${TIMESCALE_DB:-vayu}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - vayu-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: vayu-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - vayu_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks:
+      - vayu-net
+
+volumes:
+  vayu_ts_data:
+  vayu_redis_data:
+
+networks:
+  vayu-net:
+    driver: bridge
