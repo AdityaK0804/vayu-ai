@@ -23,8 +23,16 @@ interface AppState {
   view: ViewId;
   sideOpen: boolean;      // mobile drawer
   sideCollapsed: boolean; // desktop: collapse the sidebar to an icon rail
-  theme: Theme;      // in-memory ONLY — the source design persisted this to
-                     // localStorage, which the build brief forbids
+  theme: Theme;      // in-memory ONLY
+  
+  // WhatIf Scenario State
+  scenarioActive: boolean;
+  scenario: {
+    traffic_delta: number;
+    industry_delta: number;
+    fire_reduction: number;
+    ward_sprinkling: boolean;
+  };
 
   setCity: (c: CityId) => void;
   setTimeIndex: (i: number) => void;
@@ -37,6 +45,8 @@ interface AppState {
   toggleSide: () => void;
   toggleCollapse: () => void;
   toggleTheme: () => void;
+  setScenarioActive: (a: boolean) => void;
+  setScenario: (s: Partial<AppState["scenario"]>) => void;
 }
 
 export const useApp = create<AppState>((set) => ({
@@ -50,6 +60,13 @@ export const useApp = create<AppState>((set) => ({
   sideOpen: false,
   sideCollapsed: false,
   theme: "dark", // site opens in dark mode; toggle switches to light
+  scenarioActive: false,
+  scenario: {
+    traffic_delta: 0,
+    industry_delta: 0,
+    fire_reduction: 0,
+    ward_sprinkling: false,
+  },
 
   // switching city resets the scrub + selection; reveal re-arms for jagdalpur
   setCity: (city) =>
@@ -64,4 +81,6 @@ export const useApp = create<AppState>((set) => ({
   toggleSide: () => set((s) => ({ sideOpen: !s.sideOpen })),
   toggleCollapse: () => set((s) => ({ sideCollapsed: !s.sideCollapsed })),
   toggleTheme: () => set((s) => ({ theme: s.theme === "dark" ? "light" : "dark" })),
+  setScenarioActive: (scenarioActive) => set({ scenarioActive }),
+  setScenario: (partial) => set((s) => ({ scenario: { ...s.scenario, ...partial } })),
 }));

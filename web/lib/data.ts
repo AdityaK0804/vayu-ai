@@ -15,6 +15,11 @@ import type {
   Stations,
 } from "./types";
 import {
+  cpcbPm25CssReadable,
+  cpcbPm25Label,
+} from "./aqiScale";
+import { useApp } from "./store";
+import {
   fetchLiveFires,
   fetchLiveSnapshot,
   fetchLiveStations,
@@ -402,5 +407,57 @@ export function useForecasts72h() {
       return res.json();
     },
     ...STATIC,
+  });
+}
+
+/* -------------------- Phase 5: Agents What-If -------------------- */
+export interface WhatIfResponse {
+  city_id: string;
+  scenario: any;
+  city_mean_baseline_pm25: number;
+  city_mean_scenario_pm25: number;
+  city_mean_delta_pm25: number;
+  hex_deltas: {
+    h3: string;
+    lat: number;
+    lon: number;
+    baseline_pm25: number;
+    scenario_pm25: number;
+    delta_pm25: number;
+    source_mix: Record<string, number>;
+  }[];
+  population_protected_est: number;
+  schools_protected_est: number;
+}
+
+export function useWhatIf() {
+  const scenarioActive = useApp((s) => s.scenarioActive);
+  const scenario = useApp((s) => s.scenario);
+  const city = useApp((s) => s.city);
+
+  const [debouncedScenario, setDebouncedScenario] = useState(scenario);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedScenario(scenario);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [scenario]);
+
+  return useQuery({
+    queryKey: ["whatif", city, debouncedScenario],
+    queryFn: async (): Promise<WhatIfResponse> => {
+      const res = await fetch(API.AGENTS.WHATIF, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scenario: { ...debouncedScenario, city_id: city, n_hex: 60 },
+        }),
+      });
+      if (!res.ok) throw new Error("What-if failed");
+      return res.json();
+    },
+    enabled: scenarioActive,
+    staleTime: Infinity,
   });
 }

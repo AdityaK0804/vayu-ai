@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { useDistricts, type CityPoint, type DistrictProps } from "@/lib/districts";
 import CityDetail from "@/components/dashboard/CityDetail";
 import DistrictDetail from "@/components/dashboard/DistrictDetail";
+import WhatIfPanel from "@/components/dashboard/WhatIfPanel";
 import {
   CPCB_PM25_LEGEND_GRADIENT,
   cpcbAqiFromPm25,
@@ -295,8 +296,12 @@ export default function MapWorkspace({
         </div>
       </section>
 
-      {/* ---------------- right: detail, else live alerts ----------------
-          The detail panel used to float over the risk map, hiding the very
+      {/* ---------------- panel: What-If Simulator ---------------- */}
+      <WhatIfPanel />
+
+      {/* ---------------- right: alerts + detail ---------------- */}
+      {/* City or District details fly out over this space; otherwise it's the
+          live alert feed. The original design placed this left, covering the
           thing it described. It now takes the right column instead — closing
           it reveals the alerts underneath, and the map is never covered. */}
       {openCity || selected ? (

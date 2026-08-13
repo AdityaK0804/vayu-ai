@@ -2,6 +2,7 @@
 
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import { GeoJsonLayer, ScatterplotLayer, TextLayer } from "@deck.gl/layers";
+import { H3HexagonLayer } from "@deck.gl/geo-layers";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Map, { AttributionControl, useControl, type MapRef } from "react-map-gl/maplibre";
 
@@ -19,6 +20,8 @@ import {
 } from "@/lib/aqiScale";
 import { useDistricts, type CityPoint, type DistrictProps } from "@/lib/districts";
 import type { LiveApiFire, LiveApiStation } from "@/lib/types";
+import { useWhatIf } from "@/lib/data";
+import { useApp } from "@/lib/store";
 
 // Types and fetch hooks live in lib/districts so non-map components can
 // read district data without pulling deck.gl in.
@@ -98,6 +101,9 @@ export default function DistrictMap({
   const [is3D, setIs3D] = useState(false);
   const [pulse, setPulse] = useState(false);
   const { data } = useDistricts();
+
+  const scenarioActive = useApp((s) => s.scenarioActive);
+  const { data: whatif } = useWhatIf();
 
   useEffect(() => {
     const timer = setInterval(() => setPulse((p) => !p), 1200);
@@ -239,8 +245,8 @@ export default function DistrictMap({
           getLineColor: { duration: 200 },
         },
         updateTriggers: {
-          getFillColor: [selected, hover, isHybrid, is3D],
-          getLineColor: [selected, hover, isHybrid, is3D],
+          getFillColor: [selected, hover, isHybrid, is3D, scenarioActive],
+          getLineColor: [selected, hover, isHybrid, is3D, scenarioActive],
           getLineWidth: [selected, hover],
           getElevation: [is3D],
         },
@@ -252,6 +258,27 @@ export default function DistrictMap({
         },
       }),
     ];
+
+    if (scenarioActive && whatif?.hex_deltas) {
+      out.push(
+        new H3HexagonLayer({
+          id: "whatif-delta-layer",
+          data: whatif.hex_deltas,
+          pickable: true,
+          stroked: true,
+          filled: true,
+          extruded: false,
+          getHexagon: (d: any) => d.h3,
+          getFillColor: (d: any) => {
+            if (d.delta_pm25 < -0.1) return [34, 197, 94, 200]; // Green (better)
+            if (d.delta_pm25 > 0.1) return [239, 68, 68, 200]; // Red (worse)
+            return [150, 150, 150, 50]; // Neutral
+          },
+          getLineColor: [255, 255, 255, 100],
+          lineWidthMinPixels: 1,
+        })
+      );
+    }
 
     if (showCities && data.cities?.length) {
       out.push(
