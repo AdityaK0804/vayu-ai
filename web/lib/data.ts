@@ -4,14 +4,23 @@ import { useQuery } from "@tanstack/react-query";
 import type {
   Attribution,
   LiveCity,
+  LiveFiresResponse,
+  LiveSnapshot,
+  LiveStationsResponse,
   CityId,
   ForecastFrames,
   Metrics,
   PriorityWards,
   Stations,
 } from "./types";
+import {
+  fetchLiveFires,
+  fetchLiveSnapshot,
+  fetchLiveStations,
+  stationsToLiveCities,
+} from "./liveClient";
 
-/** Static reads only — the frontend never calls the model or an API. */
+/** Static city bake files under /public/data/{city}/. */
 async function getJSON<T>(city: CityId, file: string): Promise<T> {
   const res = await fetch(`/data/${city}/${file}`, { cache: "force-cache" });
   if (!res.ok) throw new Error(`${city}/${file}: HTTP ${res.status}`);
@@ -20,6 +29,11 @@ async function getJSON<T>(city: CityId, file: string): Promise<T> {
 
 // Baked files are immutable per deploy, so never refetch within a session.
 const STATIC = { staleTime: Infinity, gcTime: Infinity, retry: 1 } as const;
+
+// Live layers — SWR-style intervals (snapshot 5m, stations 30m, fires 3h).
+const LIVE_SNAP = { staleTime: 5 * 60_000, refetchInterval: 5 * 60_000, retry: 1 } as const;
+const LIVE_STATIONS = { staleTime: 30 * 60_000, refetchInterval: 30 * 60_000, retry: 1 } as const;
+const LIVE_FIRES = { staleTime: 3 * 60 * 60_000, refetchInterval: 3 * 60 * 60_000, retry: 1 } as const;
 
 export function useForecast(city: CityId) {
   return useQuery({
@@ -61,21 +75,56 @@ export function useMetrics(city: CityId) {
   });
 }
 
-/** Live city index (baked from scripts/live/fetch_live.py -> latest.json). */
+/** Live city index — FastAPI snapshot first, baked latest.json fallback. */
 export function useLive() {
   return useQuery({
     queryKey: ["live"],
     queryFn: async (): Promise<LiveCity[]> => {
+      try {
+        const snap = await fetchLiveSnapshot();
+        if (snap.stations?.length) {
+          const cities = stationsToLiveCities(snap.stations);
+          if (cities.length) return cities;
+        }
+      } catch {
+        /* baked fallback */
+      }
       const res = await fetch("/data/live/latest.json", { cache: "no-store" });
       if (!res.ok) throw new Error(`live: HTTP ${res.status}`);
       return res.json();
     },
-    staleTime: 60_000,
-    retry: 1,
+    ...LIVE_SNAP,
   });
 }
 
-/** Per-station live readings (scripts/live/fetch_live_stations.py). */
+/** Full live snapshot (stations + fires) for map overlays. */
+export function useLiveSnapshot() {
+  return useQuery({
+    queryKey: ["live_snapshot"],
+    queryFn: fetchLiveSnapshot,
+    ...LIVE_SNAP,
+  });
+}
+
+/** Live stations (+ virtual) from FastAPI with baked fallback. */
+export function useLiveStationsApi() {
+  return useQuery({
+    queryKey: ["live_stations_api"],
+    queryFn: fetchLiveStations,
+    ...LIVE_STATIONS,
+  });
+}
+
+/** Live FIRMS fires. */
+export function useLiveFires(hours = 48) {
+  return useQuery({
+    queryKey: ["live_fires", hours],
+    queryFn: () => fetchLiveFires(hours),
+    ...LIVE_FIRES,
+  });
+}
+
+/** Per-station live readings — API first, baked stations_live.json fallback. */
 export interface LiveStation {
   openaq_id: number;
   station: string;
@@ -95,14 +144,43 @@ export interface LiveStation {
 export function useStationsLive() {
   return useQuery({
     queryKey: ["stations_live"],
-    queryFn: async (): Promise<{ fetched_at_utc: string; stations: LiveStation[] }> => {
+    queryFn: async (): Promise<{
+      fetched_at_utc: string;
+      stations: LiveStation[];
+      source: string;
+    }> => {
+      try {
+        const api: LiveStationsResponse = await fetchLiveStations();
+        const stations: LiveStation[] = [...api.stations, ...api.virtual_stations]
+          .filter((s) => s.lat != null && s.lon != null)
+          .map((s, i) => ({
+            openaq_id: i,
+            station: s.station_id,
+            city_id: s.city_id,
+            lat: Number(s.lat),
+            lon: Number(s.lon),
+            pm25: s.pm25 ?? undefined,
+            pm10: s.pm10 ?? undefined,
+            no2: s.no2 ?? undefined,
+            us_aqi: s.aqi ?? null,
+            measured_at_utc: s.ts,
+          }));
+        if (stations.length) {
+          return { fetched_at_utc: api.generated_at, stations, source: api.cache };
+        }
+      } catch {
+        /* baked */
+      }
       const res = await fetch("/data/live/stations_live.json", { cache: "no-cache" });
       if (!res.ok) throw new Error(`stations_live: HTTP ${res.status}`);
-      return res.json();
+      const j = (await res.json()) as { fetched_at_utc: string; stations: LiveStation[] };
+      return { ...j, source: "baked" };
     },
-    staleTime: 60_000,
+    ...LIVE_STATIONS,
   });
 }
+
+export type { LiveSnapshot, LiveStationsResponse, LiveFiresResponse };
 
 /* -------------------- citizen advisories (hospital + school bake) -------------------- */
 export interface AdvisoryFacility {

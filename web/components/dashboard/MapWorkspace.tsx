@@ -10,10 +10,12 @@ import {
   CPCB_PM25_LEGEND_GRADIENT,
   cpcbAqiFromPm25,
   cpcbPm25Css,
+  cpcbPm25CssReadable,
   cpcbPm25Label,
 } from "@/lib/aqiScale";
+import { SOURCE_LABEL } from "@/lib/aqi";
 import { NumberTicker } from "@/components/magicui/number-ticker";
-import { useLive, usePriority } from "@/lib/data";
+import { useLive, useLiveFires, useLiveSnapshot, usePriority } from "@/lib/data";
 import { useT } from "@/lib/i18n";
 import { useApp } from "@/lib/store";
 import type { CityId } from "@/lib/types";
@@ -57,6 +59,8 @@ export default function MapWorkspace({
   const { city, setCity, setView } = useApp();
   const { data: districts } = useDistricts();
   const { data: live } = useLive();
+  const { data: liveSnap } = useLiveSnapshot();
+  const { data: liveFires } = useLiveFires(168);
   const { data: priority } = usePriority(city);
   const [focus, setFocus] = useState<Focus | null>(null);
   const [q, setQ] = useState("");
@@ -179,13 +183,14 @@ export default function MapWorkspace({
             const pm = l?.measured_pm25_24h ?? c.pm25;
             const aqi = cpcbAqiFromPm25(pm) ?? c.us_aqi;
             const on = city === c.id;
-            const tone = cpcbPm25Css(pm);
+            const tone = cpcbPm25CssReadable(pm);
+            const rawTone = cpcbPm25Css(pm);
             return (
               <button
                 key={c.id}
                 onClick={() => goCity(c)}
                 className={`mapws-city${on ? " on" : ""}`}
-                style={{ borderLeftColor: on ? tone : "transparent" }}
+                style={{ borderLeftColor: on ? rawTone : "transparent" }}
               >
                 <span style={{ minWidth: 0, flex: 1 }}>
                   <b style={{ fontSize: 13.5 }}>{c.name}</b>
@@ -198,11 +203,11 @@ export default function MapWorkspace({
                   </span>
                 </span>
                 <span style={{ textAlign: "right" }}>
-                  <span className="figure" style={{ fontSize: 16, color: tone }}>
+                  <span className="figure pill" style={{ background: `color-mix(in oklch, ${rawTone}, transparent 85%)`, color: rawTone, fontSize: 13, padding: "2px 8px" }}>
                     {aqi}
                   </span>
                   <span
-                    style={{ display: "block", fontSize: 9, color: "var(--ink-3)" }}
+                    style={{ display: "block", fontSize: 9, color: "var(--ink-3)", marginTop: 4 }}
                     className="figure"
                   >
                     {l?.measured ? t("measured") : t("predicted")}
@@ -226,7 +231,11 @@ export default function MapWorkspace({
           <b>{t("Risk Map")}</b>
           <span className="sub" style={{ margin: 0, fontSize: 11 }}>
             {districts?.meta?.n_districts ?? 28} {t("districts")} ·{" "}
-            {districts?.meta_live?.mode === "live" ? t("live") : t("model")}
+            {liveSnap?.cache === "redis" || liveSnap?.cache === "timescale"
+              ? `live ${liveSnap.n_stations} st · ${liveSnap.n_fires} fires`
+              : districts?.meta_live?.mode === "live"
+                ? t("live")
+                : t("model")}
           </span>
         </div>
 
@@ -239,6 +248,8 @@ export default function MapWorkspace({
             }}
             focus={focus}
             openCityOnFocus={false}
+            liveStations={liveSnap?.stations ?? []}
+            liveFires={liveFires?.fires ?? liveSnap?.fires ?? []}
           />
 
           <div className="mapws-legend card">
@@ -377,16 +388,66 @@ export default function MapWorkspace({
           )}
         </div>
 
-        {priority?.dossiers?.[0] && (
-          <div style={{ padding: 12, borderTop: "1px solid var(--line)" }}>
-            <div className="crumb" style={{ marginBottom: 6 }}>
-              {t("Top enforcement target")}
+        {priority?.dossiers?.[0] && (() => {
+          const d = priority.dossiers[0];
+          const srcLabel = SOURCE_LABEL[d.top_source] ?? d.top_source;
+          const pm = d.predicted_pm25;
+          const wardName = d.ward || city;
+
+          let cleanAction = d.recommended_action
+            .replace(/\? km - \([^)]+\) of/g, "upwind of")
+            .replace(/\? km - /g, "");
+
+          return (
+            <div style={{ padding: "12px 14px", borderTop: "1px solid var(--line)", background: "color-mix(in oklch, var(--surface-2) 70%, transparent)" }}>
+              {/* Header Badge */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 13 }}>🎯</span>
+                  <span style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: "0.05em", color: "var(--accent)", fontFamily: "var(--font-mono)" }}>
+                    TOP ENFORCEMENT TARGET
+                  </span>
+                </div>
+                <span className="pill" style={{ fontSize: 9, fontWeight: 700, padding: "2px 6px", background: "color-mix(in oklch, var(--accent), transparent 85%)", color: "var(--accent)" }}>
+                  RANK #01
+                </span>
+              </div>
+
+              {/* Structured Grid */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 8 }}>
+                <div style={{ background: "var(--surface)", padding: "6px 8px", borderRadius: 6, border: "1px solid var(--line)" }}>
+                  <div className="crumb" style={{ fontSize: 9 }}>Target Ward</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--ink)", marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {wardName}
+                  </div>
+                </div>
+
+                <div style={{ background: "var(--surface)", padding: "6px 8px", borderRadius: 6, border: "1px solid var(--line)" }}>
+                  <div className="crumb" style={{ fontSize: 9 }}>Forecast PM2.5</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: "var(--accent)", marginTop: 1 }}>
+                    {pm} µg/m³
+                  </div>
+                </div>
+              </div>
+
+              {/* Clean Action Description */}
+              <div style={{ fontSize: 11.5, lineHeight: 1.45, color: "var(--ink-2)", background: "var(--surface)", padding: "10px 12px", borderRadius: 6, border: "1px solid var(--line)", marginBottom: 8 }}>
+                <div style={{ fontWeight: 600, color: "var(--ink)", marginBottom: 6, fontSize: 12 }}>Directive</div>
+                <ul style={{ margin: 0, paddingLeft: 18, listStyleType: "disc", display: "flex", flexDirection: "column", gap: 5 }}>
+                  {cleanAction.split('. ').filter(Boolean).map((s, i) => (
+                    <li key={i}>{s.replace(/\.$/, "")}</li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Footer Metrics */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 10, color: "var(--ink-3)" }}>
+                <span>Source: <b style={{ color: "var(--accent)", textTransform: "capitalize" }}>{srcLabel}</b></span>
+                <span>Confidence: <b>{Math.round((d.confidence ?? 0.9) * 100)}%</b></span>
+              </div>
             </div>
-            <div style={{ fontSize: 12, lineHeight: 1.55, color: "var(--ink-2)" }}>
-              {priority.dossiers[0].recommended_action}
-            </div>
-          </div>
-        )}
+          );
+        })()}
       </aside>
       )}
       </div>

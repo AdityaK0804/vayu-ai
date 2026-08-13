@@ -208,3 +208,22 @@ COMMENT ON TABLE station_readings IS 'Live/historical station observations (Open
 COMMENT ON TABLE hex_forecasts IS 'Multi-horizon H3 PM2.5 forecasts with optional conformal bands';
 COMMENT ON TABLE fire_events IS 'FIRMS and related fire hotspot detections';
 COMMENT ON MATERIALIZED VIEW station_readings_hourly IS 'Hourly continuous aggregate of station PM/AQI';
+
+-- ---------------------------------------------------------------------------
+-- alert_events (Phase 5.4 threshold pipeline)
+-- ---------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS alert_events (
+    id              BIGSERIAL PRIMARY KEY,
+    ts              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    city_id         TEXT,
+    district        TEXT,
+    station_id      TEXT,
+    aqi             DOUBLE PRECISION,
+    pm25            DOUBLE PRECISION,
+    severity        TEXT NOT NULL DEFAULT 'warning',
+    title           TEXT NOT NULL,
+    detail          TEXT,
+    source          TEXT NOT NULL DEFAULT 'watcher',
+    meta            JSONB
+);
+CREATE INDEX IF NOT EXISTS ix_alert_events_ts ON alert_events (ts DESC);

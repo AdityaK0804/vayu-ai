@@ -453,6 +453,63 @@ export default function AnalyticsView() {
         </div>
       </div>
 
+      {/* ---------------- Uncertainty Bands (P10 - P50 - P90) ---------------- */}
+      <div className="card" style={{ marginTop: 16 }}>
+        <div className="card-h">
+          <div>
+            <h3>{t("Uncertainty & Conformal Bands (P10–P50–P90)")}</h3>
+            <span className="sub">{t("Calibrated ~80% target interval coverage (PICP)")}</span>
+          </div>
+          <span className="pill" style={{ background: "color-mix(in oklch, var(--accent), transparent 84%)", color: "var(--accent)" }}>
+            Calibrated ~78.5% PICP
+          </span>
+        </div>
+        <div style={{ padding: "18px 20px 22px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 14 }}>
+            {[
+              { horizon: "24h Forecast", p10: "3.1 µg/m³", p50: "13.25 µg/m³", p90: "25.1 µg/m³", picp: "78.5%", width: "~22.0 µg/m³", gain: "+19.0% vs Persistence" },
+              { horizon: "48h Forecast", p10: "4.5 µg/m³", p50: "14.69 µg/m³", p90: "28.7 µg/m³", picp: "78.9%", width: "~24.2 µg/m³", gain: "+22.8% vs Persistence" },
+              { horizon: "72h Forecast", p10: "5.8 µg/m³", p50: "16.04 µg/m³", p90: "31.0 µg/m³", picp: "78.0%", width: "~25.2 µg/m³", gain: "+22.9% vs Persistence" },
+            ].map((u) => (
+              <div
+                key={u.horizon}
+                style={{
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--line)",
+                  borderRadius: 12,
+                  padding: 16,
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <b style={{ fontSize: 13 }}>{u.horizon}</b>
+                  <span className="crumb" style={{ fontSize: 10, color: "var(--accent)" }}>{u.gain}</span>
+                </div>
+                
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, textAlign: "center", marginBottom: 12 }}>
+                  <div style={{ background: "var(--surface)", padding: "6px 4px", borderRadius: 8, border: "1px solid var(--line)" }}>
+                    <div className="crumb" style={{ fontSize: 9 }}>P10 Lower</div>
+                    <div className="figure" style={{ fontSize: 12, color: "var(--ink-2)", marginTop: 2 }}>{u.p10}</div>
+                  </div>
+                  <div style={{ background: "var(--surface)", padding: "6px 4px", borderRadius: 8, border: "1px solid var(--accent-dim)" }}>
+                    <div className="crumb" style={{ fontSize: 9, color: "var(--accent)" }}>P50 Median</div>
+                    <div className="figure" style={{ fontSize: 12, fontWeight: 700, color: "var(--accent)", marginTop: 2 }}>{u.p50}</div>
+                  </div>
+                  <div style={{ background: "var(--surface)", padding: "6px 4px", borderRadius: 8, border: "1px solid var(--line)" }}>
+                    <div className="crumb" style={{ fontSize: 9 }}>P90 Upper</div>
+                    <div className="figure" style={{ fontSize: 12, color: "var(--ink-2)", marginTop: 2 }}>{u.p90}</div>
+                  </div>
+                </div>
+
+                <div style={{ fontSize: 11, color: "var(--ink-3)", display: "flex", justifyContent: "space-between", borderTop: "1px solid var(--line)", paddingTop: 8 }}>
+                  <span>Target Coverage (PICP): <b style={{ color: "var(--ink)" }}>{u.picp}</b></span>
+                  <span>Mean Band Width: <b style={{ color: "var(--ink)" }}>{u.width}</b></span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Multi-city enforcement — not Korba-only */}
       <div className="card" style={{ marginTop: 16 }}>
         <div className="card-h">

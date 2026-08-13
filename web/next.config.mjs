@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const LIVE_API = process.env.LIVE_API_PROXY || "http://127.0.0.1:8000";
+
 const nextConfig = {
   reactStrictMode: true,
   compress: true,
@@ -28,5 +30,17 @@ const nextConfig = {
     ],
   },
 
+  /**
+   * Proxy FastAPI live/agent routes so the browser stays same-origin
+   * (avoids CORS in local demo). Production can set LIVE_API_PROXY.
+   */
+  async rewrites() {
+    return [
+      {
+        source: "/backend-api/:path*",
+        destination: `${LIVE_API}/:path*`,
+      },
+    ];
+  },
 };
 export default nextConfig;
