@@ -31,6 +31,10 @@ stgnn = [
     "torch>=2.1",
     "torch-geometric>=2.4",
 ]
+agents = [
+    "langgraph>=0.2",
+    "langchain-core>=0.3",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
