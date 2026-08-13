@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useState } from "react";
-import { liveApiBase } from "@/lib/liveClient";
+import { API } from "@/lib/api";
 
 type ToastPayload = {
   type?: string;
@@ -25,7 +25,7 @@ export default function AlertToast() {
     let alive = true;
     const tick = async () => {
       try {
-        const res = await fetch(`${liveApiBase()}/api/v1/ui/toast`, { cache: "no-store" });
+        const res = await fetch(API.ALERTS.TOAST, { cache: "no-store" });
         if (!res.ok) return;
         const j = (await res.json()) as { toast: ToastPayload | null };
         if (!alive || !j.toast) return;

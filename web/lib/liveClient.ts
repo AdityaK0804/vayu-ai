@@ -15,13 +15,7 @@ import type {
   LiveStationsResponse,
 } from "./types";
 
-/** Prefer rewrite proxy; allow override for absolute FastAPI URL. */
-export function liveApiBase(): string {
-  if (typeof process !== "undefined" && process.env.NEXT_PUBLIC_LIVE_API_BASE) {
-    return process.env.NEXT_PUBLIC_LIVE_API_BASE.replace(/\/$/, "");
-  }
-  return "/backend-api";
-}
+import { API } from "./api";
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, { cache: "no-store", ...init });
@@ -30,16 +24,16 @@ async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 /** Try live API first; on failure run fallback. */
-export async function liveFirst<T>(livePath: string, fallback: () => Promise<T>): Promise<T> {
+export async function liveFirst<T>(liveUrl: string, fallback: () => Promise<T>): Promise<T> {
   try {
-    return await fetchJson<T>(`${liveApiBase()}${livePath}`);
+    return await fetchJson<T>(liveUrl);
   } catch {
     return fallback();
   }
 }
 
 export async function fetchLiveSnapshot(): Promise<LiveSnapshot> {
-  return liveFirst("/api/v1/live/snapshot", async () => {
+  return liveFirst(API.LIVE.SNAPSHOT, async () => {
     // Rebuild a minimal snapshot from baked city + station files
     const [cities, stationsFile] = await Promise.all([
       fetchJson<LiveCity[]>("/data/live/latest.json").catch(() => [] as LiveCity[]),
@@ -91,7 +85,7 @@ export async function fetchLiveSnapshot(): Promise<LiveSnapshot> {
 }
 
 export async function fetchLiveStations(): Promise<LiveStationsResponse> {
-  return liveFirst("/api/v1/live/stations?include_virtual=true", async () => {
+  return liveFirst(API.LIVE.STATIONS(true), async () => {
     const snap = await fetchLiveSnapshot();
     return {
       generated_at: snap.generated_at,
@@ -105,7 +99,7 @@ export async function fetchLiveStations(): Promise<LiveStationsResponse> {
 }
 
 export async function fetchLiveFires(hours = 48): Promise<LiveFiresResponse> {
-  return liveFirst(`/api/v1/live/fires?hours=${hours}`, async () => ({
+  return liveFirst(API.LIVE.FIRES(hours), async () => ({
     generated_at: new Date().toISOString(),
     cache: "baked",
     hours,

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type {
   Attribution,
@@ -19,6 +20,7 @@ import {
   fetchLiveStations,
   stationsToLiveCities,
 } from "./liveClient";
+import { API } from "./api";
 
 /** Static city bake files under /public/data/{city}/. */
 async function getJSON<T>(city: CityId, file: string): Promise<T> {
@@ -181,6 +183,34 @@ export function useStationsLive() {
 }
 
 export type { LiveSnapshot, LiveStationsResponse, LiveFiresResponse };
+
+export interface AlertEvent {
+  id: string;
+  city_id: string;
+  type: string;
+  message: string;
+  timestamp: string;
+}
+
+/** Listen to Live Alerts via SSE */
+export function useLiveAlerts() {
+  const [alerts, setAlerts] = useState<AlertEvent[]>([]);
+
+  useEffect(() => {
+    const sse = new EventSource(API.LIVE.STREAM);
+    sse.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data) as AlertEvent;
+        setAlerts((prev) => [data, ...prev].slice(0, 50));
+      } catch (err) {
+        console.error("SSE parse error", err);
+      }
+    };
+    return () => sse.close();
+  }, []);
+
+  return { alerts };
+}
 
 /* -------------------- citizen advisories (hospital + school bake) -------------------- */
 export interface AdvisoryFacility {

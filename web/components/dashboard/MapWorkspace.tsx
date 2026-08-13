@@ -229,13 +229,19 @@ export default function MapWorkspace({
         <div className="mapws-head">
           <span style={{ color: "var(--accent)" }}>◉</span>
           <b>{t("Risk Map")}</b>
-          <span className="sub" style={{ margin: 0, fontSize: 11 }}>
-            {districts?.meta?.n_districts ?? 28} {t("districts")} ·{" "}
-            {liveSnap?.cache === "redis" || liveSnap?.cache === "timescale"
-              ? `live ${liveSnap.n_stations} st · ${liveSnap.n_fires} fires`
-              : districts?.meta_live?.mode === "live"
-                ? t("live")
-                : t("model")}
+          <span className="sub" style={{ margin: "0 0 0 8px", fontSize: 11 }}>
+            {districts?.meta?.n_districts ?? 28} {t("districts")}
+          </span>
+          <span
+            className="pill"
+            style={{
+              marginLeft: "auto",
+              fontSize: 10,
+              background: liveSnap?.cache === "baked" ? "var(--surface-2)" : "color-mix(in oklch, var(--aqi-1), transparent 85%)",
+              color: liveSnap?.cache === "baked" ? "var(--ink-3)" : "var(--aqi-1)",
+            }}
+          >
+            {liveSnap?.cache === "baked" ? "BAKED FALLBACK" : "LIVE FEED"}
           </span>
         </div>
 
