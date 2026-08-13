@@ -1,23 +1,32 @@
 """FastAPI Backend for AirSight.
 
-Serves precomputed metrics, panel summaries, and config data.
-Reads directly from the ``outputs/`` and ``config/`` directories.
+Serves precomputed metrics, panel summaries, config data, and the
+Phase-3 multi-agent analyze endpoint.
 """
 
 from __future__ import annotations
 
 import json
+import sys
+from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+# Ensure repo root + src are importable when launched as `uvicorn api.main:app`
+_ROOT = Path(__file__).resolve().parents[1]
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+if str(_ROOT / "src") not in sys.path:
+    sys.path.insert(0, str(_ROOT / "src"))
+
 from airsight.config import OUTPUTS, load_cities
 from airsight.io.stations import load_stations
 
-app = FastAPI(title="AirSight Backend API")
+app = FastAPI(title="AirSight Backend API", version="0.3.0")
 
-# Open CORS for local development
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -42,7 +51,6 @@ def get_stations(city_id: str | None = None) -> list[dict[str, Any]]:
     df = load_stations(city_id=city_id)
     if df.empty:
         return []
-    # Replace NaN with None for JSON serialization
     df = df.where(df.notna(), None)
     return df.to_dict(orient="records")
 
@@ -54,21 +62,17 @@ def get_metrics(city_id: str) -> dict[str, Any]:
     if not metrics_dir.exists():
         raise HTTPException(status_code=404, detail="Metrics directory not found")
 
-    merged = {}
-    
-    # Baselines
+    merged: dict[str, Any] = {}
     base_file = metrics_dir / f"{city_id}_baselines.json"
     if base_file.exists():
         with open(base_file) as f:
             merged["baselines"] = json.load(f)
 
-    # Temporal C1
     temp_file = metrics_dir / f"{city_id}_temporal.json"
     if temp_file.exists():
         with open(temp_file) as f:
             merged["temporal"] = json.load(f)
-            
-    # Features Static D1
+
     static_file = metrics_dir / f"{city_id}_features_static.json"
     if static_file.exists():
         with open(static_file) as f:
@@ -76,33 +80,99 @@ def get_metrics(city_id: str) -> dict[str, Any]:
 
     if not merged:
         raise HTTPException(status_code=404, detail=f"No metrics found for {city_id}")
-
     return merged
 
 
 @app.get("/panel/{city_id}/summary")
 def get_panel_summary(city_id: str) -> dict[str, Any]:
-    """Return the data quality summary for the station panel."""
     quality_file = OUTPUTS / "reports" / f"station_panel_{city_id}_quality.json"
     if not quality_file.exists():
-        raise HTTPException(
-            status_code=404, 
-            detail=f"Panel summary not found for {city_id}."
-        )
-
+        raise HTTPException(status_code=404, detail=f"Panel summary not found for {city_id}.")
     with open(quality_file) as f:
         return json.load(f)
 
 
 @app.get("/attribution/{city_id}")
 def get_attribution(city_id: str) -> dict[str, Any]:
-    """Return the source attribution prototype results."""
     attr_file = OUTPUTS / "metrics" / f"{city_id}_attribution_vs_edgar.json"
     if not attr_file.exists():
-        raise HTTPException(
-            status_code=404, 
-            detail=f"Attribution metrics not found for {city_id}."
-        )
-
+        raise HTTPException(status_code=404, detail=f"Attribution metrics not found for {city_id}.")
     with open(attr_file) as f:
         return json.load(f)
+
+
+def _json_clean(obj: Any) -> Any:
+    if isinstance(obj, dict):
+        return {k: _json_clean(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_json_clean(v) for v in obj]
+    if hasattr(obj, "item"):
+        try:
+            return obj.item()
+        except Exception:
+            return str(obj)
+    return obj
+
+
+@app.post("/api/v1/agents/analyze")
+def agents_analyze(body: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Run Scout → Forecaster? → Policy for a city.
+
+    Body::
+        {"city_id": "korba", "mode": "live"|"demo"|"offline", "request_id": "..."}
+    """
+    from api.schemas_agents import AnalyzeRequest, AnalyzeResponse
+
+    try:
+        req = AnalyzeRequest.model_validate(body or {})
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    try:
+        from airsight.agents.graph import InstallError, run_analysis
+    except ImportError as exc:
+        raise HTTPException(status_code=503, detail=f"agents package import failed: {exc}") from exc
+
+    try:
+        state = run_analysis(
+            req.city_id,
+            mode=req.mode,
+            request_id=req.request_id or str(uuid4()),
+        )
+    except InstallError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"agent graph failed: {exc}") from exc
+
+    clean = _json_clean(dict(state))
+    resp = AnalyzeResponse(
+        city_id=str(clean.get("city_id", req.city_id)),
+        mode=str(clean.get("mode", req.mode)),
+        anomaly_score=clean.get("anomaly_score"),
+        anomaly_detected=clean.get("anomaly_detected"),
+        needs_forecast=clean.get("needs_forecast"),
+        n_fires_near=clean.get("n_fires_near"),
+        forecast_backend=clean.get("forecast_backend"),
+        city_peak_pm25=clean.get("city_peak_pm25"),
+        source_share=clean.get("source_share"),
+        interventions=list(clean.get("interventions") or []),
+        policy_summary=clean.get("policy_summary"),
+        scout_notes=list(clean.get("scout_notes") or []),
+        forecast_notes=list(clean.get("forecast_notes") or []),
+        policy_notes=list(clean.get("policy_notes") or []),
+        errors=list(clean.get("errors") or []),
+        trace=list(clean.get("trace") or []),
+        state=clean,
+    )
+    return resp.model_dump()
+
+
+@app.get("/api/v1/agents/health")
+def agents_health() -> dict[str, Any]:
+    try:
+        from airsight.agents.graph import _HAS_LANGGRAPH, require_langgraph
+
+        require_langgraph()
+        return {"status": "ok", "langgraph": bool(_HAS_LANGGRAPH)}
+    except Exception as exc:
+        return {"status": "degraded", "langgraph": False, "detail": str(exc)}

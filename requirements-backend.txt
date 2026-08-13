@@ -21,7 +21,12 @@ pyarrow>=14.0
 # matplotlib>=3.8
 
 # Optional — Phase 2 STGNN prototype (PyTorch Geometric)
-# Install only when experimenting with graph models:
 #   pip install torch torch-geometric
 # torch>=2.1
 # torch-geometric>=2.4
+
+# Optional — Phase 3 multi-agent orchestration (LangGraph)
+# Install when wiring /api/v1/agents/analyze:
+#   pip install langgraph langchain-core
+# langgraph>=0.2
+# langchain-core>=0.3
