@@ -24,9 +24,10 @@ if str(_ROOT / "src") not in sys.path:
 
 from airsight.config import OUTPUTS, load_cities
 from airsight.io.stations import load_stations
+from api.live import router as live_router
 from api.schemas_agents import AnalyzeRequest, AnalyzeResponse
 
-app = FastAPI(title="AirSight Backend API", version="0.3.0")
+app = FastAPI(title="AirSight Backend API", version="0.4.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,6 +36,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(live_router)
 
 
 @app.get("/health")
