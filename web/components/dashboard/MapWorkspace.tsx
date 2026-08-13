@@ -6,7 +6,13 @@ import dynamic from "next/dynamic";
 import { useDistricts, type CityPoint, type DistrictProps } from "@/lib/districts";
 import CityDetail from "@/components/dashboard/CityDetail";
 import DistrictDetail from "@/components/dashboard/DistrictDetail";
-import { AQI_BANDS, aqiCss, aqiLabel } from "@/lib/aqiScale";
+import {
+  CPCB_PM25_LEGEND_GRADIENT,
+  cpcbAqiFromPm25,
+  cpcbPm25Css,
+  cpcbPm25Label,
+} from "@/lib/aqiScale";
+import { NumberTicker } from "@/components/magicui/number-ticker";
 import { useLive, usePriority } from "@/lib/data";
 import { useT } from "@/lib/i18n";
 import { useApp } from "@/lib/store";
@@ -70,18 +76,29 @@ export default function MapWorkspace({
     setFocus({ kind: "city", name: c.name, nonce: Date.now() });
   };
 
-  // Alerts derive from the live district field crossing the CPCB standard —
-  // never a hand-written list.
+  // Alerts: CPCB AQI from PM2.5 (not legacy US display_aqi).
+  // Moderate starts at CPCB AQI 101 (PM2.5 > 60 µg/m³).
   const alerts = useMemo(() => {
     if (!districts) return [];
     return districts.features
       .map((f) => f.properties)
-      .filter((p) => (p.display_aqi ?? 0) > 100)
-      .sort((a, b) => (b.display_aqi ?? 0) - (a.display_aqi ?? 0))
-      .slice(0, 12);
+      .map((p) => ({
+        p,
+        cpcbAqi: cpcbAqiFromPm25(p.display_pm25 ?? p.pm25) ?? 0,
+      }))
+      .filter(({ cpcbAqi }) => cpcbAqi > 100)
+      .sort((a, b) => b.cpcbAqi - a.cpcbAqi)
+      .slice(0, 12)
+      .map(({ p }) => p);
   }, [districts]);
 
-  const criticalAlerts = alerts.filter(a => (a.display_aqi ?? 0) > 150).length;
+  const criticalAlerts = alerts.filter((a) => {
+    const q = cpcbAqiFromPm25(a.display_pm25 ?? a.pm25) ?? 0;
+    return q > 200; // CPCB Poor and worse
+  }).length;
+
+  const nCities = cities.length;
+  const nDistricts = districts?.meta?.n_districts ?? 0;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "auto", minHeight: "calc(100vh - 110px)", gap: 16 }}>
@@ -94,7 +111,7 @@ export default function MapWorkspace({
             <span style={{ color: "var(--aqi-1)", fontSize: 16 }}>🏢</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-            <span style={{ fontSize: 28, fontWeight: 700, lineHeight: 1 }}>{cities.length}</span>
+            <NumberTicker value={nCities} className="kpi-ticker" />
             <span style={{ fontSize: 11, color: "var(--aqi-1)" }}>~Live</span>
           </div>
         </div>
@@ -105,7 +122,7 @@ export default function MapWorkspace({
             <span style={{ color: "var(--aqi-3)", fontSize: 16 }}>● 🔔</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-            <span style={{ fontSize: 28, fontWeight: 700, lineHeight: 1 }}>{alerts.length}</span>
+            <NumberTicker value={alerts.length} className="kpi-ticker" delay={0.05} />
             <span style={{ fontSize: 11, color: "var(--aqi-3)" }}>~Live</span>
           </div>
         </div>
@@ -116,7 +133,7 @@ export default function MapWorkspace({
             <span style={{ color: "var(--aqi-4)", fontSize: 16 }}>↗</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-            <span style={{ fontSize: 28, fontWeight: 700, lineHeight: 1 }}>{criticalAlerts}</span>
+            <NumberTicker value={criticalAlerts} className="kpi-ticker" delay={0.1} />
             <span style={{ fontSize: 11, color: "var(--aqi-4)" }}>~Live</span>
           </div>
         </div>
@@ -127,7 +144,7 @@ export default function MapWorkspace({
             <span style={{ color: "var(--aqi-2)", fontSize: 16 }}>↘</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-            <span style={{ fontSize: 28, fontWeight: 700, lineHeight: 1 }}>{districts?.meta?.n_districts ?? "--"}</span>
+            <NumberTicker value={nDistricts} className="kpi-ticker" delay={0.15} />
             <span style={{ fontSize: 11, color: "var(--aqi-1)" }}>~Live</span>
           </div>
         </div>
@@ -159,14 +176,16 @@ export default function MapWorkspace({
         <div className="thin-scroll mapws-list">
           {filtered.map((c) => {
             const l = live?.find((x) => x.city_id === c.id);
-            const aqi = l?.measured_us_aqi ?? c.us_aqi;
+            const pm = l?.measured_pm25_24h ?? c.pm25;
+            const aqi = cpcbAqiFromPm25(pm) ?? c.us_aqi;
             const on = city === c.id;
+            const tone = cpcbPm25Css(pm);
             return (
               <button
                 key={c.id}
                 onClick={() => goCity(c)}
                 className={`mapws-city${on ? " on" : ""}`}
-                style={{ borderLeftColor: on ? aqiCss(aqi) : "transparent" }}
+                style={{ borderLeftColor: on ? tone : "transparent" }}
               >
                 <span style={{ minWidth: 0, flex: 1 }}>
                   <b style={{ fontSize: 13.5 }}>{c.name}</b>
@@ -179,7 +198,7 @@ export default function MapWorkspace({
                   </span>
                 </span>
                 <span style={{ textAlign: "right" }}>
-                  <span className="figure" style={{ fontSize: 16, color: aqiCss(aqi) }}>
+                  <span className="figure" style={{ fontSize: 16, color: tone }}>
                     {aqi}
                   </span>
                   <span
@@ -224,13 +243,13 @@ export default function MapWorkspace({
 
           <div className="mapws-legend card">
             <div className="crumb" style={{ marginBottom: 6 }}>
-              {t("US AQI Scale")}
+              {t("CPCB PM2.5")} · µg/m³
             </div>
-            <div style={{ width: 220 }}>
+            <div style={{ width: 240 }}>
               <div
                 style={{
                   height: 12,
-                  background: "linear-gradient(to right, #00e400, #ffff00, #ff0000)",
+                  background: CPCB_PM25_LEGEND_GRADIENT,
                   marginBottom: 6,
                   borderRadius: 4,
                 }}
@@ -239,15 +258,20 @@ export default function MapWorkspace({
                 style={{
                   display: "flex",
                   justifyContent: "space-between",
-                  fontSize: 10.5,
+                  fontSize: 10,
                   color: "var(--ink-2)",
                   fontFamily: "var(--font-mono)",
                 }}
               >
                 <span>0</span>
-                <span>50</span>
-                <span>100</span>
-                <span>150+</span>
+                <span>30</span>
+                <span>60</span>
+                <span>90</span>
+                <span>120</span>
+                <span>250+</span>
+              </div>
+              <div style={{ fontSize: 10, color: "var(--ink-3)", marginTop: 6, lineHeight: 1.4 }}>
+                {t("Colour = PM2.5 · tooltip shows CPCB AQI")}
               </div>
             </div>
           </div>
@@ -310,11 +334,15 @@ export default function MapWorkspace({
               </div>
               <div style={{ fontSize: 13, color: "var(--ink-2)" }}>{t("No active alerts")}</div>
               <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 6 }}>
-                {t("No district is above AQI 100 right now.")}
+                {t("No district is above CPCB AQI 100 right now.")}
               </div>
             </div>
           ) : (
-            alerts.map((p) => (
+            alerts.map((p) => {
+              const pm = p.display_pm25 ?? p.pm25;
+              const caqi = cpcbAqiFromPm25(pm) ?? p.display_aqi;
+              const tone = cpcbPm25Css(pm);
+              return (
               <button
                 key={p.name}
                 onClick={() => {
@@ -323,28 +351,29 @@ export default function MapWorkspace({
                   setFocus({ kind: "district", name: p.name, nonce: Date.now() });
                 }}
                 className="mapws-alert"
-                style={{ borderLeftColor: aqiCss(p.display_aqi) }}
+                style={{ borderLeftColor: tone }}
               >
                 <span style={{ minWidth: 0, flex: 1 }}>
                   <b style={{ fontSize: 13 }}>{p.name}</b>
                   <span
                     style={{ display: "block", fontSize: 10.5, color: "var(--ink-3)", marginTop: 3 }}
                   >
-                    {p.display_pm25} µg/m³ · {p.population.toLocaleString()} {t("people")}
+                    {pm} µg/m³ · {cpcbPm25Label(pm)} · {p.population.toLocaleString()} {t("people")}
                   </span>
                 </span>
                 <span
                   className="pill"
                   style={{
-                    background: `color-mix(in oklch, ${aqiCss(p.display_aqi)}, transparent 85%)`,
-                    color: aqiCss(p.display_aqi),
+                    background: `color-mix(in oklch, ${tone}, transparent 85%)`,
+                    color: tone,
                     fontSize: 10.5,
                   }}
                 >
-                  {p.display_aqi}
+                  {caqi}
                 </span>
               </button>
-            ))
+              );
+            })
           )}
         </div>
 

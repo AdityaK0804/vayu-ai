@@ -173,16 +173,19 @@ export function MagicCard(props: MagicCardProps) {
       onPointerEnter={() => reset("enter")}
       style={{
         background: useMotionTemplate`
-          linear-gradient(var(--color-background) 0 0) padding-box,
+          linear-gradient(var(--color-background, var(--surface, #0b1210)) 0 0) padding-box,
           radial-gradient(${gradientSize}px circle at ${mouseX}px ${mouseY}px,
             ${gradientFrom},
             ${gradientTo},
-            var(--color-border) 100%
+            var(--color-border, var(--line, #2a3532)) 100%
           ) border-box
         `,
       }}
     >
-      <div className="bg-background absolute inset-px z-20 rounded-[inherit]" />
+      <div
+        className="absolute inset-px z-20 rounded-[inherit]"
+        style={{ background: "var(--color-background, var(--surface, #0b1210))" }}
+      />
 
       {mode === "gradient" && (
         <motion.div
@@ -216,7 +219,6 @@ export function MagicCard(props: MagicCardProps) {
             filter: `blur(${glowBlur}px)`,
             opacity: orbVisible,
             background: `linear-gradient(${glowAngle}deg, ${glowFrom}, ${glowTo})`,
-
             mixBlendMode: isDarkTheme ? "screen" : "multiply",
             willChange: "transform, opacity",
           }}

@@ -19,6 +19,7 @@ const PlatformLivePreview = dynamic(() => import("@/components/site/PlatformLive
 });
 const FlowSteps = dynamic(() => import("@/components/site/FlowSteps"), { ssr: false });
 const AlertPreview = dynamic(() => import("@/components/site/AlertPreview"), { ssr: false });
+const TeamSection = dynamic(() => import("@/components/site/TeamSection"), { ssr: false });
 
 /* ---------------------------------------------------------------------------
    VAYU landing — ported from the design's index.dc.html.
@@ -113,9 +114,9 @@ export default function Landing() {
               animation: "vayuRise .7s .05s both",
             }}
           >
-            {t("No sensors.")}
+            {t("No sensors")}
             <br />
-            {t("No problem.")}
+            {t("No problem")}
             <br />
             <TypingAnimation
               as="span"
@@ -134,7 +135,7 @@ export default function Landing() {
                 color: "transparent",
               }}
             >
-              {t("AI fills the gaps.")}
+              {t("AI fix the gaps")}
             </TypingAnimation>
           </h1>
 
@@ -251,6 +252,11 @@ export default function Landing() {
       {/* ---------------- multilingual alerts ---------------- */}
       <div style={{ marginTop: 100, marginBottom: 100 }}>
         <AlertPreview />
+      </div>
+
+      {/* ---------------- team: NexGen ---------------- */}
+      <div style={{ marginTop: 100, marginBottom: 100 }}>
+        <TeamSection />
       </div>
 
       {/* ---------------- CTA ---------------- */}

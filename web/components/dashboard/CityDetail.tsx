@@ -1,7 +1,7 @@
 "use client";
 
 import type { CityPoint } from "@/lib/districts";
-import { aqiCss, aqiLabel } from "@/lib/aqiScale";
+import { cpcbAqiFromPm25, cpcbPm25Css, cpcbPm25Label } from "@/lib/aqiScale";
 import { useLive, useStationsLive } from "@/lib/data";
 import { useT } from "@/lib/i18n";
 
@@ -27,10 +27,10 @@ export default function CityDetail({
   const l = live?.find((x) => x.city_id === city.id);
   const stations = (stationsLive?.stations ?? []).filter((s) => s.city_id === city.id);
 
-  const aqi = l?.measured_us_aqi ?? city.us_aqi;
   const pm25 = l?.measured_pm25_24h ?? city.pm25;
+  const aqi = cpcbAqiFromPm25(pm25) ?? city.us_aqi;
   const isMeasured = l?.measured === true && l?.measured_pm25_24h != null;
-  const tone = aqiCss(aqi);
+  const tone = cpcbPm25Css(pm25);
 
   // average whatever pollutants the city's stations actually report
   const poll: Record<string, number> = {};
@@ -96,12 +96,12 @@ export default function CityDetail({
           )}
         </span>
         <span className="crumb" style={{ fontSize: 9.5 }}>
-          {aqiLabel(aqi)}
+          {cpcbPm25Label(pm25)}
         </span>
       </div>
 
       <dl style={{ marginTop: 16, fontSize: 11.5, display: "grid", gap: 6 }}>
-        <Row k={t("Model prediction")} v={`${city.pm25} µg/m³ · AQI ${city.us_aqi}`} />
+        <Row k={t("Model prediction")} v={`${city.pm25} µg/m³ · CPCB AQI ${cpcbAqiFromPm25(city.pm25) ?? city.us_aqi}`} />
         <Row k={t("CPCB stations")} v={String(city.n_stations)} />
         <Row k={t("Role")} v={city.role ?? "—"} />
       </dl>
@@ -152,7 +152,7 @@ export default function CityDetail({
             >
               <span className="live-dot" style={{ flex: "none" }} />
               <span style={{ flex: 1, minWidth: 0, fontSize: 11.5 }}>{s.station}</span>
-              <span className="figure" style={{ fontSize: 12, color: aqiCss(s.us_aqi ?? 0) }}>
+              <span className="figure" style={{ fontSize: 12, color: cpcbPm25Css(s.pm25_24h ?? s.pm25 ?? null) }}>
                 {s.pm25_24h ?? s.pm25 ?? "—"}
               </span>
             </div>

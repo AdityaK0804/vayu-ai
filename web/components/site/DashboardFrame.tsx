@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 
-import { aqiCss } from "@/lib/aqiScale";
+import { cpcbAqiFromPm25, cpcbPm25Css } from "@/lib/aqiScale";
 import { useLive, useMetrics } from "@/lib/data";
 import { useDistricts } from "@/lib/districts";
 import { useT } from "@/lib/i18n";
@@ -94,7 +94,7 @@ function LiveMapPanel({ minHeight }: { minHeight: number }) {
           showCities={false}
           showCityLabels={false}
           openCityOnFocus={false}
-          interactive={true}
+          interactive={false}
           initialZoom={minHeight < 300 ? 2.8 : 5.8}
         />
       ) : (
@@ -239,7 +239,9 @@ export default function DashboardFrame({ compact = false }: { compact?: boolean 
             <span style={{ paddingRight: 4 }}>{t("AQI")}</span>
           </div>
           {rows.map((c: any) => {
-            const aqi = c.measured_us_aqi ?? c.current_us_aqi ?? c.us_aqi ?? null;
+            const pm = c.measured_pm25_24h ?? c.current_pm25 ?? c.pm25 ?? null;
+            const aqi = cpcbAqiFromPm25(pm) ?? c.measured_us_aqi ?? c.current_us_aqi ?? c.us_aqi ?? null;
+            const tone = cpcbPm25Css(pm);
             return (
               <div
                 key={c.city_id || c.name}
@@ -257,7 +259,7 @@ export default function DashboardFrame({ compact = false }: { compact?: boolean 
                     width: 7,
                     height: 7,
                     borderRadius: "50%",
-                    background: aqiCss(aqi),
+                    background: tone,
                     flexShrink: 0,
                   }}
                 />
@@ -272,7 +274,7 @@ export default function DashboardFrame({ compact = false }: { compact?: boolean 
                 >
                   {c.name || c.city_id}
                 </span>
-                <span className="figure" style={{ color: aqiCss(aqi), fontWeight: 600 }}>
+                <span className="figure" style={{ color: tone, fontWeight: 600 }}>
                   {aqi != null ? Math.round(aqi) : "—"}
                 </span>
               </div>

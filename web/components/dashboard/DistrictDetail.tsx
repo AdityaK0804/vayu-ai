@@ -1,7 +1,7 @@
 "use client";
 
 import type { DistrictProps } from "@/lib/districts";
-import { aqiCss, aqiLabel } from "@/lib/aqiScale";
+import { cpcbAqiFromPm25, cpcbPm25Css, cpcbPm25Label } from "@/lib/aqiScale";
 import { SOURCE_LABEL } from "@/lib/aqi";
 import { useT } from "@/lib/i18n";
 
@@ -14,7 +14,9 @@ export default function DistrictDetail({
   onClose: () => void;
 }) {
   const { t } = useT();
-  const tone = aqiCss(d.display_aqi);
+  const pm = d.display_pm25 ?? d.pm25;
+  const cpcbAqi = cpcbAqiFromPm25(pm) ?? d.display_aqi;
+  const tone = cpcbPm25Css(pm);
   const measured = d.display_basis === "measured";
 
   return (
@@ -42,7 +44,7 @@ export default function DistrictDetail({
             color: tone,
           }}
         >
-          AQI {d.display_aqi}
+          CPCB AQI {cpcbAqi}
         </span>
       </div>
 
@@ -65,7 +67,7 @@ export default function DistrictDetail({
           )}
         </span>
         <span className="crumb" style={{ fontSize: 9.5 }}>
-          {t(aqiLabel(d.display_aqi))}
+          {t(cpcbPm25Label(pm))}
         </span>
       </div>
 

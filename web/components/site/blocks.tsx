@@ -103,13 +103,14 @@ export function StepsPanel({ heading }: { heading?: string }) {
       {heading && (
         <div style={{ textAlign: "center", marginBottom: 44 }}>
           <div
-            className="figure"
+            className="section-eyebrow"
             style={{
-              fontSize: 12,
+              fontFamily: "var(--font-display)",
+              fontSize: "clamp(13px, 1.35vw, 15px)",
               fontWeight: 700,
-              letterSpacing: ".2em",
-              color: "var(--accent)",
-              marginBottom: 10,
+              letterSpacing: "0.14em",
+              color: "var(--eyebrow)",
+              marginBottom: 14,
               textTransform: "uppercase",
             }}
           >
@@ -274,12 +275,15 @@ export function SectionHead({
     <div style={{ textAlign: "center", marginBottom: mb }}>
       {eyebrow && (
         <div
-          className="figure"
+          className="section-eyebrow"
           style={{
-            fontSize: 12,
-            letterSpacing: ".18em",
-            color: "var(--accent)",
-            marginBottom: 12,
+            fontFamily: "var(--font-display)",
+            fontSize: "clamp(13px, 1.35vw, 15px)",
+            fontWeight: 700,
+            letterSpacing: "0.14em",
+            textTransform: "uppercase",
+            color: "var(--eyebrow)",
+            marginBottom: 14,
           }}
         >
           {eyebrow}

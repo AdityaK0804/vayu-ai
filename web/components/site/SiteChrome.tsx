@@ -423,11 +423,14 @@ export function PageHero({
       }}
     >
       <div
-        className="figure"
+        className="section-eyebrow"
         style={{
-          fontSize: 12,
-          letterSpacing: ".18em",
-          color: "var(--accent)",
+          fontFamily: "var(--font-display)",
+          fontSize: "clamp(13px, 1.35vw, 15px)",
+          fontWeight: 700,
+          letterSpacing: "0.14em",
+          textTransform: "uppercase",
+          color: "var(--eyebrow)",
           marginBottom: 14,
           animation: "vayuRise .6s both",
         }}

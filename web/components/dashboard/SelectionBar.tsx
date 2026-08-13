@@ -1,7 +1,7 @@
 "use client";
 
 import type { CityPoint, DistrictProps } from "@/lib/districts";
-import { aqiCss, aqiLabel } from "@/lib/aqiScale";
+import { cpcbAqiFromPm25, cpcbPm25Css, cpcbPm25Label } from "@/lib/aqiScale";
 import { useLive } from "@/lib/data";
 import { useT } from "@/lib/i18n";
 
@@ -25,7 +25,8 @@ export default function SelectionBar({
   const name = city?.name ?? district?.name ?? null;
   const kind = city ? t("City") : district ? t("District") : null;
   const pm25 = city ? (l?.measured_pm25_24h ?? city.pm25) : district?.display_pm25;
-  const aqi = city ? (l?.measured_us_aqi ?? city.us_aqi) : district?.display_aqi;
+  const aqi =
+    pm25 != null ? cpcbAqiFromPm25(pm25) : city ? city.us_aqi : district?.display_aqi;
   const measured = city ? l?.measured === true : district?.display_basis === "measured";
 
   if (!name || pm25 == null || aqi == null) {
@@ -39,12 +40,12 @@ export default function SelectionBar({
     );
   }
 
-  const tone = aqiCss(aqi);
+  const tone = cpcbPm25Css(pm25);
 
   const cells: { k: string; v: string; c?: string }[] = [
-    { k: t("US AQI"), v: String(aqi), c: tone },
+    { k: t("CPCB AQI"), v: String(aqi), c: tone },
     { k: "PM2.5", v: `${pm25} µg/m³` },
-    { k: t("Category"), v: t(aqiLabel(aqi)), c: tone },
+    { k: t("Category"), v: t(cpcbPm25Label(pm25)), c: tone },
   ];
   if (district) {
     cells.push(
@@ -80,17 +81,17 @@ export default function SelectionBar({
             fontSize: 10,
           }}
         >
-          {measured ? t("LIVE") : t("predicted")}
+          {measured ? t("measured") : t("predicted")}
         </span>
       </div>
 
       <div className="selbar-cells">
         {cells.map((c) => (
-          <div key={c.k}>
+          <div key={c.k} className="selbar-cell">
             <div className="crumb" style={{ fontSize: 9.5 }}>
               {c.k}
             </div>
-            <div className="figure" style={{ fontSize: 15, marginTop: 2, color: c.c ?? "var(--ink)" }}>
+            <div className="figure" style={{ fontSize: 13, color: c.c ?? "var(--ink)" }}>
               {c.v}
             </div>
           </div>
