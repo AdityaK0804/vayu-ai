@@ -19,3 +19,9 @@ pyarrow>=14.0
 
 # Optional — plotting
 # matplotlib>=3.8
+
+# Optional — Phase 2 STGNN prototype (PyTorch Geometric)
+# Install only when experimenting with graph models:
+#   pip install torch torch-geometric
+# torch>=2.1
+# torch-geometric>=2.4

@@ -26,6 +26,11 @@ dependencies = [
 [project.optional-dependencies]
 plot = ["matplotlib>=3.8"]
 dev  = ["pytest>=7.0", "ruff>=0.4"]
+# Phase 2 — Spatio-Temporal GNN prototype (does not replace LGBM in production bake)
+stgnn = [
+    "torch>=2.1",
+    "torch-geometric>=2.4",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
