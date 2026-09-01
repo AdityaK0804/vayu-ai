@@ -1,11 +1,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 /* ===========================================================================
-   VAYU — Air Intelligence Theme & Design System
+   VAYU — Air Intelligence Design Tokens & System
    =========================================================================== */
 
 :root,
 [data-vayu],
+[data-theme="dark"],
 [data-vayu][data-theme="dark"] {
   --bg: #060e0c;
   --surface: #0b1815;
@@ -30,12 +31,13 @@
 
   --primary: var(--accent);
 
-  --font-display: "Outfit", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-body: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, Menlo, Monaco, Consolas, monospace;
+  --font-display: "Outfit", "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-body: "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
   --font-comic: "Comic Neue", "Comic Sans MS", "Comic Sans", "Chalkboard SE", cursive, sans-serif;
 }
 
+[data-theme="light"],
 [data-vayu][data-theme="light"] {
   --bg: #f8fafc;
   --surface: #ffffff;
@@ -75,19 +77,27 @@ html, body {
   font-family: var(--font-body);
   background: var(--bg);
   color: var(--ink);
+  margin: 0;
+  padding: 0;
 }
 
-h1, h2, h3, h4, .display {
-  font-family: var(--font-display);
+h1, h2, h3, h4, h5, h6, .display {
+  font-family: var(--font-display) !important;
+}
+
+p, span, div, a, input, button, select, textarea, li {
+  font-family: var(--font-body);
+}
+
+.mono, .figure, code, pre {
+  font-family: var(--font-mono) !important;
 }
 
 .logo-comic,
-.nav-brand b,
+.nav-brand span,
 .nav-brand .display,
-.brand b,
-.brand .display {
+.brand b {
   font-family: var(--font-comic) !important;
-  letter-spacing: 0.04em !important;
 }
 
 /* --- core animations --- */
@@ -121,7 +131,7 @@ h1, h2, h3, h4, .display {
 .rule-b { border-bottom: 1px solid var(--line); }
 
 .label {
-  font-family: var(--font-mono);
+  font-family: var(--font-mono) !important;
   font-size: 11px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -129,12 +139,12 @@ h1, h2, h3, h4, .display {
 }
 
 .figure {
-  font-family: var(--font-mono);
+  font-family: var(--font-mono) !important;
   font-variant-numeric: tabular-nums;
 }
 
 .display {
-  font-family: var(--font-display);
+  font-family: var(--font-display) !important;
   font-weight: 700;
   letter-spacing: -0.02em;
 }

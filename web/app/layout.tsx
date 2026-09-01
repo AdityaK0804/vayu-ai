@@ -52,7 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       data-theme="dark"
       className={`${display.variable} ${body.variable} ${mono.variable}`}
     >
-      <body style={{ background: "#060e0c", color: "#ffffff" }}>
+      <body>
         <Providers>
           <ThemeShell>{children}</ThemeShell>
         </Providers>
