@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import ShinyLink from "@/components/magicui/shiny-link";
 
 import CityIndex from "@/components/landing/CityIndex";
+import HeroAqiSearch from "@/components/landing/HeroAqiSearch";
 import SiteShell, { PAD } from "@/components/site/SiteChrome";
 import { FeatureGrid, Section, SectionHead } from "@/components/site/blocks";
 import DashboardPreview from "@/components/site/DashboardPreview";
@@ -166,46 +167,51 @@ export default function Landing() {
             )}
           </p>
 
+          {/* Instant Search & Live AQI Inspector */}
+          <div style={{ marginTop: 32, animation: "vayuRise .7s .15s both" }}>
+            <HeroAqiSearch />
+          </div>
+
           <div
             style={{
               display: "flex",
               flexWrap: "wrap",
               gap: 14,
-              marginTop: 34,
+              marginTop: 24,
               animation: "vayuRise .7s .18s both",
             }}
           >
             <ShinyLink
-              href="/dashboard"
+              href="/map"
               style={{
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 9,
-                padding: "15px 26px",
+                padding: "14px 24px",
                 borderRadius: 12,
                 background: "linear-gradient(140deg,var(--accent),var(--accent-2))",
                 color: "#fff",
-                fontWeight: 600,
-                fontSize: 15.5,
+                fontWeight: 700,
+                fontSize: 15,
                 boxShadow: "0 14px 34px -12px var(--accent)",
               }}
             >
-              {t("Launch the platform →")}
+              🗺️ {t("Open Live Chhattisgarh Map →")}
             </ShinyLink>
             <ShinyLink
-              href="/#how"
+              href="/dashboard"
               className="card"
               style={{
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 9,
-                padding: "15px 26px",
+                padding: "14px 24px",
                 borderRadius: 12,
                 fontWeight: 600,
-                fontSize: 15.5,
+                fontSize: 15,
               }}
             >
-              {t("How it works")}
+              📊 {t("Regulator Dashboard")}
             </ShinyLink>
           </div>
 

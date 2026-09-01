@@ -195,6 +195,12 @@ export default function MapCanvas() {
       <Map
         ref={mapRef}
         initialViewState={{ ...VIEWS[city], pitch: is3D ? 52 : 0, bearing: is3D ? -18 : 0 }}
+        maxBounds={[
+          [79.0, 17.0],
+          [85.0, 24.5],
+        ]}
+        minZoom={5.8}
+        maxZoom={15.5}
         mapStyle={mapStyle as any}
         style={{ width: "100%", height: "100%", background: "var(--carbon)" }}
         attributionControl={false}

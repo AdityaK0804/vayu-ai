@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 
 import ShinyButton from "@/components/magicui/shiny-button";
-import { useDistricts, useIndiaIndex, type DistrictProps } from "@/lib/districts";
+import { useDistricts, type DistrictProps } from "@/lib/districts";
 import MapWorkspace from "@/components/dashboard/MapWorkspace";
 import SelectionBar from "@/components/dashboard/SelectionBar";
 import type { CityPoint } from "@/lib/districts";
@@ -278,7 +278,6 @@ export function MapView() {
   const [district, setDistrict] = useState<DistrictProps | null>(null);
   const [openCity, setOpenCity] = useState<CityPoint | null>(null);
   const [q, setQ] = useState("");
-  const { data: india } = useIndiaIndex();
   const [focus, setFocus] = useState<
     | {
         kind: "district" | "city" | "india";
@@ -292,39 +291,30 @@ export function MapView() {
   >(null);
   const [welcome, setWelcome] = useState<string | null>(null);
 
-  // search across both districts and modelled cities
+  // Search across Chhattisgarh districts and modelled cities only
   type Hit = {
-    kind: "district" | "city" | "india";
+    kind: "district" | "city";
     name: string;
     aqi?: number | null;
-    bb?: [number, number, number, number];
-    lat?: number;
-    lon?: number;
     note?: string;
   };
 
   const results = useMemo<Hit[]>(() => {
     const s = q.trim().toLowerCase();
     if (!s) return [];
-    const cgNames = new Set((districts?.features ?? []).map((f) => f.properties.name));
     const c: Hit[] = (districts?.cities ?? [])
       .filter((x) => x.name.toLowerCase().includes(s))
-      .slice(0, 4)
-      .map((x) => ({ kind: "city", name: x.name, aqi: x.us_aqi, note: "modelled city" }));
+      .slice(0, 5)
+      .map((x) => ({ kind: "city", name: x.name, aqi: x.us_aqi, note: "Chhattisgarh City" }));
     const d: Hit[] = (districts?.features ?? [])
       .filter((f) => f.properties.name.toLowerCase().includes(s))
-      .slice(0, 5)
-      .map((f) => ({ kind: "district", name: f.properties.name, aqi: f.properties.us_aqi, note: "Chhattisgarh" }));
-    // anywhere else in India — no prediction there, we just travel to it
-    const i: Hit[] = (india?.districts ?? [])
-      .filter((x) => x.n.toLowerCase().includes(s) && !cgNames.has(x.n))
-      .slice(0, 5)
-      .map((x) => ({ kind: "india", name: x.n, bb: x.bb, lat: x.lat, lon: x.lon, note: "India" }));
-    return [...c, ...d, ...i].slice(0, 9);
-  }, [q, districts, india]);
+      .slice(0, 8)
+      .map((f) => ({ kind: "district", name: f.properties.name, aqi: f.properties.us_aqi, note: "Chhattisgarh District" }));
+    return [...c, ...d].slice(0, 10);
+  }, [q, districts]);
 
   const go = (h: Hit) => {
-    setFocus({ kind: h.kind, name: h.name, nonce: Date.now(), bb: h.bb, lat: h.lat, lon: h.lon });
+    setFocus({ kind: h.kind, name: h.name, nonce: Date.now() });
     setQ("");
     setWelcome(h.name);
     window.setTimeout(() => setWelcome(null), 3200);

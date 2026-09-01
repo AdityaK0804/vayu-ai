@@ -18,6 +18,7 @@ import { useApp } from "@/lib/store";
 const PAD = "clamp(16px,2.5vw,36px)";
 
 const NAV = [
+  { href: "/map", label: "Live Map 🗺️" },
   { href: "/#cities", label: "Live Cities" },
   { href: "/#features", label: "Platform" },
   { href: "/#how", label: "How AI Works" },
