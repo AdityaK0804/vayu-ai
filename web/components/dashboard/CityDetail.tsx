@@ -1,6 +1,7 @@
 "use client";
 
 import type { CityPoint } from "@/lib/districts";
+import type { CityId } from "@/lib/types";
 import { cpcbAqiFromPm25, cpcbPm25Css, cpcbPm25Label } from "@/lib/aqiScale";
 import { useLive, useStationsLive, useAttribution, useForecast } from "@/lib/data";
 import { useT } from "@/lib/i18n";
@@ -25,8 +26,8 @@ export default function CityDetail({
   const { t } = useT();
   const { data: live } = useLive();
   const { data: stationsLive } = useStationsLive();
-  const { data: attribution } = useAttribution(city.id);
-  const { data: forecast } = useForecast(city.id);
+  const { data: attribution } = useAttribution(city.id as CityId);
+  const { data: forecast } = useForecast(city.id as CityId);
 
   const l = live?.find((x) => x.city_id === city.id);
   const stations = (stationsLive?.stations ?? []).filter((s) => s.city_id === city.id);

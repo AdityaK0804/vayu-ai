@@ -25,3 +25,4 @@ app_served.css
 .env.*
 !.env.example
 .venv-agents
+.agents/

@@ -784,13 +784,20 @@ function initMap(){
   selectMapCity('korba');
 }
 function metricVal(ci,m){return m==='aqi'?ci.aqi:ci[m];}
-function metricToAqi(ci,m){if(m==='aqi')return ci.aqi;// scale pollutant to an AQI-ish color band
-  const ratios={pm25:ci.aqi/ci.pm25,pm10:ci.aqi/ci.pm10,so2:280/ci.so2*(ci.so2/60),no2:ci.aqi/ci.no2};return ci.aqi;}
+function metricToAqi(ci,m){
+  if(m==='aqi') return ci.aqi;
+  const limits={pm25:60,pm10:100,no2:80,so2:80,o3:100};
+  const val=ci[m]||0;
+  const std=limits[m]||100;
+  return Math.round((val/std)*100);
+}
 function drawMap(){
   heatLayer.clearLayers();stationLayer.clearLayers();labelLayer.clearLayers();windLayer.clearLayers();
   const m=state.mapMetric;
   ORDER.forEach(key=>{
-    const ci=CITIES[key];const c=cat(ci.aqi);
+    const ci=CITIES[key];
+    const effectiveAqi=metricToAqi(ci,m);
+    const c=cat(effectiveAqi);
     // heat blobs — layered circles
     const r=rng(ci.seed);
     const rings=[[26000,0.10],[17000,0.16],[9000,0.26]];

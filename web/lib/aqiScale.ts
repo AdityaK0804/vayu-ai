@@ -121,34 +121,20 @@ export function cpcbAqiFromPm25(pm25: number | null | undefined): number | null 
   const c = pm25;
   const rows: [number, number, number, number][] = [
     [0, 30, 0, 50],
-    [31, 60, 51, 100],
-    [61, 90, 101, 200],
-    [91, 120, 201, 300],
-    [121, 250, 301, 400],
-    [251, 350, 401, 500],
+    [30, 60, 51, 100],
+    [60, 90, 101, 200],
+    [90, 120, 201, 300],
+    [120, 250, 301, 400],
+    [250, 500, 401, 500],
   ];
-  if (c > 350) return 500;
+  if (c >= 500) return 500;
   for (const [clo, chi, ilo, ihi] of rows) {
     if (c >= clo && c <= chi) {
       const t = chi === clo ? 0 : (c - clo) / (chi - clo);
       return Math.round(ilo + t * (ihi - ilo));
     }
-    // Gap between integer breakpoints (e.g. 30.5): snap to next band low
-    if (c > clo && c < chi) {
-      const t = (c - clo) / (chi - clo);
-      return Math.round(ilo + t * (ihi - ilo));
-    }
   }
-  // Between 30 and 31, etc. — linear across the tiny gap using lower band edge
-  for (let i = 0; i < rows.length - 1; i++) {
-    const [, chi, , ihi] = rows[i];
-    const [nlo, , nilo] = rows[i + 1];
-    if (c > chi && c < nlo) {
-      const t = (c - chi) / (nlo - chi);
-      return Math.round(ihi + t * (nilo - ihi));
-    }
-  }
-  return null;
+  return 500;
 }
 
 export function cpcbPm25Band(pm25: number | null | undefined): AqiBand | null {

@@ -5,16 +5,19 @@ Memory-efficient sampling using rasterio.
 
 from __future__ import annotations
 
-import sys
+import logging
 from pathlib import Path
 
 import pandas as pd
 
+logger = logging.getLogger(__name__)
+
 try:
     import rasterio
+    _HAS_RASTERIO = True
 except ImportError:
-    print("  [!] Please run: pip install rasterio")
-    sys.exit(1)
+    rasterio = None
+    _HAS_RASTERIO = False
 
 from airsight.config import DATA
 
@@ -36,8 +39,12 @@ def get_station_population(stations: pd.DataFrame) -> pd.DataFrame:
     pd.DataFrame
         Columns: ``station_id``, ``population_density``.
     """
+    if not _HAS_RASTERIO:
+        logger.warning("rasterio not installed; skipping WorldPop sampling")
+        return pd.DataFrame({"station_id": stations["station_id"], "population_density": float("nan")})
+
     if not _POP_FILE.exists():
-        print(f"  [!] WorldPop file not found: {_POP_FILE}")
+        logger.info("WorldPop file not found: %s", _POP_FILE)
         return pd.DataFrame({"station_id": stations["station_id"], "population_density": float("nan")})
 
     df = pd.DataFrame({"station_id": stations["station_id"].copy()})

@@ -260,8 +260,16 @@ def fetch_open_meteo(settings: Settings | None = None) -> tuple[list[MeteoPointI
                 cur = j.get("current") or {}
                 blh = None
                 hourly = j.get("hourly") or {}
-                if hourly.get("boundary_layer_height"):
-                    blh = hourly["boundary_layer_height"][0]
+                blh_series = hourly.get("boundary_layer_height") or []
+                hourly_times = hourly.get("time") or []
+                cur_time = cur.get("time")
+
+                if cur_time and cur_time in hourly_times:
+                    idx = hourly_times.index(cur_time)
+                    if idx < len(blh_series):
+                        blh = blh_series[idx]
+                elif blh_series:
+                    blh = blh_series[0]
                 ts_raw = cur.get("time") or _now().isoformat()
                 try:
                     ts = datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00"))
@@ -293,40 +301,49 @@ def fetch_open_meteo(settings: Settings | None = None) -> tuple[list[MeteoPointI
 # ---------------------------------------------------------------------------
 
 
-def fetch_firms(settings: Settings | None = None) -> tuple[list[FireEventIn], str]:
+def fetch_firms_fires(settings: Settings | None = None) -> tuple[list[FireEventIn], str]:
+    """Pull active fires for CG. Degrades to local sample CSV if no key or API error."""
     cfg = settings or get_settings()
     if not cfg.nasa_firms_map_key:
-        # Local CSV fallback from pipeline data
-        return _firms_from_local_csv(cfg)
+        rows, detail = _firms_from_local_csv(cfg)
+        return rows, f"no_key; {detail}"
 
-    west, south, east, north = cfg.bbox_west, cfg.bbox_south, cfg.bbox_east, cfg.bbox_north
     url = (
-        f"https://firms.modaps.eosdis.nasa.gov/api/area/csv/"
+        f"{cfg.nasa_firms_base}/api/area/csv/"
         f"{cfg.nasa_firms_map_key}/VIIRS_SNPP_NRT/"
-        f"{west},{south},{east},{north}/1"
+        f"{cfg.cg_bbox_firms}/1"
     )
     try:
-        with _client(cfg) as client:
-            r = client.get(url)
-            r.raise_for_status()
-            return _parse_firms_csv(r.text, cfg), "ok firms api"
+        r = httpx.get(url, timeout=30.0)
+        if r.status_code == 403 or "Invalid MAP_KEY" in r.text:
+            rows, detail = _firms_from_local_csv(cfg)
+            return rows, f"invalid_key; {detail}"
+        r.raise_for_status()
+        rows = _parse_firms_csv(r.text, cfg, max_rows=500)
+        return rows, f"live n={len(rows)}"
     except Exception as exc:
-        log.warning("firms api failed: %s — trying local csv", exc)
+        log.warning("FIRMS API call failed: %s; falling back to local CSV", exc)
         rows, detail = _firms_from_local_csv(cfg)
         return rows, f"degraded api={exc}; {detail}"
 
 
 def _firms_from_local_csv(settings: Settings) -> tuple[list[FireEventIn], str]:
     from pathlib import Path
+    import pandas as pd
 
     path = Path(__file__).resolve().parents[2] / "data" / "fire" / "firms_chhattisgarh.csv"
     if not path.exists():
         return [], "no FIRMS key and no local CSV"
     try:
-        text = path.read_text(encoding="utf-8", errors="replace")
-        # only recent-ish lines — parser caps
-        rows = _parse_firms_csv(text, settings, max_rows=200)
-        return rows, f"local csv n={len(rows)}"
+        df = pd.read_csv(path, low_memory=False)
+        date_col = "acq_date" if "acq_date" in df.columns else ("acq_datetime" if "acq_datetime" in df.columns else None)
+        if date_col:
+            df_recent = df.sort_values(date_col, ascending=False).head(200)
+        else:
+            df_recent = df.tail(200)
+        csv_text = df_recent.to_csv(index=False)
+        rows = _parse_firms_csv(csv_text, settings, max_rows=200)
+        return rows, f"local csv tail n={len(rows)}"
     except Exception as exc:
         return [], f"local csv error: {exc}"
 

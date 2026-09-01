@@ -39,7 +39,7 @@ npm install
 npm run dev
 ```
 
-Open: http://localhost:3000
+Open: http://localhost:5000
 
 **Where model upgrade shows:** Analytics / Proof panel → RMSE @24h, “better than v1”, “better than persistence”.  
 **Where live AQI shows:** map / city cards (can be 28–50 or lower in monsoon). That is **air**, not model skill.

@@ -104,7 +104,7 @@ def main():
         try:
             say(f"fetching roads via tight bbox {W:.3f},{S:.3f},{E:.3f},{N:.3f} (faster and localized)")
             try:
-                G = ox.graph_from_bbox(bbox=(W, S, E, N), network_type="drive")
+                G = ox.graph_from_bbox(bbox=(N, S, E, W), network_type="drive")
             except TypeError:
                 G = ox.graph_from_bbox(N, S, E, W, network_type="drive")  # osmnx <2.0
             
@@ -129,7 +129,7 @@ def main():
             try:
                 say(f"fetching POI: {label}")
                 try:
-                    gdf = ox.features_from_bbox(bbox=(W, S, E, N), tags=tags)
+                    gdf = ox.features_from_bbox(bbox=(N, S, E, W), tags=tags)
                 except TypeError:
                     gdf = ox.features_from_bbox(N, S, E, W, tags=tags)
 

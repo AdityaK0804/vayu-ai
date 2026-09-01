@@ -28,11 +28,18 @@ from api.live import router as live_router
 from api.schemas_agents import AnalyzeRequest, AnalyzeResponse
 from api.schemas_phase5 import AdvisoryRequest, AlertInjectRequest, WhatIfRequest
 
-app = FastAPI(title="AirSight Backend API", version="0.5.0")
+app = FastAPI(title="Vayu Air Quality Intelligence API", version="2.1.0")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://localhost:5000",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:5000",
+        "https://vayu-ai-eosin.vercel.app",
+    ],
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?|https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -43,7 +50,7 @@ app.include_router(live_router)
 
 @app.get("/health")
 def health_check() -> dict[str, str]:
-    return {"status": "ok"}
+    return {"status": "ok", "version": "2.1.0"}
 
 
 @app.get("/cities")

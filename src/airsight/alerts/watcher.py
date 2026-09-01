@@ -192,6 +192,50 @@ def inject_breach(
     return {"alert": alert, "ui_toast": True, "channel": ALERTS_CHANNEL}
 
 
+def trigger_alert_for_station(
+    *,
+    city_id: str,
+    aqi: float,
+    pm25: float,
+    station_id: str,
+) -> dict[str, Any]:
+    """Emit and persist an AQI alert for a real detected threshold breach."""
+    title = f"AQI breach {aqi:.0f} in {city_id.title()}"
+    detail = f"Detected high AQI ({aqi:.0f}, PM2.5={pm25:.0f} µg/m³) at station {station_id}."
+    alert = insert_alert(
+        {
+            "city_id": city_id,
+            "station_id": station_id,
+            "aqi": aqi,
+            "pm25": pm25,
+            "severity": "critical" if aqi >= 300 else "warning",
+            "title": title,
+            "detail": detail,
+            "source": "watcher",
+            "meta": {"threshold_aqi": 300},
+        }
+    )
+    publish_alert(alert)
+    try:
+        from services.ingestor import cache
+
+        cache.set_json(
+            "vayu:ui:toast",
+            {
+                "type": "alert",
+                "title": title,
+                "detail": detail,
+                "severity": alert.get("severity"),
+                "ts": alert.get("ts"),
+                "id": alert.get("id"),
+            },
+            ttl_s=3600,
+        )
+    except Exception:
+        pass
+    return {"alert": alert, "ui_toast": True, "channel": ALERTS_CHANNEL}
+
+
 def run_watcher_once(aqi_threshold: float = 300.0, hours: int = 3) -> dict[str, Any]:
     """Scan latest station readings; emit alert if any AQI exceeds threshold."""
     try:
@@ -210,12 +254,11 @@ def run_watcher_once(aqi_threshold: float = 300.0, hours: int = 3) -> dict[str, 
         if aqi is None:
             continue
         if float(aqi) >= aqi_threshold:
-            rec = inject_breach(
+            rec = trigger_alert_for_station(
                 city_id=str(s.get("city_id") or "unknown"),
                 aqi=float(aqi),
                 pm25=float(pm or 0),
                 station_id=str(s.get("station_id") or "unknown"),
-                hours=hours,
             )
             fired.append(rec["alert"])
     return {

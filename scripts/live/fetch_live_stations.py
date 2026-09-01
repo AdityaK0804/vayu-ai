@@ -30,13 +30,21 @@ API = "https://api.openaq.org/v3"
 LIVE = DATA / "live"
 POLL = {"pm25", "pm10", "no2", "so2", "co", "o3"}
 
-# EPA PM2.5 -> US AQI
-_AQI = [(0.0, 12.0, 0, 50), (12.1, 35.4, 51, 100), (35.5, 55.4, 101, 150),
-        (55.5, 150.4, 151, 200), (150.5, 250.4, 201, 300), (250.5, 500.4, 301, 500)]
+# CPCB 2014 NAQI PM2.5 breakpoints
+_CPCB_PM25 = [
+    (0.0, 30.0, 0, 50),
+    (30.0, 60.0, 51, 100),
+    (60.0, 90.0, 101, 200),
+    (90.0, 120.0, 201, 300),
+    (120.0, 250.0, 301, 400),
+    (250.0, 500.0, 401, 500),
+]
 
 
-def aqi_from_pm25(pm: float) -> int:
-    for lo, hi, alo, ahi in _AQI:
+def aqi_from_pm25(pm: float | None) -> int | None:
+    if pm is None or pm < 0:
+        return None
+    for lo, hi, alo, ahi in _CPCB_PM25:
         if pm <= hi:
             return int(round((ahi - alo) / (hi - lo) * (pm - lo) + alo))
     return 500

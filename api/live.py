@@ -205,3 +205,36 @@ def live_cams() -> dict[str, Any]:
     env = _envelope(cache_src="redis")
     env.update({"n": len(enriched), "cams": enriched, "source": "open-meteo-aq"})
     return env
+
+
+@router.get("/stream")
+async def live_stream():
+    """Server-Sent Events (SSE) stream for live alerts and telemetry updates."""
+    import asyncio
+    import json
+    from fastapi.responses import StreamingResponse
+
+    async def event_generator():
+        yield f"event: ping\ndata: {json.dumps({'type': 'connected', 'ts': _now()})}\n\n"
+        while True:
+            try:
+                toast = cache.get_json("vayu:ui:toast")
+                if toast:
+                    yield f"event: alert\ndata: {json.dumps(toast)}\n\n"
+                await asyncio.sleep(5)
+                yield f"event: ping\ndata: {json.dumps({'type': 'heartbeat', 'ts': _now()})}\n\n"
+            except asyncio.CancelledError:
+                break
+            except Exception as exc:
+                log.warning("SSE generator error: %s", exc)
+                await asyncio.sleep(5)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

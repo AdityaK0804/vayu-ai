@@ -11,7 +11,7 @@ Deadline: 22 Jul 2026. Stop collecting when `99_verify.py` goes green.
 ## Install (2 min)
 
 ```bash
-pip install -r requirements.txt --break-system-packages
+pip install -r requirements.txt -r requirements-backend.txt --break-system-packages
 python scripts/00_setup.py
 ```
 

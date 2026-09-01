@@ -6,16 +6,19 @@ Uses xarray to sample the netCDF files.
 
 from __future__ import annotations
 
-import sys
+import logging
 from pathlib import Path
 
 import pandas as pd
 
+logger = logging.getLogger(__name__)
+
 try:
     import xarray as xr
+    _HAS_XARRAY = True
 except ImportError:
-    print("  [!] Please run: pip install xarray netCDF4")
-    sys.exit(1)
+    xr = None
+    _HAS_XARRAY = False
 
 from airsight.config import DATA
 
@@ -37,8 +40,12 @@ def get_station_edgar_features(stations: pd.DataFrame) -> pd.DataFrame:
     pd.DataFrame
         Columns: ``station_id`` and one column per sector e.g. ``edgar_Power_pm25``.
     """
+    if not _HAS_XARRAY:
+        logger.warning("xarray or netCDF4 not installed; skipping EDGAR netCDF sampling")
+        return pd.DataFrame({"station_id": stations["station_id"]})
+
     if not _EDGAR_DIR.exists():
-        print(f"  [!] EDGAR dir not found: {_EDGAR_DIR}")
+        logger.info("EDGAR dir not found: %s", _EDGAR_DIR)
         return pd.DataFrame({"station_id": stations["station_id"]})
 
     df = pd.DataFrame({"station_id": stations["station_id"].copy()})

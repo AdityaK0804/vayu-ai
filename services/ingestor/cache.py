@@ -7,7 +7,12 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
-import redis
+try:
+    import redis
+    _HAS_REDIS = True
+except ImportError:
+    redis = None
+    _HAS_REDIS = False
 
 from services.ingestor.config import Settings, get_settings
 
@@ -21,14 +26,35 @@ KEY_CAMS = "vayu:live:cams"
 KEY_LAST_SYNC = "vayu:live:last_sync"
 
 
-def client(settings: Settings | None = None) -> redis.Redis:
-    cfg = settings or get_settings()
-    return redis.Redis.from_url(cfg.redis_url, decode_responses=True)
+_CLIENT_INSTANCE: Any = None
+_POOL_INSTANCE: Any = None
+
+
+def client(settings: Settings | None = None) -> Any:
+    global _CLIENT_INSTANCE, _POOL_INSTANCE
+    if not _HAS_REDIS:
+        return None
+    if _CLIENT_INSTANCE is None:
+        cfg = settings or get_settings()
+        try:
+            _POOL_INSTANCE = redis.ConnectionPool.from_url(
+                cfg.redis_url,
+                decode_responses=True,
+                max_connections=20,
+            )
+            _CLIENT_INSTANCE = redis.Redis(connection_pool=_POOL_INSTANCE)
+        except Exception as exc:
+            log.warning("redis pool creation failed: %s", exc)
+            return None
+    return _CLIENT_INSTANCE
 
 
 def ping_redis(settings: Settings | None = None) -> bool:
+    if not _HAS_REDIS:
+        return False
     try:
-        return bool(client(settings).ping())
+        c = client(settings)
+        return bool(c.ping()) if c is not None else False
     except Exception as exc:
         log.warning("redis ping failed: %s", exc)
         return False
@@ -37,14 +63,18 @@ def ping_redis(settings: Settings | None = None) -> bool:
 def set_json(key: str, payload: Any, ttl_s: int, settings: Settings | None = None) -> None:
     try:
         r = client(settings)
-        r.set(key, json.dumps(payload, default=str), ex=ttl_s)
+        if r is not None:
+            r.set(key, json.dumps(payload, default=str), ex=ttl_s)
     except Exception as exc:
         log.warning("redis set %s failed: %s", key, exc)
 
 
 def get_json(key: str, settings: Settings | None = None) -> Any | None:
     try:
-        raw = client(settings).get(key)
+        r = client(settings)
+        if r is None:
+            return None
+        raw = r.get(key)
         if raw is None:
             return None
         return json.loads(raw)

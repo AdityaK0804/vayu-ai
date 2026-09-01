@@ -8,8 +8,14 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Iterator, Sequence
 
-import psycopg
-from psycopg.rows import dict_row
+try:
+    import psycopg
+    from psycopg.rows import dict_row
+    _HAS_PSYCOPG = True
+except ImportError:
+    psycopg = None
+    dict_row = None
+    _HAS_PSYCOPG = False
 
 from services.ingestor.config import Settings, get_settings
 from services.ingestor.models import FireEventIn, StationReadingIn
@@ -17,18 +23,53 @@ from services.ingestor.models import FireEventIn, StationReadingIn
 log = logging.getLogger(__name__)
 
 
+_POOL: Any = None
+
+
+def get_pool(settings: Settings | None = None):
+    global _POOL
+    if not _HAS_PSYCOPG:
+        return False
+    if _POOL is None:
+        cfg = settings or get_settings()
+        try:
+            from psycopg_pool import ConnectionPool
+
+            _POOL = ConnectionPool(
+                cfg.database_url,
+                min_size=1,
+                max_size=10,
+                kwargs={"row_factory": dict_row},
+            )
+        except Exception:
+            _POOL = False
+    return _POOL
+
+
 @contextmanager
-def connect(settings: Settings | None = None) -> Iterator[psycopg.Connection]:
+def connect(settings: Settings | None = None) -> Iterator[Any]:
+    if not _HAS_PSYCOPG:
+        raise RuntimeError("psycopg not installed")
     cfg = settings or get_settings()
-    conn = psycopg.connect(cfg.database_url, row_factory=dict_row)
-    try:
-        yield conn
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
+    pool = get_pool(settings)
+    if pool:
+        with pool.connection() as conn:
+            try:
+                yield conn
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
+    else:
+        conn = psycopg.connect(cfg.database_url, row_factory=dict_row)
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
 
 
 def ping_db(settings: Settings | None = None) -> bool:

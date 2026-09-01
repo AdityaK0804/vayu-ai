@@ -92,9 +92,9 @@ export async function POST(req: Request) {
   const { keys, isGemini } = getApiKeys();
 
   if (keys.length === 0) {
-    return NextResponse.json(
-      { ok: false, reason: "no_key", hint: "Set GEMINI_API_KEY (or GEMINI_API_KEY_1, GEMINI_API_KEY_2) in your root .env file." },
-      { status: 200 },
+    return new Response(
+      "Namaste! The AI assistant requires a GEMINI_API_KEY in your environment to generate live custom responses. Currently operating in deterministic offline mode.",
+      { status: 200, headers: { "Content-Type": "text/plain; charset=utf-8" } }
     );
   }
 

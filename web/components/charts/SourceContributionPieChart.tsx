@@ -27,40 +27,52 @@ export default function SourceContributionPieChart({
   size = 120,
 }: SourceContributionPieChartProps) {
   const slices = useMemo(() => {
-    let total = 0;
-    const entries = Object.entries(shares) as [SourceKey, number][];
-    for (const [, v] of entries) total += v;
+    const rawEntries = Object.entries(shares || {}) as [SourceKey, number][];
+    const sortedEntries = rawEntries.sort((a, b) => (b[1] || 0) - (a[1] || 0));
+    const total = sortedEntries.reduce((acc, [, v]) => acc + (v || 0), 0);
+
+    if (total <= 0) {
+      return sortedEntries.map(([key]) => ({
+        key,
+        val: 0,
+        pct: 0,
+        pathData: "",
+        color: SOURCE_COLORS[key] || "#94a3b8",
+      }));
+    }
 
     let currentAngle = 0;
     const radius = size / 2;
     const center = size / 2;
 
-    return entries.map(([key, val]) => {
-      const angle = (val / total) * Math.PI * 2;
-      
+    return sortedEntries.map(([key, val]) => {
+      const v = Math.max(0, val || 0);
+      const angle = (v / total) * Math.PI * 2;
+
       const x1 = center + radius * Math.cos(currentAngle);
       const y1 = center + radius * Math.sin(currentAngle);
-      
+
       const x2 = center + radius * Math.cos(currentAngle + angle);
       const y2 = center + radius * Math.sin(currentAngle + angle);
-      
+
       const largeArc = angle > Math.PI ? 1 : 0;
-      
+
       // If the slice is exactly 100%, render a circle instead of an arc
-      const pathData = angle >= Math.PI * 2 * 0.999 
-        ? `M ${center} ${center - radius} A ${radius} ${radius} 0 1 1 ${center} ${center + radius} A ${radius} ${radius} 0 1 1 ${center} ${center - radius}`
-        : `M ${center} ${center} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+      const pathData =
+        angle >= Math.PI * 2 * 0.999
+          ? `M ${center} ${center - radius} A ${radius} ${radius} 0 1 1 ${center} ${center + radius} A ${radius} ${radius} 0 1 1 ${center} ${center - radius}`
+          : `M ${center} ${center} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
 
       currentAngle += angle;
 
       return {
         key,
-        val,
-        pct: (val / total) * 100,
+        val: v,
+        pct: (v / total) * 100,
         pathData,
         color: SOURCE_COLORS[key] || "#94a3b8",
       };
-    }).sort((a, b) => b.val - a.val);
+    });
   }, [shares, size]);
 
   return (
