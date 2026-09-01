@@ -7,6 +7,7 @@ import ShinyLink from "@/components/magicui/shiny-link";
 
 import CityIndex from "@/components/landing/CityIndex";
 import HeroAqiSearch from "@/components/landing/HeroAqiSearch";
+import AirIndxHero from "@/components/landing/AirIndxHero";
 import SiteShell, { PAD } from "@/components/site/SiteChrome";
 import { FeatureGrid, Section, SectionHead } from "@/components/site/blocks";
 import DashboardPreview from "@/components/site/DashboardPreview";
@@ -58,190 +59,30 @@ export default function Landing() {
 
   return (
     <SiteShell>
-      {/* ---------------- hero (2-column: text left, sidebar right) ---------------- */}
-      <header
+      {/* ---------------- AirIndx Style 3D Globe & Atmospheric Hero ---------------- */}
+      <section
         id="top"
         style={{
           position: "relative",
           zIndex: 1,
           maxWidth: 1400,
           margin: "0 auto",
-          padding: `140px ${PAD} 60px`,
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 520px), 1fr))",
-          gap: "clamp(24px, 4vw, 60px)",
-          alignItems: "start",
+          padding: `120px ${PAD} 30px`,
         }}
       >
-        <div
-          aria-hidden
-          style={{
-            position: "absolute",
-            top: "5%",
-            left: "10%",
-            width: 450,
-            height: 450,
-            background: "radial-gradient(circle, color-mix(in oklch, var(--accent), transparent 82%) 0%, transparent 70%)",
-            filter: "blur(60px)",
-            pointerEvents: "none",
-            zIndex: -1,
-          }}
-        />
-        {/* ---------- left: hero text ---------- */}
-        <div style={{ minWidth: 0 }}>
-          <div
-            className="figure"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 10,
-              padding: "7px 14px",
-              borderRadius: 100,
-              border: "1px solid var(--line)",
-              background: "var(--surface)",
-              fontSize: 12,
-              color: "var(--ink-2)",
-              animation: "vayuRise .6s both",
-            }}
-          >
-            <span
-              style={{
-                width: 7,
-                height: 7,
-                borderRadius: "50%",
-                background: "var(--aqi-1)",
-                animation: "vayuPulse 1.8s infinite",
-              }}
-            />
-            LIVE · {metrics?.dataset.stations ?? "—"} stations · 9 cities · Chhattisgarh
-          </div>
+        <AirIndxHero />
+      </section>
 
-          <h1
-            className="display"
-            style={{
-              fontWeight: 700,
-              fontSize: "clamp(38px,6.6vw,80px)",
-              lineHeight: 1.02,
-              margin: "22px 0 0",
-              maxWidth: "15ch",
-              animation: "vayuRise .7s .05s both",
-            }}
-          >
-            {t("No sensors")}
-            <br />
-            {t("No problem")}
-            <br />
-            <TypingAnimation
-              as="span"
-              duration={70}
-              delay={900}
-              startOnView={false}
-              style={{
-                display: "inline-block",
-                fontSize: "inherit",
-                fontWeight: "inherit",
-                letterSpacing: "inherit",
-                lineHeight: "inherit",
-                background: "linear-gradient(120deg,var(--accent),var(--accent-2))",
-                WebkitBackgroundClip: "text",
-                backgroundClip: "text",
-                color: "transparent",
-              }}
-            >
-              {t("AI fix the gaps")}
-            </TypingAnimation>
-          </h1>
-
-          <p
-            style={{
-              fontSize: "clamp(16px,1.9vw,20px)",
-              lineHeight: 1.6,
-              color: "var(--ink-2)",
-              maxWidth: "56ch",
-              margin: "26px 0 0",
-              animation: "vayuRise .7s .12s both",
-            }}
-          >
-            {t(
-              "VAYU fuses satellite, ground, and emissions data to forecast PM2.5 72 hours out. It pinpoints pollution sources and prioritizes enforcement across the state-even in districts without physical sensors.",
-            )}
-          </p>
-
-          {/* Instant Search & Live AQI Inspector */}
-          <div style={{ marginTop: 32, animation: "vayuRise .7s .15s both" }}>
-            <HeroAqiSearch />
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 14,
-              marginTop: 24,
-              animation: "vayuRise .7s .18s both",
-            }}
-          >
-            <ShinyLink
-              href="/map"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 9,
-                padding: "14px 24px",
-                borderRadius: 12,
-                background: "linear-gradient(140deg,var(--accent),var(--accent-2))",
-                color: "#fff",
-                fontWeight: 700,
-                fontSize: 15,
-                boxShadow: "0 14px 34px -12px var(--accent)",
-              }}
-            >
-              🗺️ {t("Open Live Chhattisgarh Map →")}
-            </ShinyLink>
-            <ShinyLink
-              href="/dashboard"
-              className="card"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 9,
-                padding: "14px 24px",
-                borderRadius: 12,
-                fontWeight: 600,
-                fontSize: 15,
-              }}
-            >
-              📊 {t("Regulator Dashboard")}
-            </ShinyLink>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 28,
-              marginTop: 52,
-              paddingTop: 30,
-              borderTop: "1px solid var(--line)",
-              animation: "vayuRise .7s .24s both",
-            }}
-          >
-            {stats.map((s) => (
-              <div key={s.k}>
-                <div className="display" style={{ fontWeight: 700, fontSize: 30 }}>
-                  {s.v}
-                </div>
-                <div className="figure" style={{ fontSize: 13, color: "var(--ink-3)" }}>
-                  {s.k}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ---------- right: dashboard preview (NOT a link) ---------- */}
-        <DashboardPreview />
-      </header>
+      {/* ---------------- Instant AQI Search & District Explorer ---------------- */}
+      <section
+        style={{
+          maxWidth: 1400,
+          margin: "0 auto",
+          padding: `10px ${PAD} 40px`,
+        }}
+      >
+        <HeroAqiSearch />
+      </section>
 
       {/* full-width live map platform preview (Climate Saathi style) */}
       <div style={{ marginTop: 80, marginBottom: 80 }}>
