@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import json
 import logging
 import sys
 from datetime import datetime, timezone
@@ -23,7 +24,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 from services.ingestor import cache, db, sources
 from services.ingestor.config import Settings, get_settings
-from services.ingestor.models import IngestResult
+from services.ingestor.models import IngestResult, StationReadingIn
 
 log = logging.getLogger("vayu.ingestor")
 
@@ -37,7 +38,8 @@ async def job_stations(settings: Settings) -> IngestResult:
     try:
         rows, detail = await _to_thread(sources.fetch_openaq_stations, settings)
         n = await _to_thread(db.write_station_readings, rows, settings) if rows else 0
-        # refresh redis from DB bundle
+        if n:
+            await _to_thread(cache.touch_last_sync, "stations", settings)
         bundle = await _to_thread(db.fetch_snapshot_bundle, settings)
         await _to_thread(
             cache.publish_live_bundle,
@@ -47,7 +49,13 @@ async def job_stations(settings: Settings) -> IngestResult:
             settings=settings,
         )
         status = "ok" if n else "degraded"
-        res = IngestResult(source="stations", status=status, rows_written=n, detail=detail, started_at=started)
+        res = IngestResult(
+            source="stations",
+            status=status,
+            rows_written=n,
+            detail=detail,
+            started_at=started,
+        )
     except Exception as exc:
         log.exception("stations job failed")
         res = IngestResult(
@@ -68,11 +76,18 @@ async def job_meteo(settings: Settings) -> IngestResult:
     started = datetime.now(timezone.utc)
     try:
         rows, detail = await _to_thread(sources.fetch_open_meteo, settings)
-        # meteo is cached in Redis (no dedicated hypertable in 4.1 schema)
         payload = [r.model_dump(mode="json") for r in rows]
         await _to_thread(cache.set_json, cache.KEY_METEO, payload, settings.redis_ttl_snapshot_s, settings)
+        if rows:
+            await _to_thread(cache.touch_last_sync, "meteo", settings)
         status = "ok" if rows else "degraded"
-        res = IngestResult(source="meteo", status=status, rows_written=len(rows), detail=detail, started_at=started)
+        res = IngestResult(
+            source="meteo",
+            status=status,
+            rows_written=len(rows),
+            detail=detail,
+            started_at=started,
+        )
     except Exception as exc:
         log.exception("meteo job failed")
         res = IngestResult(source="meteo", status="error", detail=str(exc), started_at=started)
@@ -87,9 +102,10 @@ async def job_fires(settings: Settings) -> IngestResult:
     try:
         rows, detail = await _to_thread(sources.fetch_firms, settings)
         n = await _to_thread(db.write_fire_events, rows, settings) if rows else 0
+        if n:
+            await _to_thread(cache.touch_last_sync, "fires", settings)
         fires = await _to_thread(db.fetch_recent_fires, 48, 500, settings)
         await _to_thread(cache.set_json, cache.KEY_FIRES, fires, settings.redis_ttl_snapshot_s, settings)
-        # update snapshot fires field
         snap = await _to_thread(cache.get_json, cache.KEY_SNAPSHOT, settings) or {}
         if isinstance(snap, dict):
             snap["fires"] = fires
@@ -97,7 +113,13 @@ async def job_fires(settings: Settings) -> IngestResult:
             snap["generated_at"] = datetime.now(timezone.utc).isoformat()
             await _to_thread(cache.set_json, cache.KEY_SNAPSHOT, snap, settings.redis_ttl_snapshot_s, settings)
         status = "ok" if n else "degraded"
-        res = IngestResult(source="fires", status=status, rows_written=n, detail=detail, started_at=started)
+        res = IngestResult(
+            source="fires",
+            status=status,
+            rows_written=n,
+            detail=detail,
+            started_at=started,
+        )
     except Exception as exc:
         log.exception("fires job failed")
         res = IngestResult(source="fires", status="error", detail=str(exc), started_at=started)
@@ -113,9 +135,6 @@ async def job_cams(settings: Settings) -> IngestResult:
         rows, detail = await _to_thread(sources.fetch_cams_proxy, settings)
         payload = [r.model_dump(mode="json") for r in rows]
         await _to_thread(cache.set_json, cache.KEY_CAMS, payload, settings.redis_ttl_snapshot_s, settings)
-        # also upsert CAMS pm25 as virtual-ish station rows for calibration
-        from services.ingestor.models import StationReadingIn
-
         station_rows = [
             StationReadingIn(
                 ts=r.ts,
@@ -123,15 +142,20 @@ async def job_cams(settings: Settings) -> IngestResult:
                 city_id=r.city_id,
                 source="cams",
                 pm25=r.pm25,
+                pm10=r.pm10,
                 no2=r.no2,
+                so2=r.so2,
+                o3=r.o3,
+                co=r.co,
                 lat=r.lat,
                 lon=r.lon,
-                aqi_basis="model",
+                aqi_basis="cpcb",
             )
             for r in rows
-            if r.pm25 is not None
+            if r.pm25 is not None or r.pm10 is not None
         ]
         n = await _to_thread(db.write_station_readings, station_rows, settings) if station_rows else 0
+        await _to_thread(cache.touch_last_sync, "cams", settings)
         status = "ok" if rows else "degraded"
         res = IngestResult(
             source="cams",
@@ -158,13 +182,12 @@ async def run_once(settings: Settings | None = None) -> dict:
         job_cams(cfg),
         return_exceptions=True,
     )
-    out = {}
+    out: dict = {}
     for r in results:
         if isinstance(r, Exception):
             log.error("job exception: %s", r)
             continue
         out[r.source] = r.model_dump(mode="json")
-    # final snapshot after all writers finished
     try:
         bundle = await _to_thread(db.fetch_snapshot_bundle, cfg)
         meteo = await _to_thread(cache.get_json, cache.KEY_METEO, cfg)
@@ -191,7 +214,6 @@ async def run_scheduler(settings: Settings | None = None) -> None:
     if not cache.ping_redis(cfg):
         log.error("redis unreachable — will still schedule and retry")
 
-    # initial catch-up
     await run_once(cfg)
 
     sched = AsyncIOScheduler()
@@ -223,8 +245,6 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.once:
         out = asyncio.run(run_once(cfg))
-        import json
-
         print(json.dumps(out, indent=2, default=str))
         return 0
 

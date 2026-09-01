@@ -2,8 +2,10 @@
 
 import type { CityPoint } from "@/lib/districts";
 import { cpcbAqiFromPm25, cpcbPm25Css, cpcbPm25Label } from "@/lib/aqiScale";
-import { useLive, useStationsLive } from "@/lib/data";
+import { useLive, useStationsLive, useAttribution, useForecast } from "@/lib/data";
 import { useT } from "@/lib/i18n";
+import SourceContributionPieChart from "@/components/charts/SourceContributionPieChart";
+import ForecastBandChart from "@/components/charts/ForecastBandChart";
 
 /**
  * City-level detail.
@@ -23,6 +25,8 @@ export default function CityDetail({
   const { t } = useT();
   const { data: live } = useLive();
   const { data: stationsLive } = useStationsLive();
+  const { data: attribution } = useAttribution(city.id);
+  const { data: forecast } = useForecast(city.id);
 
   const l = live?.find((x) => x.city_id === city.id);
   const stations = (stationsLive?.stations ?? []).filter((s) => s.city_id === city.id);
@@ -165,6 +169,25 @@ export default function CityDetail({
               "This city has no CPCB station. Its value is predicted from satellite, meteorology and emissions geography — the basis the leave-one-station-out test validated.",
             )}
           </p>
+        </Block>
+      )}
+
+      {/* ---------------- Wow Layer Charts ---------------- */}
+      {attribution && attribution.cells && attribution.cells.length > 0 && (
+        <Block title="Source Contributions">
+          <SourceContributionPieChart shares={attribution.cells[0].shares} size={150} />
+          <div className="sub" style={{ marginTop: 12 }}>
+            Primary driver: <span style={{ textTransform: "capitalize", fontWeight: 600 }}>{attribution.cells[0].top_source}</span>
+          </div>
+        </Block>
+      )}
+
+      {forecast && forecast.cells && forecast.cells.length > 0 && (
+        <Block title="72-Hour AI Forecast Band">
+          <ForecastBandChart data={forecast.cells[0].v} width={280} height={90} threshold={60} />
+          <div className="sub" style={{ marginTop: 12 }}>
+            Forecast PM2.5 trajectory over the next 72 hours using the {forecast.grid_model} model.
+          </div>
         </Block>
       )}
 

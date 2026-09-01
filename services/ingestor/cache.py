@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime, timezone
 from typing import Any
 
 import redis
@@ -17,6 +18,7 @@ KEY_STATIONS = "vayu:live:stations"
 KEY_FIRES = "vayu:live:fires"
 KEY_METEO = "vayu:live:meteo"
 KEY_CAMS = "vayu:live:cams"
+KEY_LAST_SYNC = "vayu:live:last_sync"
 
 
 def client(settings: Settings | None = None) -> redis.Redis:
@@ -49,6 +51,19 @@ def get_json(key: str, settings: Settings | None = None) -> Any | None:
     except Exception as exc:
         log.warning("redis get %s failed: %s", key, exc)
         return None
+
+
+def touch_last_sync(source: str, settings: Settings | None = None) -> None:
+    """Record per-source last successful sync timestamp (ISO UTC)."""
+    cfg = settings or get_settings()
+    try:
+        meta = get_json(KEY_LAST_SYNC, cfg) or {}
+        if not isinstance(meta, dict):
+            meta = {}
+        meta[source] = datetime.now(timezone.utc).isoformat()
+        set_json(KEY_LAST_SYNC, meta, cfg.redis_ttl_snapshot_s, cfg)
+    except Exception as exc:
+        log.warning("touch_last_sync failed: %s", exc)
 
 
 def publish_live_bundle(

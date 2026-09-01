@@ -78,7 +78,7 @@ def fetch_openaq_stations(settings: Settings | None = None) -> tuple[list[Statio
                 detail = f"{url}: {exc}"
                 log.warning("openaq fetch failed: %s", exc)
 
-    # Fallback: Open-Meteo AQ as city stations (same source as CAMS job)
+    # Fallback: Open-Meteo AQ as city stations (multi-pollutant)
     cams_rows, cams_detail = fetch_cams_proxy(cfg)
     fallback = [
         StationReadingIn(
@@ -87,13 +87,17 @@ def fetch_openaq_stations(settings: Settings | None = None) -> tuple[list[Statio
             city_id=r.city_id,
             source="open-meteo-aq",
             pm25=r.pm25,
+            pm10=r.pm10,
             no2=r.no2,
+            so2=r.so2,
+            o3=r.o3,
+            co=r.co,
             lat=r.lat,
             lon=r.lon,
-            aqi_basis="model",
+            aqi_basis="cpcb",
         )
         for r in cams_rows
-        if r.pm25 is not None
+        if r.pm25 is not None or r.pm10 is not None or r.no2 is not None
     ]
     if fallback:
         return fallback, f"degraded openaq={detail}; fallback {cams_detail}"
@@ -109,30 +113,51 @@ def _parse_openaq_payload(data: Any, settings: Settings) -> list[StationReadingI
     for item in results:
         if not isinstance(item, dict):
             continue
-        # v2 latest shape
+        # v2 latest shape — multi-pollutant measurements
         if "measurements" in item:
             loc = str(item.get("location") or item.get("locationId") or "unknown")
             coords = item.get("coordinates") or {}
             lat = coords.get("latitude")
             lon = coords.get("longitude")
             city = item.get("city") or (_nearest_city(float(lat), float(lon), settings) if lat and lon else None)
-            pm25 = pm10 = no2 = None
+            vals: dict[str, float | None] = {
+                "pm25": None,
+                "pm10": None,
+                "no2": None,
+                "so2": None,
+                "o3": None,
+                "co": None,
+            }
             ts = _now()
             for m in item.get("measurements") or []:
-                param = str(m.get("parameter") or "").lower()
+                param = str(m.get("parameter") or "").lower().replace(" ", "")
                 val = m.get("value")
-                if param in {"pm25", "pm2.5"} and val is not None:
-                    pm25 = float(val)
-                elif param == "pm10" and val is not None:
-                    pm10 = float(val)
-                elif param in {"no2", "nitrogen dioxide"} and val is not None:
-                    no2 = float(val)
+                if val is None:
+                    continue
+                try:
+                    fval = float(val)
+                except (TypeError, ValueError):
+                    continue
+                unit = str(m.get("unit") or "").lower()
+                if param in {"pm25", "pm2.5"}:
+                    vals["pm25"] = fval
+                elif param == "pm10":
+                    vals["pm10"] = fval
+                elif param in {"no2", "nitrogendioxide"}:
+                    vals["no2"] = fval
+                elif param in {"so2", "sulphurdioxide", "sulfurdioxide"}:
+                    vals["so2"] = fval
+                elif param in {"o3", "ozone"}:
+                    vals["o3"] = fval
+                elif param in {"co", "carbonmonoxide"}:
+                    # OpenAQ often µg/m³; CPCB NAQI wants mg/m³
+                    vals["co"] = fval / 1000.0 if ("µg" in unit or "ug" in unit or fval > 50) else fval
                 if m.get("lastUpdated"):
                     try:
                         ts = datetime.fromisoformat(str(m["lastUpdated"]).replace("Z", "+00:00"))
                     except Exception:
                         pass
-            if pm25 is None and pm10 is None:
+            if vals["pm25"] is None and vals["pm10"] is None and vals["no2"] is None:
                 continue
             out.append(
                 StationReadingIn(
@@ -140,43 +165,69 @@ def _parse_openaq_payload(data: Any, settings: Settings) -> list[StationReadingI
                     station_id=f"openaq:{loc}",
                     city_id=str(city).lower().replace(" ", "_") if city else None,
                     source="openaq",
-                    pm25=pm25,
-                    pm10=pm10,
-                    no2=no2,
+                    pm25=vals["pm25"],
+                    pm10=vals["pm10"],
+                    no2=vals["no2"],
+                    so2=vals["so2"],
+                    o3=vals["o3"],
+                    co=vals["co"],
+                    aqi_basis="cpcb",
                     lat=float(lat) if lat is not None else None,
                     lon=float(lon) if lon is not None else None,
                 )
             )
             continue
 
-        # v3 locations (sensors nested) — limited latest values
+        # v3 locations (sensors nested)
         name = str(item.get("name") or item.get("id") or "loc")
         sid = f"openaq:{item.get('id', name)}"
         coords = item.get("coordinates") or {}
         lat = coords.get("latitude")
         lon = coords.get("longitude")
-        # sensors may list parameters without latest — skip if no value
         sensors = item.get("sensors") or []
-        pm25 = None
+        vals = {"pm25": None, "pm10": None, "no2": None, "so2": None, "o3": None, "co": None}
+        ts = _now()
         for s in sensors:
             p = str((s.get("parameter") or {}).get("name") or s.get("parameter") or "").lower()
-            # v3 often lacks inline latest; leave pm25 None unless present
+            latest = s.get("latest") or {}
+            if latest.get("value") is None:
+                continue
+            try:
+                fval = float(latest["value"])
+            except (TypeError, ValueError):
+                continue
             if "pm25" in p or "pm2.5" in p:
-                latest = s.get("latest") or {}
-                if latest.get("value") is not None:
-                    pm25 = float(latest["value"])
-        if pm25 is None and not sensors:
-            continue
-        if pm25 is None:
-            # still register location shell? skip empty
+                vals["pm25"] = fval
+            elif "pm10" in p:
+                vals["pm10"] = fval
+            elif "no2" in p:
+                vals["no2"] = fval
+            elif "so2" in p:
+                vals["so2"] = fval
+            elif p in {"o3", "ozone"} or "ozone" in p:
+                vals["o3"] = fval
+            elif p == "co" or "carbon" in p:
+                vals["co"] = fval / 1000.0 if fval > 50 else fval
+            if latest.get("datetime"):
+                try:
+                    ts = datetime.fromisoformat(str(latest["datetime"]).replace("Z", "+00:00"))
+                except Exception:
+                    pass
+        if all(v is None for v in vals.values()):
             continue
         out.append(
             StationReadingIn(
-                ts=_now(),
+                ts=ts,
                 station_id=sid,
                 city_id=_nearest_city(float(lat), float(lon), settings) if lat and lon else None,
                 source="openaq",
-                pm25=pm25,
+                pm25=vals["pm25"],
+                pm10=vals["pm10"],
+                no2=vals["no2"],
+                so2=vals["so2"],
+                o3=vals["o3"],
+                co=vals["co"],
+                aqi_basis="cpcb",
                 lat=float(lat) if lat is not None else None,
                 lon=float(lon) if lon is not None else None,
             )
@@ -339,7 +390,7 @@ def fetch_cams_proxy(settings: Settings | None = None) -> tuple[list[CamsPointIn
             url = (
                 f"{cfg.open_meteo_air_quality_base}/v1/air-quality"
                 f"?latitude={lat}&longitude={lon}"
-                f"&current=pm2_5,nitrogen_dioxide,dust"
+                f"&current=pm2_5,pm10,nitrogen_dioxide,sulphur_dioxide,ozone,carbon_monoxide,dust"
                 f"&timezone=UTC"
             )
             try:
@@ -351,6 +402,10 @@ def fetch_cams_proxy(settings: Settings | None = None) -> tuple[list[CamsPointIn
                     ts = datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00"))
                 except Exception:
                     ts = _now()
+                co = _f(cur.get("carbon_monoxide"))
+                # Open-Meteo CO is µg/m³ → mg/m³ for CPCB
+                if co is not None:
+                    co = co / 1000.0
                 out.append(
                     CamsPointIn(
                         ts=ts,
@@ -358,7 +413,11 @@ def fetch_cams_proxy(settings: Settings | None = None) -> tuple[list[CamsPointIn
                         lat=lat,
                         lon=lon,
                         pm25=_f(cur.get("pm2_5")),
+                        pm10=_f(cur.get("pm10")),
                         no2=_f(cur.get("nitrogen_dioxide")),
+                        so2=_f(cur.get("sulphur_dioxide")),
+                        o3=_f(cur.get("ozone")),
+                        co=co,
                         dust=_f(cur.get("dust")),
                     )
                 )

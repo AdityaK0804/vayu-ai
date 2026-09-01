@@ -60,7 +60,11 @@ def write_station_readings(
             pm25 = EXCLUDED.pm25,
             pm10 = EXCLUDED.pm10,
             no2 = EXCLUDED.no2,
+            so2 = EXCLUDED.so2,
+            o3 = EXCLUDED.o3,
+            co = EXCLUDED.co,
             aqi = EXCLUDED.aqi,
+            aqi_basis = EXCLUDED.aqi_basis,
             quality_flag = EXCLUDED.quality_flag,
             ingested_at = NOW()
     """
@@ -124,7 +128,9 @@ def log_ingest_run(
 def fetch_latest_stations(limit: int = 500, settings: Settings | None = None) -> list[dict]:
     sql = """
         SELECT DISTINCT ON (station_id, source)
-            ts, station_id, city_id, source, pm25, pm10, no2, aqi, aqi_basis, lat, lon, quality_flag
+            ts, station_id, city_id, source,
+            pm25, pm10, no2, so2, o3, co,
+            aqi, aqi_basis, lat, lon, quality_flag, ingested_at
         FROM station_readings
         WHERE quality_flag = 0
         ORDER BY station_id, source, ts DESC

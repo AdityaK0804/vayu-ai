@@ -59,7 +59,11 @@ class CamsPointIn(BaseModel):
     lat: float
     lon: float
     pm25: float | None = None
+    pm10: float | None = None
     no2: float | None = None
+    so2: float | None = None
+    o3: float | None = None
+    co: float | None = None
     dust: float | None = None
     aod550: float | None = None  # if available
     source: str = "open-meteo-aq"
