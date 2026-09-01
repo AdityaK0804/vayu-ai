@@ -1,8 +1,7 @@
+@import url('https://fonts.googleapis.com/css2?family=Comic+Neue:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
 /* ===========================================================================
-   VAYU — Air Intelligence.
-   Ported from the Claude Design project "AI-Powered Urban Air Quality"
-   (index.dc.html). These tokens ARE the design; components never hard-code a
-   colour. Swapping a design = editing this file only.
+   VAYU — Air Intelligence Theme & Design System
    =========================================================================== */
 
 :root,
@@ -31,9 +30,10 @@
 
   --primary: var(--accent);
 
-  --font-display: var(--font-outfit), "Outfit", ui-sans-serif, system-ui, sans-serif;
-  --font-body: var(--font-jakarta), "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains), "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --font-display: "Outfit", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-body: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, Monaco, Consolas, monospace;
+  --font-comic: "Comic Neue", "Comic Sans MS", "Comic Sans", "Chalkboard SE", cursive, sans-serif;
 }
 
 [data-vayu][data-theme="light"] {
@@ -60,10 +60,7 @@
   --primary: var(--accent);
 }
 
-/* --- alias layer -----------------------------------------------------------
-   The dashboard was built against an earlier token set. Mapping the old names
-   onto the VAYU tokens keeps those components working unchanged, so the design
-   import is additive rather than a rewrite. */
+/* --- alias layer for dashboard components --- */
 :root,
 [data-vayu] {
   --carbon: var(--bg);
@@ -73,20 +70,53 @@
   --accent-glow: var(--glow);
 }
 
-/* --- motion (from the design) --------------------------------------------- */
+/* --- typography & font enforcement --- */
+html, body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--ink);
+}
+
+h1, h2, h3, h4, .display {
+  font-family: var(--font-display);
+}
+
+.logo-comic,
+.nav-brand b,
+.nav-brand .display,
+.brand b,
+.brand .display {
+  font-family: var(--font-comic) !important;
+  letter-spacing: 0.04em !important;
+}
+
+/* --- core animations --- */
 @keyframes vayuPulse {
   0%, 100% { opacity: 0.55; transform: scale(1); }
   50% { opacity: 1; transform: scale(1.35); }
 }
+
 @keyframes vayuRise {
   from { opacity: 0; transform: translateY(18px); }
   to { opacity: 1; transform: translateY(0); }
 }
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; transition: none !important; }
+
+@keyframes vayuFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
 }
 
-/* --- shared primitives ---------------------------------------------------- */
+@keyframes vayuGlow {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.4)); }
+  50% { filter: drop-shadow(0 0 22px rgba(56, 189, 248, 0.85)); }
+}
+
+@keyframes vayuTrack {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* --- shared primitives --- */
 .rule-t { border-top: 1px solid var(--line); }
 .rule-b { border-bottom: 1px solid var(--line); }
 
@@ -105,7 +135,7 @@
 
 .display {
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.02em;
 }
 
@@ -135,15 +165,7 @@
 .thin-scroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 3px; }
 .thin-scroll::-webkit-scrollbar-track { background: transparent; }
 
-/* ===========================================================================
-   Bklit chart tokens -> Vayu design tokens.
-
-   The registry ships its palette under `:root` / `.dark`, but this app themes
-   via [data-vayu][data-theme] on a wrapper element, so `.dark` never matches
-   and every chart would render the light-mode greys on our dark surface.
-   Mapping the chart vars onto our own tokens fixes both themes at once, since
-   --surface/--ink/--line already flip with data-theme.
-   =========================================================================== */
+/* Chart Theme Tokens */
 [data-vayu] {
   --chart-background: var(--surface);
   --chart-foreground: var(--ink-2);
@@ -159,8 +181,4 @@
   --chart-tooltip-background: var(--surface);
   --chart-tooltip-foreground: var(--ink);
   --chart-tooltip-muted: var(--ink-3);
-
-  --chart-marker-background: var(--surface-2);
-  --chart-marker-border: var(--line);
-  --chart-marker-foreground: var(--ink);
 }

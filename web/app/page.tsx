@@ -66,10 +66,10 @@ export default function Landing() {
           zIndex: 1,
           maxWidth: 1400,
           margin: "0 auto",
-          padding: `clamp(115px,10vw,140px) ${PAD} 40px`,
+          padding: `140px ${PAD} 60px`,
           display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "clamp(24px, 4vw, 56px)",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 520px), 1fr))",
+          gap: "clamp(24px, 4vw, 60px)",
           alignItems: "start",
         }}
       >

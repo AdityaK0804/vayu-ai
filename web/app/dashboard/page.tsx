@@ -119,7 +119,17 @@ export default function Dashboard() {
             </svg>
           </span>
           <span>
-            <b style={{ letterSpacing: ".08em" }}>Vayu.AI</b>
+            <b
+              style={{
+                fontFamily:
+                  '"Comic Neue", "Comic Sans MS", "Comic Sans", "Chalkboard SE", cursive, sans-serif',
+                letterSpacing: ".04em",
+                fontSize: 18,
+                color: "#38bdf8",
+              }}
+            >
+              Vayu.AI
+            </b>
             <small>{t("COMMAND CENTER")}</small>
           </span>
         </Link>

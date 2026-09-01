@@ -194,166 +194,133 @@ function AlertTicker() {
 function SiteNav() {
   const pathname = usePathname();
   const { t } = useT();
-  const navRef = useRef<HTMLElement | null>(null);
-
-  // Nav condenses into a floating dark pill once scrolled, exactly as the design does.
-  useEffect(() => {
-    const el = navRef.current;
-    if (!el) return;
-    const on: Record<string, string> = {
-      maxWidth: "1500px",
-      width: "calc(100% - 40px)",
-      margin: "12px auto",
-      borderRadius: "26px",
-      background: "rgba(10,17,15,0.86)",
-      backdropFilter: "blur(16px)",
-      borderColor: "rgba(255,255,255,0.08)",
-      boxShadow: "0 18px 44px -18px rgba(0,0,0,0.65)",
-      padding: "12px clamp(18px,2.4vw,30px)",
-    };
-    const off: Record<string, string> = {
-      maxWidth: "none",
-      width: "auto",
-      margin: "0 auto",
-      borderRadius: "0px",
-      background: "transparent",
-      backdropFilter: "none",
-      borderColor: "transparent",
-      boxShadow: "none",
-      padding: `18px ${PAD}`,
-    };
-    const sc = () => {
-      const y = window.scrollY > 24;
-      Object.assign(el.style, y ? on : off);
-      el.querySelectorAll<HTMLElement>(".nav-txt").forEach((a) => {
-        if (a.dataset.active === "true") return;
-        a.style.color = y ? "#c7d3cf" : "var(--ink-2)";
-      });
-      el.querySelectorAll<HTMLElement>(".nav-brand, .nav-brand *").forEach((b) => {
-        b.style.color = y ? "#ffffff" : "";
-      });
-      const t = el.querySelector<HTMLElement>(".nav-theme");
-      if (t) {
-        // stays transparent in both states so it reads as part of the bar
-        t.style.color = y ? "#c7d3cf" : "var(--ink-2)";
-        t.style.borderColor = y
-          ? "rgba(255,255,255,0.16)"
-          : "color-mix(in oklch, var(--ink-2), transparent 78%)";
-        t.style.background = "transparent";
-      }
-    };
-    sc();
-    window.addEventListener("scroll", sc, { passive: true });
-    return () => window.removeEventListener("scroll", sc);
-  }, [pathname]);
 
   return (
-    <nav
-      ref={navRef}
-      id="siteNav"
+    <header
       style={{
         position: "fixed",
         top: 0,
         left: 0,
         right: 0,
-        zIndex: 20,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: `18px ${PAD}`,
-        background: "transparent",
-        border: "1px solid transparent",
-        transition:
-          "background .35s ease,box-shadow .35s ease,margin .35s ease,padding .35s ease,border-radius .35s ease,border-color .35s ease,max-width .35s ease",
+        zIndex: 50,
+        background: "rgba(6, 14, 12, 0.88)",
+        backdropFilter: "blur(18px)",
+        WebkitBackdropFilter: "blur(18px)",
+        borderBottom: "1px solid rgba(56, 189, 248, 0.15)",
+        boxShadow: "0 4px 24px rgba(0, 0, 0, 0.4)",
       }}
     >
-      <Link href="/" className="nav-brand" style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <span
-          style={{
-            display: "grid",
-            placeItems: "center",
-            width: 48,
-            height: 48,
-            position: "relative",
-          }}
-        >
-          <svg width="48" height="48" viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg">
-            <path d="M 25 45 C 20 45 15 40 15 35 C 15 30 18 26 23 25 C 25 15 33 10 42 12 C 48 5 58 5 63 12 C 72 10 80 15 82 25 C 87 26 90 30 90 35 C 90 40 85 45 80 45 L 25 45 Z" fill="none" stroke="#60a5fa" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" style={{ filter: "drop-shadow(0 0 4px rgba(96,165,250,0.8))" }}></path>
-            <path d="M 25 45 L 80 45" fill="none" stroke="#60a5fa" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" style={{ filter: "drop-shadow(0 0 4px rgba(96,165,250,0.8))" }}></path>
-            <path d="M 12 35 L 35 35 L 43 45 L 53 15 L 63 45 L 70 35 L 92 35" fill="none" stroke="#4ade80" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" style={{ filter: "drop-shadow(0 0 4px rgba(74,222,128,0.8))" }}></path>
-            <circle cx="53" cy="15" r="5" fill="#fbbf24" style={{ filter: "drop-shadow(0 0 4px rgba(251,191,36,0.8))" }}></circle>
-          </svg>
-        </span>
-        <span style={{ display: "flex", flexDirection: "column", lineHeight: 1 }}>
-          <span className="display" style={{ fontWeight: 700, fontSize: 24, letterSpacing: 0 }}>
-            Vayu.AI
-          </span>
-
-        </span>
-      </Link>
-
-      <div
+      <nav
+        id="siteNav"
         style={{
+          maxWidth: "1400px",
+          margin: "0 auto",
           display: "flex",
           alignItems: "center",
-          gap: "clamp(14px,2.4vw,34px)",
-          fontSize: 14,
-          fontWeight: 500,
+          justifyContent: "space-between",
+          padding: `14px ${PAD}`,
         }}
       >
-        {NAV.map((n) => {
-          const active = pathname === n.href;
-          return (
-            <Link
-              key={n.href}
-              href={n.href}
-              className="nav-txt hidden sm:inline"
-              data-active={active ? "true" : "false"}
+        <Link href="/" className="nav-brand" style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span
+            style={{
+              display: "grid",
+              placeItems: "center",
+              width: 42,
+              height: 42,
+              position: "relative",
+            }}
+          >
+            <svg width="42" height="42" viewBox="0 0 100 70" xmlns="http://www.w3.org/2000/svg">
+              <path d="M 25 45 C 20 45 15 40 15 35 C 15 30 18 26 23 25 C 25 15 33 10 42 12 C 48 5 58 5 63 12 C 72 10 80 15 82 25 C 87 26 90 30 90 35 C 90 40 85 45 80 45 L 25 45 Z" fill="none" stroke="#38bdf8" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" style={{ filter: "drop-shadow(0 0 6px rgba(56,189,248,0.8))" }}></path>
+              <path d="M 25 45 L 80 45" fill="none" stroke="#38bdf8" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" style={{ filter: "drop-shadow(0 0 6px rgba(56,189,248,0.8))" }}></path>
+              <path d="M 12 35 L 35 35 L 43 45 L 53 15 L 63 45 L 70 35 L 92 35" fill="none" stroke="#4ade80" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" style={{ filter: "drop-shadow(0 0 6px rgba(74,222,128,0.8))" }}></path>
+              <circle cx="53" cy="15" r="5" fill="#fbbf24" style={{ filter: "drop-shadow(0 0 6px rgba(251,191,36,0.8))" }}></circle>
+            </svg>
+          </span>
+          <span style={{ display: "flex", flexDirection: "column", lineHeight: 1 }}>
+            <span
               style={{
-                color: active ? "var(--accent)" : "var(--ink-2)",
-                fontWeight: active ? 600 : 500,
-              }}
-              onClick={(e) => {
-                if (n.href.startsWith("/#") && pathname === "/") {
-                  e.preventDefault();
-                  const targetId = n.href.substring(2);
-                  const targetElement = document.getElementById(targetId);
-                  if (targetElement) {
-                    targetElement.scrollIntoView({ behavior: "smooth" });
-                    window.history.pushState(null, "", n.href);
-                  }
-                }
+                fontFamily: '"Comic Neue", "Comic Sans MS", "Comic Sans", "Chalkboard SE", cursive, sans-serif',
+                fontWeight: 700,
+                fontSize: 26,
+                letterSpacing: "0.02em",
+                color: "#38bdf8",
+                textShadow: "0 0 14px rgba(56, 189, 248, 0.6)",
               }}
             >
-              {t(n.label)}
-            </Link>
-          );
-        })}
-        <LangToggle compact />
-        <AnimatedThemeToggler
-          className="nav-theme grid place-items-center cursor-pointer"
-          style={undefined}
-        />
-        <ShinyLink
-          href="/dashboard"
+              Vayu.AI
+            </span>
+          </span>
+        </Link>
+
+        <div
           style={{
-            display: "inline-flex",
+            display: "flex",
             alignItems: "center",
-            gap: 8,
-            padding: "10px 18px",
-            borderRadius: 10,
-            background: "var(--ink)",
-            color: "var(--bg)",
+            gap: "clamp(12px, 2vw, 24px)",
+            fontSize: 14,
             fontWeight: 600,
-            fontSize: 13.5,
           }}
         >
-          {t("Open Dashboard →")}
-        </ShinyLink>
-      </div>
-    </nav>
+          {NAV.map((n) => {
+            const active = pathname === n.href;
+            return (
+              <Link
+                key={n.href}
+                href={n.href}
+                className="nav-txt hidden md:inline-block"
+                data-active={active ? "true" : "false"}
+                style={{
+                  color: active ? "#38bdf8" : "#cbd5e1",
+                  fontWeight: active ? 700 : 500,
+                  transition: "color 0.15s ease",
+                  padding: "4px 8px",
+                }}
+                onClick={(e) => {
+                  if (n.href.startsWith("/#") && pathname === "/") {
+                    e.preventDefault();
+                    const targetId = n.href.substring(2);
+                    const targetElement = document.getElementById(targetId);
+                    if (targetElement) {
+                      targetElement.scrollIntoView({ behavior: "smooth" });
+                      window.history.pushState(null, "", n.href);
+                    }
+                  }
+                }}
+              >
+                {t(n.label)}
+              </Link>
+            );
+          })}
+          <LangToggle compact />
+          <AnimatedThemeToggler
+            className="nav-theme grid place-items-center cursor-pointer"
+            style={undefined}
+          />
+          <ShinyLink
+            href="/dashboard"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "9px 18px",
+              borderRadius: 10,
+              background: "linear-gradient(135deg, #38bdf8, #2563eb)",
+              color: "#ffffff",
+              fontWeight: 700,
+              fontSize: 13.5,
+              boxShadow: "0 4px 14px rgba(56, 189, 248, 0.4)",
+            }}
+          >
+            {t("Open Dashboard →")}
+          </ShinyLink>
+        </div>
+      </nav>
+    </header>
   );
 }
+
 
 /* ------------------------------------------------- page shell (backdrops) */
 export default function SiteShell({ children }: { children: React.ReactNode }) {

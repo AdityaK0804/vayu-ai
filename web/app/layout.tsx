@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono, Outfit, Plus_Jakarta_Sans } from "next/font/google";
+import "./theme.css";
+import "./dashboard.css";
+import "./site.css";
 import "./globals.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Providers } from "./providers";
