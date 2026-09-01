@@ -43,8 +43,13 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${display.variable} ${body.variable} ${mono.variable}`}>
-      <body>
+    <html
+      lang="en"
+      data-vayu
+      data-theme="dark"
+      className={`${display.variable} ${body.variable} ${mono.variable}`}
+    >
+      <body style={{ background: "#060e0c", color: "#ffffff" }}>
         <Providers>
           <ThemeShell>{children}</ThemeShell>
         </Providers>

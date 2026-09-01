@@ -44,27 +44,7 @@ const NAV = [
 function LiveMapPanel({ minHeight }: { minHeight: number }) {
   const { t } = useT();
   const ref = useRef<HTMLDivElement | null>(null);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (typeof IntersectionObserver === "undefined") {
-      setMounted(true);
-      return;
-    }
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setMounted(true);
-          io.disconnect();
-        }
-      },
-      { rootMargin: "300px" },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
+  const [mounted, setMounted] = useState(true);
 
   return (
     <div ref={ref} style={{ position: "relative", minHeight, minWidth: 0, overflow: "hidden", background: "var(--surface-2)" }}>
@@ -91,11 +71,11 @@ function LiveMapPanel({ minHeight }: { minHeight: number }) {
         <DistrictMap
           selected={null}
           onSelect={() => {}}
-          showCities={false}
-          showCityLabels={false}
+          showCities={true}
+          showCityLabels={true}
           openCityOnFocus={false}
           interactive={false}
-          initialZoom={minHeight < 300 ? 2.8 : 5.8}
+          initialZoom={6.5}
         />
       ) : (
         <div style={{ display: "grid", placeItems: "center", height: minHeight }}>
