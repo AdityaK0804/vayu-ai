@@ -37,9 +37,9 @@ FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 
 AIRQ_CURRENT = [
     "pm2_5", "pm10", "nitrogen_dioxide", "sulphur_dioxide", "ozone",
-    "carbon_monoxide", "aerosol_optical_depth", "dust", "us_aqi",
+    "carbon_monoxide", "aerosol_optical_depth", "dust",
 ]
-AIRQ_HOURLY = ["pm2_5", "us_aqi"]
+AIRQ_HOURLY = ["pm2_5"]
 MET_CURRENT = [
     "temperature_2m", "wind_speed_10m", "wind_direction_10m",
     "boundary_layer_height",
@@ -149,20 +149,35 @@ def summarize(entry: dict) -> dict:
         "lat": entry["lat"],
         "lon": entry["lon"],
         "current_pm25": cur.get("pm2_5"),
-        "current_us_aqi": cur.get("us_aqi"),
+        # CPCB NAQI PM2.5 sub-index on the trailing 24h mean (no US EPA AQI).
+        "current_aqi": _cpcb_aqi_24h(entry["air_quality"].get("hourly", {})),
+        "aqi_basis": "cpcb_naqi",
         "updated": entry["fetched_at"],
         "stale": False,
     }
 
 
+def _cpcb_aqi_24h(hourly: dict) -> int | None:
+    """CPCB PM2.5 sub-index of the last 24 hourly values up to now."""
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
+    from airsight.aqi.cpcb_naqi import rolling_pm25_aqi
+
+    times = hourly.get("time") or []
+    values = hourly.get("pm2_5") or []
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:00")
+    upto = [v for t, v in zip(times, values) if t <= now]
+    return rolling_pm25_aqi(upto)[-1] if upto else None
+
+
 def aqi_band(aqi) -> str:
+    """CPCB NAQI bands."""
     if aqi is None:
         return "-"
-    for hi, label in ((50, "Good"), (100, "Moderate"), (150, "Unhealthy(SG)"),
-                      (200, "Unhealthy"), (300, "Very Unhealthy")):
+    for hi, label in ((50, "Good"), (100, "Satisfactory"), (200, "Moderate"),
+                      (300, "Poor"), (400, "Very Poor")):
         if aqi <= hi:
             return label
-    return "Hazardous"
+    return "Severe"
 
 
 def run_once(cities: list[dict]) -> bool:
@@ -193,7 +208,7 @@ def run_once(cities: list[dict]) -> bool:
         write_atomic(LIVE / f"{cid}_live.json", entry)
         rows[cid] = summarize(entry)
         cur = entry["air_quality"]["current"]
-        ok(f"{cid}: pm2.5={cur.get('pm2_5')} us_aqi={cur.get('us_aqi')}")
+        ok(f"{cid}: pm2.5={cur.get('pm2_5')} aqi={rows[cid].get('current_aqi')}")
 
     fresh = [c for c, r in rows.items() if not r.get("stale")]
     if not fresh:
@@ -206,7 +221,7 @@ def run_once(cities: list[dict]) -> bool:
         ok(f"latest.json -> {len(merged)} cities ({len(fresh)} fresh)")
 
     print()
-    print(f"{'city':<12}{'PM2.5':>9}{'US AQI':>9}  {'band':<15}{'updated (UTC)':<22}state")
+    print(f"{'city':<12}{'PM2.5':>9}{'AQI':>9}  {'band':<15}{'updated (UTC)':<22}state")
     print("-" * 78)
     for city in cities:
         r = rows.get(city["id"])
@@ -214,7 +229,7 @@ def run_once(cities: list[dict]) -> bool:
             print(f"{city['id']:<12}{'-':>9}{'-':>9}  {'-':<15}{'-':<22}FAILED (no prior)")
             continue
         pm = r["current_pm25"]
-        aqi = r["current_us_aqi"]
+        aqi = r.get("current_aqi")
         print(f"{r['city_id']:<12}{pm if pm is not None else '-':>9}"
               f"{aqi if aqi is not None else '-':>9}  {aqi_band(aqi):<15}"
               f"{r['updated']:<22}{'STALE' if r.get('stale') else 'live'}")

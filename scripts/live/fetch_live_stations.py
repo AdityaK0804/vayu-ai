@@ -154,11 +154,11 @@ def main() -> None:
             "city_id": name2city.get(norm(r.station)),
             "lat": float(r.lat), "lon": float(r.lon),
             **vals,
-            "us_aqi": aqi_from_pm25(vals["pm25_24h"]) if vals.get("pm25_24h") else None,
+            "aqi": aqi_from_pm25(vals["pm25_24h"]) if vals.get("pm25_24h") else None,
             "measured_at_utc": when,
         })
         say(f"{r.station[:42]:<44}now={vals.get('pm25','—'):>6}  24h={vals.get('pm25_24h') or '—':>6}"
-            f"  aqi={rows[-1]['us_aqi'] if rows[-1]['us_aqi'] is not None else '—'}")
+            f"  aqi={rows[-1]['aqi'] if rows[-1]['aqi'] is not None else '—'}")
         time.sleep(0.4)   # be polite to the API
 
     if not rows:
@@ -195,10 +195,10 @@ def main() -> None:
             if pm is None:
                 c["measured"] = False
                 c["n_stations"] = 0
-                print(f"{c['city_id']:<12}{str(cams):>11}{'—':>15}{str(c['current_us_aqi']):>6}  no 24h data")
+                print(f"{c['city_id']:<12}{str(cams):>11}{'—':>15}{str(c.get('current_aqi')):>6}  no 24h data")
                 continue
             c["measured_pm25_24h"] = pm
-            c["measured_us_aqi"] = aqi_from_pm25(pm)
+            c["measured_aqi"] = aqi_from_pm25(pm)
             c["measured"] = True
             c["n_stations"] = len(got)
             c["updated"] = payload["fetched_at_utc"]
@@ -208,7 +208,7 @@ def main() -> None:
             c["n_stations"] = 0
             pm = cams
             src = "CAMS model (no station)"
-        print(f"{c['city_id']:<12}{str(cams):>11}{str(pm):>15}{str(c['current_us_aqi']):>6}  {src}")
+        print(f"{c['city_id']:<12}{str(cams):>11}{str(pm):>15}{str(c.get('current_aqi')):>6}  {src}")
 
     lp.write_text(json.dumps(cities, indent=2), encoding="utf-8")
     ok("latest.json refreshed — measured values now take precedence")

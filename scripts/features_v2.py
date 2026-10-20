@@ -5,10 +5,18 @@ Used by training jobs; works on plain dict rows or DataFrames.
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Iterable
 
 import numpy as np
 import pandas as pd
+
+
+log = logging.getLogger(__name__)
+
+
+class EmptyFeatureError(ValueError):
+    """Raised when required features are entirely missing (DATA-01)."""
 
 
 FEATURE_V2_COLS: list[str] = [
@@ -88,8 +96,8 @@ def build_feature_row(raw: dict[str, Any]) -> dict[str, float]:
         if v is not None:
             out[col] = v
 
-    spd = take("wind_speed_10m", "wind_speed")
-    direction = take("wind_direction_10m", "wind_direction")
+    spd = take("wind_speed_10m", "wind_speed", "wind_speed_ms")
+    direction = take("wind_direction_10m", "wind_direction", "wind_dir")
     if spd is not None and direction is not None:
         u, v = wind_uv(spd, direction)
         out["wind_u"], out["wind_v"], out["wind_speed"] = u, v, spd
@@ -109,11 +117,48 @@ def build_feature_row(raw: dict[str, Any]) -> dict[str, float]:
     return out
 
 
+# Time features are always derivable; everything else must come from the data.
+_DATA_COLS = [c for c in FEATURE_V2_COLS if c not in {"hour_sin", "hour_cos", "doy_sin", "doy_cos"}]
+
+
+def empty_feature_columns(df: pd.DataFrame, cols: list[str] | None = None) -> list[str]:
+    """Columns that are entirely NaN/absent - the DATA-01 failure signature."""
+    use = cols or _DATA_COLS
+    x = df.reindex(columns=use)
+    return [c for c in use if x[c].isna().all()]
+
+
 def build_feature_frame(rows: Iterable[dict[str, Any]]) -> pd.DataFrame:
-    return pd.DataFrame([build_feature_row(r) for r in rows], columns=FEATURE_V2_COLS)
+    df = pd.DataFrame([build_feature_row(r) for r in rows], columns=FEATURE_V2_COLS)
+    empty = empty_feature_columns(df) if len(df) else []
+    if empty:
+        # Never silent: an unmapped column name shows up here, not as a quiet
+        # accuracy drop after zero-imputation.
+        log.warning("features_v2: %d feature(s) entirely empty: %s", len(empty), ", ".join(empty))
+    return df
 
 
-def feature_matrix(df: pd.DataFrame, cols: list[str] | None = None) -> np.ndarray:
+def feature_matrix(
+    df: pd.DataFrame,
+    cols: list[str] | None = None,
+    *,
+    required: Iterable[str] | None = None,
+    max_empty_share: float = 0.5,
+) -> np.ndarray:
+    """Model matrix. Raises :class:`EmptyFeatureError` instead of silently
+    zero-filling when a required feature, or more than ``max_empty_share`` of
+    the data features, is entirely missing."""
     use = cols or FEATURE_V2_COLS
+    data_cols = [c for c in use if c in _DATA_COLS]
+    empty = empty_feature_columns(df, data_cols) if data_cols else []
+    missing_required = [c for c in (required or []) if c in empty]
+    if missing_required:
+        raise EmptyFeatureError(f"required features entirely empty: {missing_required}")
+    if data_cols and len(df) and len(empty) / len(data_cols) > max_empty_share:
+        raise EmptyFeatureError(
+            f"{len(empty)}/{len(data_cols)} features entirely empty: {empty}"
+        )
+    if empty:
+        log.warning("feature_matrix: zero-filling empty features %s", empty)
     x = df.reindex(columns=use).astype(float)
     return np.nan_to_num(x.to_numpy(), nan=0.0, posinf=0.0, neginf=0.0)
