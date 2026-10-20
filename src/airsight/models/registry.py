@@ -39,7 +39,14 @@ import pandas as pd
 from airsight.config import DATA, OUTPUTS
 from airsight.store import Store
 
-MODELS_DIR = OUTPUTS / "models"
+import os as _os
+
+# Committed artifacts (models/<version>/) win over local training output.
+_REPO_MODELS = Path(__file__).resolve().parents[3] / "models"
+MODELS_DIR = Path(
+    _os.environ.get("VAYU_MODELS_DIR")
+    or (_REPO_MODELS if _REPO_MODELS.is_dir() else OUTPUTS / "models")
+)
 REGISTRY_JSON = MODELS_DIR / "registry.json"
 TARGET = "pm25"
 HORIZONS: tuple[int, ...] = (24, 48, 72)
@@ -463,6 +470,21 @@ def load_artifacts(version: str, horizon: int, target: str = TARGET) -> dict[str
 
     model_dir = MODELS_DIR / version
     bundle: dict[str, Any] = {"version": version, "horizon_h": horizon, "target": target}
+    manifest = model_dir / "bundle.json"
+    if manifest.exists():
+        # Text-format LightGBM boosters committed to the repo (scripts/train_clean.py).
+        import lightgbm as lgb
+
+        meta = json.loads(manifest.read_text(encoding="utf-8"))
+        for q in QUANTILES:
+            key = f"p{int(q * 100)}"
+            path = model_dir / f"{target}_h{horizon}_{key}.txt"
+            if not path.exists():
+                raise FileNotFoundError(f"missing model artifact {path}")
+            bundle[key] = {"model": lgb.Booster(model_file=str(path)), "features": meta["features"]}
+        bundle["features"] = list(meta["features"])
+        bundle["calibration"] = meta.get("calibration") or {}
+        return bundle
     for q in QUANTILES:
         key = f"p{int(q * 100)}"
         path = model_dir / f"{target}_h{horizon}_{key}.joblib"
@@ -487,6 +509,8 @@ def load_active(horizon: int, store: Store | None = None, target: str = TARGET) 
                 pass
         # Fallback: newest version present on disk.
         candidates = sorted(MODELS_DIR.glob(f"*{target}*h{horizon}*p50.joblib"))
+        if not candidates:
+            candidates = sorted(MODELS_DIR.glob(f"*/{target}_h{horizon}_p50.txt"))
         if not candidates:
             candidates = sorted(MODELS_DIR.glob("*/pm25_h*_p50.joblib"))
             candidates = [c for c in candidates if f"h{horizon}_" in c.name]
