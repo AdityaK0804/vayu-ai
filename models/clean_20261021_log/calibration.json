@@ -1,0 +1,39 @@
+{
+  "created_at": "2026-10-20T16:53:52Z",
+  "method": "split-conformal scaling of p10/p90 half-widths around p50 (CQR)",
+  "target_coverage": 0.8,
+  "windows": {
+    "train": "< 2025-01-01",
+    "calibration": ">= 2025-01-01, even 7-day blocks",
+    "evaluation": ">= 2025-01-01, odd 7-day blocks (never used for fitting)"
+  },
+  "horizons": {
+    "24": {
+      "scale": 1.0596,
+      "n_calibration": 38777,
+      "n_evaluation": 38440,
+      "eval_coverage_raw": 0.762,
+      "eval_coverage_calibrated": 0.786,
+      "eval_mean_width_raw": 23.12,
+      "eval_mean_width_calibrated": 24.5
+    },
+    "48": {
+      "scale": 1.1128,
+      "n_calibration": 38038,
+      "n_evaluation": 37612,
+      "eval_coverage_raw": 0.748,
+      "eval_coverage_calibrated": 0.794,
+      "eval_mean_width_raw": 24.93,
+      "eval_mean_width_calibrated": 27.74
+    },
+    "72": {
+      "scale": 1.131,
+      "n_calibration": 37537,
+      "n_evaluation": 37258,
+      "eval_coverage_raw": 0.74,
+      "eval_coverage_calibrated": 0.794,
+      "eval_mean_width_raw": 25.82,
+      "eval_mean_width_calibrated": 29.21
+    }
+  }
+}
