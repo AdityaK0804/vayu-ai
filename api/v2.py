@@ -297,6 +297,17 @@ def v2_forecast(city_id: str, hours: int = Query(72, ge=6, le=120)) -> dict[str,
     return result
 
 
+@router.get("/cities/{city_id}/skill")
+def v2_skill(city_id: str, days: int = Query(7, ge=1, le=30)) -> dict[str, Any]:
+    """Forecast verification against readings that arrived after issue."""
+    from airsight.forecast.skill import city_skill
+
+    with _open_store() as store:
+        if not store.city(city_id):
+            raise ApiError(404, "Unknown city.", code="unknown_city")
+        return city_skill(store, city_id, days=days)
+
+
 @router.get("/cities/{city_id}/surface")
 def v2_surface(
     request: Request,
@@ -704,12 +715,27 @@ def v2_advice(body: AdviceRequest) -> dict[str, Any]:
     from airsight.rag.advisory import generate_advisory
 
     pm25, aqi = body.pm25, body.aqi
+    evidence: dict[str, Any] = {"basis": "request", "pm25": pm25, "aqi": aqi}
     if pm25 is None and aqi is None:
         with _open_store() as store:
             summary = city_summary(store, body.city_id) or {}
+            freshness = store.source_freshness(body.city_id) if summary else {}
         if not summary:
             raise ApiError(404, "Unknown city.", code="unknown_city")
         pm25, aqi = summary.get("pm25_24h") or summary.get("pm25"), summary.get("aqi")
+        evidence = {
+            "basis": "city_summary",
+            "pm25": pm25,
+            "pm25_field": "pm25_24h" if summary.get("pm25_24h") is not None else "pm25",
+            "aqi": aqi,
+            "aqi_basis": "CPCB NAQI",
+            # Pass through whatever provenance the summary carries (ts, source, stations).
+            "summary": {k: v for k, v in summary.items()
+                        if any(t in k for t in ("ts", "source", "station", "updated", "dominant", "measured"))},
+            "freshness": freshness,
+        }
+    evidence["top_source"] = body.top_source
+    evidence["profile"] = {"asthma": body.asthma, "child": body.child, "elderly": body.elderly}
     try:
         result = generate_advisory(
             city_id=body.city_id, pm25=pm25, aqi=aqi, top_source=body.top_source,
@@ -718,6 +744,8 @@ def v2_advice(body: AdviceRequest) -> dict[str, Any]:
     except Exception:  # noqa: BLE001
         log.exception("advice generation failed")
         raise ApiError(503, "Health advice is temporarily unavailable.", code="advice_unavailable") from None
+    if isinstance(result, dict):
+        result = {**result, "evidence": evidence}
     return _json_clean(result)
 
 

@@ -835,6 +835,17 @@ class Store:
             params.append(int(limit))
         return [dict(r) for r in self.query(sql, params)]
 
+    def forecast_runs(
+        self, city_id: str, *, since: str, until: str, sources: Sequence[str]
+    ) -> list[dict[str, Any]]:
+        """Every stored run (not just the latest) for target hours in [since, until]."""
+        marks = ",".join("?" for _ in sources)
+        sql = (
+            "SELECT run_ts, ts, pm25, p10, p90, source, model_version FROM air_forecast "
+            f"WHERE city_id = ? AND ts >= ? AND ts <= ? AND source IN ({marks}) ORDER BY ts, run_ts"
+        )
+        return [dict(r) for r in self.query(sql, [city_id.lower(), to_iso(since), to_iso(until), *sources])]
+
     def upsert_fires(self, rows: Iterable[dict[str, Any]]) -> int:
         now = utcnow()
         n = 0
