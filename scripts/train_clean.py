@@ -16,6 +16,9 @@ from pathlib import Path
 import lightgbm as lgb, numpy as np, pandas as pd, yaml
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+from airsight.features import fire_upwind  # noqa: E402
+from airsight.live.fires import parse_csv  # noqa: E402
 HORIZONS = (24, 48, 72)
 CAMS = {"pm2_5": "cams_pm25", "pm10": "cams_pm10", "nitrogen_dioxide": "cams_no2",
         "sulphur_dioxide": "cams_so2", "ozone": "cams_o3", "dust": "cams_dust"}
@@ -103,7 +106,28 @@ def load_clean_stations(om: Path, cdir: Path):
     return pms, inputs, log, cams_start
 
 
-def station_frame(pm: pd.Series, cams: pd.DataFrame, met: pd.DataFrame, horizon: int) -> pd.DataFrame:
+def load_fire_archive(fdir: Path) -> pd.DataFrame:
+    """FIRMS SP archive CSVs (scripts/fetch_firms_archive.py), parsed like live ingest."""
+    rows = []
+    for f in sorted(fdir.glob("*.csv")):
+        rows += parse_csv(f.read_text())
+    if not rows:
+        raise SystemExit(f"no FIRMS archive in {fdir}; run scripts/fetch_firms_archive.py")
+    return pd.DataFrame(rows)[["ts", "lat", "lon", "frp"]].drop_duplicates()
+
+
+def fire_issue_series(fires: pd.DataFrame, lat: float, lon: float, met: pd.DataFrame,
+                      start, end) -> pd.Series:
+    """fire_frp_upwind at every hourly issue time, wind-from from the met archive."""
+    idx = pd.date_range(start, end, freq="h")
+    m = met.reindex(idx)
+    wd = (np.degrees(np.arctan2(m["wind_dir_sin"], m["wind_dir_cos"])) + 360.0) % 360.0
+    return pd.Series(fire_upwind.upwind_frp(fires, lat, lon, idx, wd.to_numpy(), **fire_upwind.params()),
+                     index=idx)
+
+
+def station_frame(pm: pd.Series, cams: pd.DataFrame, met: pd.DataFrame, horizon: int,
+                  fire: pd.Series | None = None) -> pd.DataFrame:
     idx = pd.date_range(pm.index.min(), pm.index.max(), freq="h")
     pm = pm.reindex(idx)
     # Issue-time state, mirroring forecast.service._recent_state.
@@ -113,6 +137,8 @@ def station_frame(pm: pd.Series, cams: pd.DataFrame, met: pd.DataFrame, horizon:
     st["pm25_lag24"] = pm.shift(23)
     st["pm25_roll24_mean"] = pm.rolling(24, min_periods=6).mean()
     st["pm25_roll24_std"] = pm.rolling(24, min_periods=6).std(ddof=0)
+    if fire is not None:
+        st[fire_upwind.FEATURE] = fire.reindex(idx)
     out = st.shift(horizon)  # row = target hour; state known `horizon` hours earlier
     out["target"] = pm
     out = out.join(cams, how="left").join(met, how="left")
@@ -138,6 +164,20 @@ def evaluate(train, test):
             "persistence": scores(y, t["pm25_lag1"].values), "cams": scores(y, t["cams_pm25"].values)}
 
 
+def attach_fire(firms_dir: str):
+    """Enable the fire feature: extends FEATURES and returns a per-station builder."""
+    if fire_upwind.FEATURE not in FEATURES:
+        FEATURES.append(fire_upwind.FEATURE)
+    archive = load_fire_archive(Path(firms_dir))
+    st = pd.read_csv(ROOT / "config" / "stations.csv").set_index("station_id")
+
+    def build(pms, inputs, cams_start):
+        return {s: fire_issue_series(archive, float(st.loc[s, "latitude"]), float(st.loc[s, "longitude"]),
+                                     inputs[s][1], max(pms[s].index.min(), cams_start - pd.Timedelta(days=4)),
+                                     pms[s].index.max()) for s in pms}
+    return build
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--om-dir", default="/workspace/vayu-data/fetched/open_meteo")
@@ -146,10 +186,15 @@ def main() -> int:
     ap.add_argument("--skip-loso", action="store_true")
     ap.add_argument("--version", default=None)
     ap.add_argument("--transform", default=TRANSFORM, choices=["log1p", "none"])
+    ap.add_argument("--fire", action=argparse.BooleanOptionalAction, default=True,
+                    help="add fire_frp_upwind (config firms.upwind_feature)")
+    ap.add_argument("--firms-dir", default="/workspace/vayu-data/fetched/firms")
     a = ap.parse_args()
     globals()["TRANSFORM"] = a.transform
+    fire_by_station = attach_fire(a.firms_dir) if a.fire else None
     om, cdir = Path(a.om_dir), Path(a.cpcb_dir)
     pms, inputs, log, cams_start = load_clean_stations(om, cdir)
+    fires = fire_by_station(pms, inputs, cams_start) if fire_by_station else None
     report = {"created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
               "data": log, "cams_history_start": str(cams_start.date()),
               "note": "Rows restricted to hours with CAMS available (Open-Meteo CAMS history starts "
@@ -160,7 +205,8 @@ def main() -> int:
     vdir.mkdir(parents=True, exist_ok=True)
     split = pd.Timestamp("2025-01-01", tz="UTC")
     for h in HORIZONS:
-        frames = {s: station_frame(pms[s], *inputs[s], h).assign(station=s) for s in pms}
+        frames = {s: station_frame(pms[s], *inputs[s], h, fire=(fires or {}).get(s)).assign(station=s)
+                  for s in pms}
         allf = pd.concat(frames.values())
         allf = allf[allf.index >= cams_start]
         res = {"n_rows": int(len(allf))}
@@ -195,7 +241,8 @@ def main() -> int:
         report["horizons"][str(h)] = res
         print(h, json.dumps({k: v for k, v in res.items() if k != "loso"}), flush=True)
     (vdir / "bundle.json").write_text(json.dumps({"version": version, "features": FEATURES,
-        "calibration": {}, "target_transform": TRANSFORM, "horizons": list(HORIZONS), "quantiles": [0.1, 0.5, 0.9]}, indent=2))
+        "calibration": {}, "target_transform": TRANSFORM,
+        "fire_upwind": fire_upwind.params() if fire_by_station else None, "horizons": list(HORIZONS), "quantiles": [0.1, 0.5, 0.9]}, indent=2))
     (vdir / "metrics.json").write_text(json.dumps(report, indent=2))
     print("wrote", vdir)
     return 0

@@ -32,6 +32,7 @@ import pandas as pd
 
 from airsight.aqi.cpcb_naqi import band_for_aqi
 from airsight.config import DATA
+from airsight.features import fire_upwind
 from airsight.grid.surface import load_static_grid
 from airsight.models.registry import HORIZONS, add_inference_features, load_active, predict_frame
 from airsight.store import Store, to_iso, utcnow
@@ -78,6 +79,7 @@ def forecast_city(
 
     statics = _static_profile(city)
     fire = _fire_features(store, city, now)
+    fire.update(_fire_upwind(store, city, now, met_rows))
     state = _recent_state(store, city_id, now)
 
     rows = frame.copy()
@@ -258,6 +260,25 @@ def _fire_features(store: Store, city: dict[str, Any], now: datetime) -> dict[st
             count += 1
             frp_total += float(row["frp"] or 0.0)
     return {"fire_count": count, "fire_frp": round(frp_total, 2)}
+
+
+def _fire_upwind(
+    store: Store, city: dict[str, Any], now: datetime, met_rows: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """fire_frp_upwind at issue time, same function and config as training."""
+    p = fire_upwind.params()
+    since = (now - timedelta(hours=p["window_h"])).strftime("%Y-%m-%dT%H:%M:%SZ")
+    rows = store.query("SELECT ts, lat, lon, frp FROM fires WHERE ts >= ?", (since,))
+    now_iso = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    wind = next((r.get("wind_direction_10m") for r in met_rows if r.get("ts") == now_iso), None)
+    if wind is None:
+        wind = next((r.get("wind_direction_10m") for r in met_rows
+                     if r.get("wind_direction_10m") is not None), None)
+    val = fire_upwind.upwind_frp(
+        pd.DataFrame(rows, columns=["ts", "lat", "lon", "frp"]), float(city["lat"]), float(city["lon"]),
+        [now], [np.nan if wind is None else float(wind)], **p,
+    )[0]
+    return {fire_upwind.FEATURE: None if np.isnan(val) else round(float(val), 2)}
 
 
 def _recent_state(store: Store, city_id: str, now: datetime) -> dict[str, Any]:

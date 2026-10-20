@@ -29,6 +29,15 @@ firms:
   # Chhattisgarh state extent [W, S, E, N] (Survey of India boundary, rounded out).
   state_bbox: [80.2, 17.7, 84.5, 24.2]
   days: 2
+  # Model feature fire_frp_upwind (src/airsight/features/fire_upwind.py):
+  # FRP summed over detections in the last window_h hours, within radius_km,
+  # inside a sector_deg wedge centred on the wind-from direction. Chosen by
+  # time-split + LOSO validation (models/<version>/metrics.json, fire_search).
+  # window_h must stay <= days*24 so live ingest holds the whole window.
+  upwind_feature:
+    window_h: 48
+    radius_km: 200
+    sector_deg: 90
 
 weather:
   # Open-Meteo forecast API rate-limits shared cloud IPs. Weather changes
