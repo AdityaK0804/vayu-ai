@@ -347,6 +347,8 @@ def _ingest_city(
                         "so2": values["so2"],
                         "o3": values["o3"],
                         "co": values["co"],
+                        # Open-Meteo CAMS dust, µg/m³ — same field/units as training.
+                        "dust": _at(series, idx, "dust"),
                         "aqi": naqi.get("aqi"),
                         "model_version": "cams-direct",
                         "source": CAMS_SOURCE,

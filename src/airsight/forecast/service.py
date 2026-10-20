@@ -185,12 +185,14 @@ def _join_inputs(
             "so2": "cams_so2",
             "o3": "cams_o3",
             "co": "cams_co",
+            "dust": "cams_dust",
         }
     )
     keep_cams = [c for c in cams.columns if c == "ts" or c.startswith("cams_")]
     merged = pd.merge(cams[keep_cams], met, on="ts", how="outer").sort_values("ts")
     merged = merged[merged["ts"] >= now_iso]
-    merged["cams_dust"] = np.nan
+    if "cams_dust" not in merged:
+        merged["cams_dust"] = np.nan
     merged = merged.rename(
         columns={
             "temperature_2m": "temp_c",
@@ -276,6 +278,10 @@ def _recent_state(store: Store, city_id: str, now: datetime) -> dict[str, Any]:
         "pm25_roll24_std": float(np.std(values[-24:])) if len(values) >= 6 else None,
     }
     modelled_values = [float(r["pm25"]) for r in sorted(modelled, key=lambda r: r["ts"])]
+    if features["pm25_roll24_std"] is None:
+        # Too few measured hours yet: fall back to the CAMS series' 24 h spread.
+        if len(modelled_values) >= 6:
+            features["pm25_roll24_std"] = float(np.std(modelled_values[-24:]))
     features["cams_pm25_latest"] = modelled_values[-1] if modelled_values else None
     return features
 

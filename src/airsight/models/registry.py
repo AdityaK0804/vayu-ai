@@ -483,7 +483,8 @@ def load_artifacts(version: str, horizon: int, target: str = TARGET) -> dict[str
                 raise FileNotFoundError(f"missing model artifact {path}")
             bundle[key] = {"model": lgb.Booster(model_file=str(path)), "features": meta["features"]}
         bundle["features"] = list(meta["features"])
-        bundle["calibration"] = meta.get("calibration") or {}
+        by_h = meta.get("calibration_by_horizon") or {}
+        bundle["calibration"] = by_h.get(str(horizon)) or meta.get("calibration") or {}
         return bundle
     for q in QUANTILES:
         key = f"p{int(q * 100)}"

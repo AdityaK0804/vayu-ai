@@ -261,6 +261,7 @@ CREATE TABLE IF NOT EXISTS air_forecast (
     so2         REAL,
     o3          REAL,
     co          REAL,
+    dust        REAL,
     aqi         REAL,
     p10         REAL,
     p90         REAL,
@@ -449,12 +450,28 @@ class Store:
                 return
             conn = self._conn
             conn.executescript(_SCHEMA)
+            self._add_missing_columns(conn)
             conn.execute(
                 "INSERT INTO meta(key, value) VALUES('schema_version', ?) "
                 "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
                 (str(SCHEMA_VERSION),),
             )
             self._initialised_paths.add(key)
+
+    # Columns added after the first deploy: (table, column, type).
+    _ADDED_COLUMNS: tuple[tuple[str, str, str], ...] = (("air_forecast", "dust", "REAL"),)
+
+    def _add_missing_columns(self, conn: Any) -> None:
+        for table, column, sqltype in self._ADDED_COLUMNS:
+            if self._url:
+                conn.execute(
+                    f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} "
+                    f"{'DOUBLE PRECISION' if sqltype == 'REAL' else sqltype}"
+                )
+            else:
+                cols = {row[1] for row in conn.execute(f"PRAGMA table_info({table})").fetchall()}
+                if column not in cols:
+                    conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {sqltype}")
 
     @contextmanager
     def tx(self) -> Iterator[sqlite3.Connection]:
@@ -750,11 +767,11 @@ class Store:
                 conn.execute(
                     """
                     INSERT INTO air_forecast (city_id, run_ts, ts, pm25, pm10, no2, so2,
-                        o3, co, aqi, p10, p90, model_version, source)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                        o3, co, dust, aqi, p10, p90, model_version, source)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                     ON CONFLICT(city_id, run_ts, ts, source) DO UPDATE SET
                         pm25=excluded.pm25, pm10=excluded.pm10, no2=excluded.no2,
-                        so2=excluded.so2, o3=excluded.o3, co=excluded.co,
+                        so2=excluded.so2, o3=excluded.o3, co=excluded.co, dust=excluded.dust,
                         aqi=excluded.aqi, p10=excluded.p10, p90=excluded.p90,
                         model_version=excluded.model_version, source=excluded.source
                     """,
@@ -768,6 +785,7 @@ class Store:
                         r.get("so2"),
                         r.get("o3"),
                         r.get("co"),
+                        r.get("dust"),
                         r.get("aqi"),
                         r.get("p10"),
                         r.get("p90"),
