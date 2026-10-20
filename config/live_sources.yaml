@@ -21,6 +21,9 @@ cpcb_datagov:
   stations_file: "cpcb_stations.csv"
   # Readings older than this are not stored as current.
   max_age_hours: 6
+  # auto: parse rows the Supabase pg_net job stored in cpcb_datagov_raw, else
+  # call the API directly. raw_table / direct force one path.
+  mode: "auto"
 
 firms:
   # Chhattisgarh state extent [W, S, E, N] (Survey of India boundary, rounded out).

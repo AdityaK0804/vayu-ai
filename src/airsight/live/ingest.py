@@ -426,8 +426,19 @@ def _ingest_city(
 
 
 def ingest_cpcb(store: Store) -> dict[str, Any]:
-    """Store current CPCB station readings (data.gov.in) for the whole state."""
-    rows, status = cpcb_mod.fetch_latest()
+    """Store current CPCB station readings (data.gov.in) for the whole state.
+
+    ``cpcb_datagov.mode``: ``raw_table`` parses what the Supabase scheduler
+    fetched (Render cannot reach data.gov.in), ``direct`` calls the API, and
+    ``auto`` (default) uses raw rows when present and falls back to direct.
+    """
+    mode = str(source_section("cpcb_datagov").get("mode") or "auto")
+    rows: list[dict[str, Any]] = []
+    status: dict[str, Any] = {"status": "skipped"}
+    if mode in ("auto", "raw_table"):
+        rows, status = cpcb_mod.collect_raw(store)
+    if not rows and mode in ("auto", "direct") and status.get("status") != "ok":
+        rows, status = cpcb_mod.fetch_latest()
     if rows:
         store.upsert_stations([
             {

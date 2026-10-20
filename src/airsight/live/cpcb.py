@@ -219,3 +219,71 @@ def fetch_latest(*, api_key: str | None = None, timeout: float = 60.0) -> tuple[
         detail += f"; unmatched stations: {', '.join(unmatched)[:200]}"
     return rows, {"source": SOURCE, "status": status, "detail": detail,
                   "n_records": len(records), "n_stations": len(rows), "fetched_at": fetched_at}
+
+
+RAW_TABLE = "cpcb_datagov_raw"
+
+
+def collect_raw(store: Any) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Parse responses the Supabase scheduler stored in ``cpcb_datagov_raw``.
+
+    Returns ``([], {"status": "no_raw_table"})`` when the table does not exist
+    (SQLite, or the migration is not applied). Every fetched row is marked
+    ``parsed_at`` so it is read once; readings keep the response's fetch time.
+    """
+    cfg = section("cpcb_datagov")
+    try:
+        pending = store.query(
+            f"SELECT id, fetched_at, status_code, body FROM {RAW_TABLE} "
+            "WHERE parsed_at IS NULL AND fetched_at IS NOT NULL ORDER BY id"
+        )
+    except Exception:  # noqa: BLE001 - table absent
+        _rollback_quietly(store)
+        return [], {"source": SOURCE, "status": "no_raw_table"}
+    registry = cpcb_station_registry()
+    rows: dict[tuple[str, str], dict[str, Any]] = {}
+    notes: list[str] = []
+    for raw in pending:
+        body = raw["body"]
+        if isinstance(body, str):
+            import json
+
+            try:
+                body = json.loads(body)
+            except ValueError:
+                body = None
+        note = "ok"
+        if raw["status_code"] != 200 or not isinstance(body, dict):
+            note = f"skipped: http {raw['status_code']}"
+        else:
+            fetched = raw["fetched_at"]
+            fetched_iso = fetched.strftime("%Y-%m-%dT%H:%M:%SZ") if hasattr(fetched, "strftime") else str(fetched)
+            parsed, unmatched = parse_records(
+                body.get("records") or [], registry,
+                value_kind=str(cfg.get("value_kind") or "sub_index"),
+                tz=str(cfg.get("timezone") or "Asia/Kolkata"),
+                max_age_hours=float(cfg.get("max_age_hours") or 6),
+                fetched_at=fetched_iso,
+            )
+            for r in parsed:
+                rows[(r["station_id"], r["ts"])] = r
+            note = f"{len(parsed)} station readings" + (f"; unmatched {len(unmatched)}" if unmatched else "")
+        notes.append(note)
+        store.execute(
+            f"UPDATE {RAW_TABLE} SET parsed_at = ?, parse_note = ? WHERE id = ?",
+            (_now(), note, raw["id"]),
+        )
+    out = list(rows.values())
+    status = "ok" if out else ("empty" if pending else "no_pending")
+    return out, {"source": SOURCE, "status": status, "via": "supabase_raw",
+                 "n_raw": len(pending), "n_stations": len(out), "fetched_at": _now(),
+                 "detail": "; ".join(notes)[:300]}
+
+
+def _rollback_quietly(store: Any) -> None:
+    # A failed statement in Postgres autocommit mode needs no rollback; this is
+    # here for adapters that keep an implicit transaction.
+    try:
+        store.execute("ROLLBACK")
+    except Exception:  # noqa: BLE001
+        pass

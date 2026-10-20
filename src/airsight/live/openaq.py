@@ -58,6 +58,9 @@ def _iso(value: Any) -> str | None:
     return dt.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+MAX_RADIUS_M = 25_000
+
+
 def fetch_latest(
     center: tuple[float, float],
     *,
@@ -83,7 +86,8 @@ def fetch_latest(
                 f"{BASE}/locations",
                 params={
                     "coordinates": f"{lat:.4f},{lon:.4f}",
-                    "radius": int(radius_m),
+                    # OpenAQ v3 rejects radius > 25 km with HTTP 422.
+                    "radius": max(1, min(int(radius_m), MAX_RADIUS_M)),
                     "limit": max(1, min(limit, 1000)),
                 },
                 headers=_headers(key),
