@@ -158,7 +158,12 @@ def ingest_cities(
     own_store = store is None
     store = store or Store.open()
     try:
-        if store.scalar("SELECT COUNT(*) FROM cities") == 0:
+        # Seed from config when the registry has never been loaded. Checking the
+        # source (not just "table empty") keeps a stray non-config row - e.g. a
+        # test fixture in a shared Postgres - from blocking the seed forever.
+        if not store.scalar(
+            "SELECT COUNT(*) FROM cities WHERE source = ?", ("config/cities.yaml",)
+        ):
             seed_registry(store)
 
         cities = store.cities()

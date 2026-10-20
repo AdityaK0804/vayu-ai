@@ -426,12 +426,19 @@ def test_postgres_roundtrip(monkeypatch):
     monkeypatch.setenv("DATABASE_URL", os.environ["VAYU_TEST_DATABASE_URL"])
     with Store.open() as s:
         assert s.backend == "postgres"
-        s.upsert_cities([{"id": "pgtest", "name": "PG", "lat": 1.0, "lon": 2.0, "calibrated": True}])
-        s.upsert_observations([{"station_id": "pg:1", "city_id": "pgtest", "ts": _iso(NOW),
-                                "source": "open-meteo-cams", "pm25": 12.0}])
-        assert s.city("pgtest")["name"] == "PG"
-        assert s.latest_observations("pgtest")[0]["pm25"] == 12.0
-        assert s.log_ingest("test", "ok") > 0
-        assert s.insert_alert({"city_id": "pgtest", "title": "t"})["id"] > 0
-        assert "cams" in s.source_freshness("pgtest")
-        assert s.scalar("SELECT COUNT(*) FROM cities") >= 1
+        try:
+            s.upsert_cities([{"id": "pgtest", "name": "PG", "lat": 1.0, "lon": 2.0, "calibrated": True}])
+            s.upsert_observations([{"station_id": "pg:1", "city_id": "pgtest", "ts": _iso(NOW),
+                                    "source": "open-meteo-cams", "pm25": 12.0}])
+            assert s.city("pgtest")["name"] == "PG"
+            assert s.latest_observations("pgtest")[0]["pm25"] == 12.0
+            assert s.log_ingest("test", "ok") > 0
+            assert s.insert_alert({"city_id": "pgtest", "title": "t"})["id"] > 0
+            assert "cams" in s.source_freshness("pgtest")
+            assert s.scalar("SELECT COUNT(*) FROM cities") >= 1
+        finally:
+            # The test may point at a shared database: leave no fixture rows behind.
+            s.execute("DELETE FROM alerts WHERE city_id = ?", ("pgtest",))
+            s.execute("DELETE FROM observations WHERE city_id = ?", ("pgtest",))
+            s.execute("DELETE FROM cities WHERE id = ?", ("pgtest",))
+            s.execute("DELETE FROM ingest_log WHERE source = ?", ("test",))

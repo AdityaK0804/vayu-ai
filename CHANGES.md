@@ -98,3 +98,16 @@ This starts three services: `postgres` (volume `vayu_pg`, not published to the h
 * The frontend still calls `/api/v1/*` in `lib/data.ts` and `lib/liveClient.ts` (legacy dashboard), and it has hardcoded admin passwords in `lib/auth.ts`. Both belong to the frontend rebuild.
 * P1 items not done: async endpoints, rate limiting, typed response models, CI.
 * `data/vayu.db` (a runtime SQLite file) is git-ignored and was not part of the baseline commit.
+
+## Postgres fixes found on Render + Supabase (staging)
+
+Deployed `backend-p0-staging` to Render (free, Singapore) against Supabase Postgres
+(session pooler, ap-south-1). `test_postgres_roundtrip` runs in the Render build step.
+
+- **Registry seeding blocked by any existing city row.** `ingest_cities` only seeded
+  `config/cities.yaml` when the `cities` table was completely empty, so the round-trip
+  test's `pgtest` row stopped the real 28-district registry from ever loading
+  (refresh ran on 1 fake city). It now seeds when no config-sourced city exists.
+- **Round-trip test left fixture rows in the shared database.** `test_postgres_roundtrip`
+  now deletes its `pgtest` city/observation/alert and `test` ingest-log rows in a
+  `finally` block.
