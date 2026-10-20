@@ -50,6 +50,47 @@ def load_om(om_dir: Path, oid: int, kind: str, mapping: dict) -> pd.DataFrame:
     return df.astype(float)
 
 
+def load_clean_stations(om: Path, cdir: Path):
+    """CPCB files with CLEANUP.md drops/quarantine applied, then validated archive fills."""
+    q = yaml.safe_load((ROOT / "config" / "data_quarantine.yaml").read_text())
+    st = pd.read_csv(ROOT / "config" / "stations.csv")
+    ids = pd.read_csv(ROOT / "config" / "cpcb_stations.csv").set_index("station_id")["openaq_id"]
+    pms, inputs, log, cams_start = {}, {}, [], None
+    for r in st.itertuples():
+        if r.source_file in q["drop_files"]:
+            continue
+        pm = load_station_pm(next(cdir.rglob(r.source_file)))
+        n0 = len(pm)
+        for qq in q["quarantine"]:
+            if qq["station_id"] == r.station_id:
+                lo, hi = pd.Timestamp(qq["start"], tz="UTC"), pd.Timestamp(qq["end"], tz="UTC")
+                pm = pm[(pm.index < lo) | (pm.index >= hi)]
+        n_kept = len(pm)
+        added = 0
+        for rep in q.get("replacements") or []:
+            f = ROOT / "data" / rep["source"] / f"{r.station_id}_{rep['year']}.csv"
+            if rep["station_id"] != r.station_id or not f.exists():
+                continue
+            a = pd.read_csv(f)
+            a = pd.Series(pd.to_numeric(a["pm25"], errors="coerce").values,
+                          index=pd.to_datetime(a["ts"], utc=True)).dropna()
+            a = a[(a > 0) & (a < 1000) & ~a.index.isin(pm.index)]
+            added += len(a)
+            pm = pd.concat([pm, a]).sort_index()
+        entry = {"station_id": r.station_id, "file": r.source_file, "pm25_hours": n0,
+                 "kept_after_quarantine": int(n_kept), "added_from_archive": int(added)}
+        if pm.empty:
+            log.append({**entry, "excluded": "no clean hours"})
+            continue
+        oid = int(ids[r.station_id])
+        cams = load_om(om, oid, "airquality", CAMS)
+        cams_start = cams.index.min()
+        pms[r.station_id] = pm
+        inputs[r.station_id] = (cams, load_om(om, oid, "weather_archive", MET))
+        log.append(entry)
+    return pms, inputs, log, cams_start
+
+
 def station_frame(pm: pd.Series, cams: pd.DataFrame, met: pd.DataFrame, horizon: int) -> pd.DataFrame:
     idx = pd.date_range(pm.index.min(), pm.index.max(), freq="h")
     pm = pm.reindex(idx)
@@ -91,40 +132,16 @@ def main() -> int:
     ap.add_argument("--cpcb-dir", default=str(ROOT / "data" / "cpcb"))
     ap.add_argument("--out", default=str(ROOT / "models"))
     ap.add_argument("--skip-loso", action="store_true")
+    ap.add_argument("--version", default=None)
     a = ap.parse_args()
     om, cdir = Path(a.om_dir), Path(a.cpcb_dir)
-    q = yaml.safe_load((ROOT / "config" / "data_quarantine.yaml").read_text())
-    st = pd.read_csv(ROOT / "config" / "stations.csv")
-    ids = pd.read_csv(ROOT / "config" / "cpcb_stations.csv").set_index("station_id")["openaq_id"]
-    cams_start = None
-    pms, inputs, log = {}, {}, []
-    for r in st.itertuples():
-        if r.source_file in q["drop_files"]:
-            continue
-        f = next(cdir.rglob(r.source_file))
-        pm = load_station_pm(f)
-        n0 = len(pm)
-        for qq in q["quarantine"]:
-            if qq["station_id"] == r.station_id:
-                lo, hi = pd.Timestamp(qq["start"], tz="UTC"), pd.Timestamp(qq["end"], tz="UTC")
-                pm = pm[(pm.index < lo) | (pm.index >= hi)]
-        if pm.empty:
-            log.append({"station_id": r.station_id, "file": r.source_file, "pm25_hours": n0,
-                        "kept_after_quarantine": 0, "excluded": "no clean hours"})
-            continue
-        oid = int(ids[r.station_id])
-        cams = load_om(om, oid, "airquality", CAMS)
-        cams_start = cams.index.min()
-        pms[r.station_id] = pm
-        inputs[r.station_id] = (cams, load_om(om, oid, "weather_archive", MET))
-        log.append({"station_id": r.station_id, "file": r.source_file, "pm25_hours": n0,
-                    "kept_after_quarantine": int(len(pm))})
+    pms, inputs, log, cams_start = load_clean_stations(om, cdir)
     report = {"created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
               "data": log, "cams_history_start": str(cams_start.date()),
               "note": "Rows restricted to hours with CAMS available (Open-Meteo CAMS history starts "
                       "2022-08-01). CPCB IST timestamps floored to UTC hours (30-min alignment error).",
               "horizons": {}}
-    version = "clean_" + datetime.now(timezone.utc).strftime("%Y%m%d")
+    version = a.version or ("clean_" + datetime.now(timezone.utc).strftime("%Y%m%d"))
     vdir = Path(a.out) / version
     vdir.mkdir(parents=True, exist_ok=True)
     split = pd.Timestamp("2025-01-01", tz="UTC")

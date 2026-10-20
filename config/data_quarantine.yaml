@@ -9,3 +9,11 @@ quarantine:   # station_id: [start_utc, end_utc)  (hours copied between stations
   - {station_id: bhilai_02,    start: "2025-01-01", end: "2026-01-01", reason: "D4 identical to chhal 2025"}
   - {station_id: bilaspur_01,  start: "2021-01-01", end: "2025-01-01", reason: "D5 identical to urja nagar 2021-2024"}
   - {station_id: korba_02,     start: "2021-01-01", end: "2025-01-01", reason: "D5 identical to mangala 2021-2024"}
+# Re-acquired from the OpenAQ AWS open-data archive (scripts/fetch_openaq_archive.py)
+# and validated: pairwise not duplicated (identical-hour share <= 0.1%), so the
+# hours fill the quarantined windows above. See data/openaq_archive/VALIDATION.json.
+replacements:
+  - {station_id: kunjemara_01, year: 2025, source: openaq_archive}
+  - {station_id: milupara_01,  year: 2025, source: openaq_archive}
+  - {station_id: chhal_01,     year: 2025, source: openaq_archive}
+  - {station_id: bhilai_02,    year: 2025, source: openaq_archive}
