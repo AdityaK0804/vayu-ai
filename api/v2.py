@@ -308,6 +308,28 @@ def v2_skill(city_id: str, days: int = Query(7, ge=1, le=30)) -> dict[str, Any]:
         return city_skill(store, city_id, days=days)
 
 
+@router.get("/cities/{city_id}/dossier")
+def v2_dossier(
+    city_id: str,
+    start: str = Query(..., description="Event window start, ISO 8601 UTC"),
+    end: str = Query(..., description="Event window end, ISO 8601 UTC"),
+    station_id: str | None = None,
+) -> dict[str, Any]:
+    """Evidence-backed exceedance dossier; says insufficient_evidence when it cannot support a claim."""
+    from airsight.impact.dossier import build_dossier
+
+    try:
+        s, e = datetime.fromisoformat(start.replace("Z", "+00:00")), datetime.fromisoformat(end.replace("Z", "+00:00"))
+    except ValueError:
+        raise ApiError(422, "start/end must be ISO 8601 timestamps.", code="bad_window") from None
+    if e <= s or (e - s).days > 7:
+        raise ApiError(422, "Window must be positive and at most 7 days.", code="bad_window")
+    with _open_store() as store:
+        if not store.city(city_id):
+            raise ApiError(404, "Unknown city.", code="unknown_city")
+        return _json_clean(build_dossier(store, city_id, start=start, end=end, station_id=station_id))
+
+
 @router.get("/cities/{city_id}/surface")
 def v2_surface(
     request: Request,

@@ -1,0 +1,20 @@
+# Enforcement dossier rules (src/airsight/impact/dossier.py). Policy values live
+# here, not in code; every dossier echoes the rules version it was built with.
+rules_version: "dossier-rules-1"
+# An hour counts as an exceedance when the station's PM2.5 maps to a CPCB NAQI
+# sub-index >= this value (201 = start of the CPCB "Poor" band).
+exceedance_min_aqi: 201
+pollutant: pm25
+measured_sources: [cpcb, openaq]
+# Look-back window before the event for fires and wind.
+lookback_hours: 24
+# Back-trajectory: hourly steps along the reversed mean wind.
+trajectory_hours: 12
+# Candidate search radius around the station and the upwind cone half-width.
+search_radius_km: 50
+upwind_half_angle_deg: 45
+# Minimum data needed before any attribution claim is made.
+min_measured_hours: 3
+min_met_coverage: 0.6         # share of look-back hours with wind data
+min_wind_steadiness: 0.3      # mean resultant length of hourly wind directions
+industry_registry: data/sources/industry_registry.geojson
