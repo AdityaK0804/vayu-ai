@@ -1,0 +1,13 @@
+.git
+web
+node_modules
+**/__pycache__
+.venv
+venv
+data/raw
+data/fire
+data/cpcb
+*.db
+*.bak
+*.superseded
+.env
