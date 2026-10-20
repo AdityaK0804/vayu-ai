@@ -1,0 +1,63 @@
+{
+  "version": "clean_20261021_logfire",
+  "features": [
+    "cams_pm25",
+    "cams_pm10",
+    "cams_no2",
+    "cams_so2",
+    "cams_o3",
+    "cams_dust",
+    "temp_c",
+    "rh_pct",
+    "dew_point_c",
+    "wind_speed",
+    "wind_dir_sin",
+    "wind_dir_cos",
+    "blh_m",
+    "surface_pressure",
+    "precip_mm",
+    "hour",
+    "dow",
+    "month",
+    "is_weekend",
+    "hour_sin",
+    "hour_cos",
+    "pm25_lag1",
+    "pm25_lag3",
+    "pm25_lag24",
+    "pm25_roll24_mean",
+    "pm25_roll24_std",
+    "fire_frp_upwind"
+  ],
+  "calibration": {},
+  "target_transform": "log1p",
+  "fire_upwind": {
+    "window_h": 48.0,
+    "radius_km": 200.0,
+    "sector_deg": 90.0
+  },
+  "horizons": [
+    24,
+    48,
+    72
+  ],
+  "quantiles": [
+    0.1,
+    0.5,
+    0.9
+  ],
+  "calibration_by_horizon": {
+    "24": {
+      "scale": 1.0745,
+      "source": "calibration.json"
+    },
+    "48": {
+      "scale": 1.1133,
+      "source": "calibration.json"
+    },
+    "72": {
+      "scale": 1.1484,
+      "source": "calibration.json"
+    }
+  }
+}
