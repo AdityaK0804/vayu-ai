@@ -123,3 +123,33 @@ Deployed `backend-p0-staging` to Render (free, Singapore) against Supabase Postg
   blocks now run in psycopg pipeline mode (statements queued, synced at COMMIT; reads
   and `RETURNING` sync immediately). A failing statement still rolls the whole
   transaction back. New test `test_postgres_bulk_snapshot_and_rollback`.
+
+## Live sources: CPCB (data.gov.in), FIRMS, OpenAQ, weather, hourly refresh
+
+- **CPCB real-time feed** (`airsight/live/cpcb.py`): data.gov.in resource
+  `3b01bcb8-…` for all 14 Chhattisgarh CAAQMS stations, once per refresh, state-wide.
+  The feed publishes 24 h min/max/avg **pollutant sub-indices** (e.g. CO "30" at a
+  clean site); we invert the CPCB breakpoints to concentrations, store those
+  (source `cpcb`, `ingested_at` = fetch time) and recompute the AQI with
+  `cpcb_naqi` (>= 3 pollutants incl. PM). Stations are matched by CPCB name, then by
+  coordinates. Registry: `config/cpcb_stations.csv` (built from
+  `vayu-data/fetched/cpcb/cg_stations.csv`, mapped to our station ids). Endpoint,
+  resource id, state, time zone and value kind are in `config/live_sources.yaml`.
+  data.gov.in stalls requests with the default `python-httpx` User-Agent, so the UA
+  is set from config.
+- **Measured-first everywhere:** city summaries, surfaces and forecast anchoring
+  prefer `cpcb`, then `openaq`, then CAMS. A CPCB row's AQI is used as published
+  (already a 24 h average) instead of re-averaging hourly snapshots.
+- **FIRMS:** VIIRS (SNPP, NOAA-20) + MODIS for the state bbox from config (was the
+  union of city boxes). Needs `FIRMS_MAP_KEY`.
+- **OpenAQ:** unchanged cross-check; every attempt (incl. "empty") now goes to
+  `ingest_log` so freshness reflects it.
+- **Weather:** one multi-point Open-Meteo request per refresh for all due cities,
+  at most every `weather.min_interval_minutes` (180), with a 60 min back-off after a
+  429. New `POST /api/v2/admin/ingest/weather` (admin token) accepts Open-Meteo JSON
+  fetched elsewhere.
+- **Hourly refresh:** `.github/workflows/vayu-hourly-refresh.yml` +
+  `scripts/cron/gha_refresh.py` wake the API, push weather if stale, then call
+  `/admin/refresh`.
+- Health freshness gains a `cpcb` source; `met` stale threshold 3 h -> 6 h.
+- Tests: `tests/test_live_sources.py`.

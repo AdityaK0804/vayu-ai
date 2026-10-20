@@ -275,7 +275,7 @@ def test_city_endpoint_reports_cpcb_basis_and_freshness(db, monkeypatch):
     assert body["aqi"] == 80 and body["dominant"] == "pm10"
     assert body["cpcb_valid"] is True
     fr = body["freshness"]
-    assert set(fr) == {"cams", "openaq", "met", "forecast", "fires"}
+    assert set(fr) == {"cams", "cpcb", "openaq", "met", "forecast", "fires"}
     assert fr["cams"]["stale"] is False and fr["met"]["stale"] is True
 
 

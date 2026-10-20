@@ -262,7 +262,7 @@ def _recent_state(store: Store, city_id: str, now: datetime) -> dict[str, Any]:
     """Latest observed PM2.5 and trailing statistics for lag features."""
     since = (now - timedelta(hours=48)).strftime("%Y-%m-%dT%H:%M:%SZ")
     rows = store.observations(city_id, since=since, limit=2000)
-    measured = [r for r in rows if r["source"] == "openaq" and r.get("pm25") is not None]
+    measured = [r for r in rows if r["source"] in ("cpcb", "openaq") and r.get("pm25") is not None]
     modelled = [r for r in rows if r["source"] == CAMS_SOURCE and r.get("pm25") is not None]
     series = measured or modelled
     series = sorted(series, key=lambda r: r["ts"])
@@ -414,7 +414,7 @@ def _history_pm25(store: Store, city_id: str, now: datetime) -> list[float | Non
 
     since = (now - timedelta(hours=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
     rows = store.observations(city_id, since=since, limit=2000)
-    measured = [r for r in rows if r.get("source") == "openaq" and r.get("pm25") is not None]
+    measured = [r for r in rows if r.get("source") in ("cpcb", "openaq") and r.get("pm25") is not None]
     rows = measured or [r for r in rows if r.get("pm25") is not None]
     if not rows:
         return []
