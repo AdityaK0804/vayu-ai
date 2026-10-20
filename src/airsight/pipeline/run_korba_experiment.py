@@ -44,10 +44,9 @@ _METRICS = OUTPUTS / "metrics"
 def _load_panel(city_id: str = "korba") -> pd.DataFrame:
     path = _REPORTS / f"station_panel_{city_id}.parquet"
     if not path.exists():
-        print(f"  [!] Panel not found: {path}")
-        print("      Run:  python -m airsight.pipeline.build_station_panel "
-              f"--city {city_id}")
-        sys.exit(1)
+        raise FileNotFoundError(
+            f"Panel not found: {path}. Run: python -m airsight.pipeline.build_station_panel --city {city_id}"
+        )
     df = pd.read_parquet(path)
     df.sort_values(["station_id", "timestamp"], inplace=True)
     df.reset_index(drop=True, inplace=True)
