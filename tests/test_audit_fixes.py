@@ -61,15 +61,18 @@ def test_graceful_raster_loaders():
 
 
 def test_api_health_and_routes():
-    """Verify FastAPI health check, metadata, and live stream endpoint."""
+    """Only v2 is served: one health endpoint, legacy routes retired."""
     client = TestClient(app)
-    res = client.get("/health")
+    res = client.get("/api/v2/health")
     assert res.status_code == 200
     data = res.json()
-    assert data["status"] == "ok"
-    assert data["version"] == "2.1.0"
+    assert data["status"] in {"ok", "stale", "empty"}
+    assert data["version"] == "4.0.0"
+    assert "sources" in data["freshness"]
 
-    # Verify live endpoints
-    res_cities = client.get("/cities")
-    assert res_cities.status_code == 200
-    assert isinstance(res_cities.json(), list)
+    # v0 root routes are gone; v1 answers 410 with the standard error envelope.
+    assert client.get("/health").status_code == 404
+    assert client.get("/cities").status_code == 404
+    r = client.get("/api/v1/live/snapshot")
+    assert r.status_code == 410
+    assert r.json()["error"]["code"] == "gone"
