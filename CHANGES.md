@@ -111,3 +111,8 @@ Deployed `backend-p0-staging` to Render (free, Singapore) against Supabase Postg
 - **Round-trip test left fixture rows in the shared database.** `test_postgres_roundtrip`
   now deletes its `pgtest` city/observation/alert and `test` ingest-log rows in a
   `finally` block.
+- **One weather failure dropped a whole city.** On Render's shared egress IPs
+  Open-Meteo's weather API returns 429; `_ingest_city` fetched weather before storing
+  anything, so every city failed and no air-quality rows were written. Weather is now
+  best-effort: on failure the city's CAMS air-quality observations are still stored
+  and the error is logged.

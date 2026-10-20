@@ -239,9 +239,17 @@ def _ingest_city(
     aqu = fetch_air_quality(
         anchor_points, past_days=past_days, forecast_days=forecast_days
     )
-    wx = fetch_weather([(lat, lon)], past_days=past_days, forecast_days=forecast_days)
     if not aqu:
         raise RuntimeError("Open-Meteo returned no air-quality series")
+
+    # Weather is an input to the forecast, not to the observed AQI. A weather
+    # outage (e.g. Open-Meteo 429 on a shared cloud egress IP) must not discard
+    # the air-quality readings we already have for this city.
+    try:
+        wx = fetch_weather([(lat, lon)], past_days=past_days, forecast_days=forecast_days)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("weather fetch failed for %s, storing air quality only: %s", city_id, exc)
+        wx = []
 
     now_hour = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:00")
     obs_rows: list[dict[str, Any]] = []
