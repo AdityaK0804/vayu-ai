@@ -213,6 +213,168 @@ def compute_naqi(raw: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+# CPCB averaging periods for the National AQI (CPCB, 2014).
+#   PM2.5 / PM10 / NO2 / SO2 / NH3 -> 24-hour average
+#   O3 / CO                        -> 8-hour average (max of the rolling means)
+# Using instantaneous hourly values instead systematically inflates the index,
+# because a single ozone peak pins the whole city at "Poor" while PM2.5 is fine.
+AVERAGING_HOURS: dict[str, int] = {
+    "pm25": 24,
+    "pm10": 24,
+    "no2": 24,
+    "so2": 24,
+    "nh3": 24,
+    "o3": 8,
+    "co": 8,
+}
+
+# Minimum share of the window that must be present before we trust it.
+MIN_WINDOW_COVERAGE = 0.5
+
+
+# Pollutants whose CPCB sub-index uses the *maximum* 8-hour rolling mean of the
+# day rather than a plain trailing mean.
+MAX_ROLLING_8H: frozenset[str] = frozenset({"o3", "co"})
+# CPCB: an AQI needs at least three pollutants, one of which is PM2.5 or PM10.
+MIN_POLLUTANTS = 3
+
+
+def _mean(values: list[float | None]) -> tuple[float | None, int]:
+    chunk = [v for v in values if v is not None]
+    return (sum(chunk) / len(chunk) if chunk else None), len(chunk)
+
+
+def averaged_concentrations(
+    hourly: dict[str, list[float | None]], index: int
+) -> tuple[dict[str, float], dict[str, Any]]:
+    """CPCB window concentrations ending at *index* (inclusive).
+
+    * PM2.5 / PM10 / NO2 / SO2 / NH3: mean of the trailing 24 hours.
+    * O3 / CO: maximum of the 8-hour rolling means inside the trailing 24 hours.
+
+    The input lists must be on a regular hourly grid (use
+    :func:`hourly_grid` for irregular rows). A window is used only when at
+    least ``MIN_WINDOW_COVERAGE`` of it has data.
+    """
+    out: dict[str, float] = {}
+    meta: dict[str, Any] = {}
+    for pollutant, window in AVERAGING_HOURS.items():
+        values = hourly.get(pollutant)
+        if not values or index < 0:
+            continue
+        if pollutant in MAX_ROLLING_8H:
+            best: float | None = None
+            n_best = 0
+            # rolling 8h windows whose end lies within the trailing 24h
+            for end in range(max(0, index - 23), index + 1):
+                start = end - window + 1
+                if start < 0:
+                    continue
+                m, n = _mean(values[start : end + 1])
+                if m is None or n / window < MIN_WINDOW_COVERAGE:
+                    continue
+                if best is None or m > best:
+                    best, n_best = m, n
+            if best is None:
+                continue
+            out[pollutant] = best
+            meta[pollutant] = {
+                "window_hours": window,
+                "method": "max_8h_rolling_mean_in_24h",
+                "n_values": n_best,
+                "coverage": round(n_best / window, 3),
+            }
+            continue
+        start = max(0, index - window + 1)
+        m, n = _mean(values[start : index + 1])
+        # Coverage is measured against the *full* window, so the first row of a
+        # series can never publish a "24h average" computed from one hour.
+        if m is None or n / window < MIN_WINDOW_COVERAGE:
+            continue
+        out[pollutant] = m
+        meta[pollutant] = {
+            "window_hours": window,
+            "method": "mean_24h",
+            "n_values": n,
+            "coverage": round(n / window, 3),
+        }
+    return out, meta
+
+
+def compute_naqi_rolling(
+    hourly: dict[str, list[float | None]], index: int
+) -> dict[str, Any]:
+    """CPCB-compliant NAQI at *index* using the official averaging windows."""
+    concentrations, meta = averaged_concentrations(hourly, index)
+    result = compute_naqi(concentrations)
+    result["averaging"] = meta
+    pols = [p for p, s in (result.get("sub_indexes") or {}).items() if s.get("sub_index") is not None]
+    result["cpcb_valid"] = len(pols) >= MIN_POLLUTANTS and bool({"pm25", "pm10"} & set(pols))
+    result["basis_note"] = (
+        "CPCB NAQI: 24h means for PM2.5/PM10/NO2/SO2/NH3, max 8h rolling mean for O3/CO"
+    )
+    return result
+
+
+def hourly_grid(
+    rows: list[dict[str, Any]],
+    *,
+    ts_key: str = "ts",
+    pollutants: Iterable[str] = ("pm25", "pm10", "no2", "so2", "o3", "co", "nh3"),
+    hours: int = 48,
+) -> tuple[list[str], dict[str, list[float | None]]]:
+    """Put irregular rows (ISO ``...Z`` timestamps) on a gap-aware hourly grid.
+
+    Returns ``(hour_stamps, {pollutant: values})`` ending at the newest row's
+    hour. Missing hours become ``None`` so a 24-hour window really spans 24
+    clock hours instead of the last 24 *rows*.
+    """
+    from datetime import datetime, timedelta, timezone
+
+    def _hour(ts: str) -> datetime | None:
+        try:
+            dt = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+        except ValueError:
+            return None
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc).replace(minute=0, second=0, microsecond=0)
+
+    keyed: dict[datetime, dict[str, Any]] = {}
+    for r in rows:
+        h = _hour(r.get(ts_key))
+        if h is not None:
+            keyed[h] = r  # last write per hour wins
+    pols = list(pollutants)
+    if not keyed:
+        return [], {p: [] for p in pols}
+    end = max(keyed)
+    stamps = [end - timedelta(hours=hours - 1 - i) for i in range(hours)]
+    grid = {p: [(keyed.get(h) or {}).get(p) for h in stamps] for p in pols}
+    return [h.strftime("%Y-%m-%dT%H:%M:%SZ") for h in stamps], grid
+
+
+def naqi_from_rows(rows: list[dict[str, Any]], *, ts_key: str = "ts") -> dict[str, Any]:
+    """CPCB NAQI at the newest row of an irregular time series."""
+    stamps, grid = hourly_grid(rows, ts_key=ts_key)
+    if not stamps:
+        return compute_naqi({}) | {"averaging": {}, "cpcb_valid": False}
+    return compute_naqi_rolling(grid, len(stamps) - 1)
+
+
+def rolling_pm25_aqi(pm25_series: list[float | None]) -> list[int | None]:
+    """CPCB PM2.5 sub-index of the trailing 24h mean at every hour of a series."""
+    out: list[int | None] = []
+    for i in range(len(pm25_series)):
+        m, n = _mean(pm25_series[max(0, i - 23) : i + 1])
+        if m is None or n / 24 < MIN_WINDOW_COVERAGE:
+            out.append(None)
+            continue
+        idx = sub_index("pm25", m)
+        out.append(None if idx is None else int(round(idx)))
+    return out
+
+
 def enrich_station_row(row: dict[str, Any]) -> dict[str, Any]:
     """Attach multi-pollutant NAQI fields onto a live station dict (copy)."""
     out = dict(row)
