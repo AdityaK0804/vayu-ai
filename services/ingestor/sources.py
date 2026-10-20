@@ -5,7 +5,7 @@ from __future__ import annotations
 import csv
 import io
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import httpx
@@ -324,28 +324,44 @@ def fetch_firms_fires(settings: Settings | None = None) -> tuple[list[FireEventI
     except Exception as exc:
         log.warning("FIRMS API call failed: %s; falling back to local CSV", exc)
         rows, detail = _firms_from_local_csv(cfg)
-        return rows, f"degraded api={exc}; {detail}"
+        return rows, f"degraded api={type(exc).__name__}; {detail}"
+
+
+LOCAL_FIRMS_MAX_AGE_HOURS = 48
 
 
 def _firms_from_local_csv(settings: Settings) -> tuple[list[FireEventIn], str]:
+    """Fallback when the FIRMS API is unavailable.
+
+    DATA-03: the local CSV is a historical archive (from Jan 2021). Rows are
+    only returned when their acquisition time is genuinely recent; otherwise
+    we return nothing and say so, instead of re-broadcasting old fires with
+    live timestamps.
+    """
     from pathlib import Path
-    import pandas as pd
 
     path = Path(__file__).resolve().parents[2] / "data" / "fire" / "firms_chhattisgarh.csv"
     if not path.exists():
         return [], "no FIRMS key and no local CSV"
     try:
+        import pandas as pd
+
         df = pd.read_csv(path, low_memory=False)
         date_col = "acq_date" if "acq_date" in df.columns else ("acq_datetime" if "acq_datetime" in df.columns else None)
-        if date_col:
-            df_recent = df.sort_values(date_col, ascending=False).head(200)
-        else:
-            df_recent = df.tail(200)
-        csv_text = df_recent.to_csv(index=False)
-        rows = _parse_firms_csv(csv_text, settings, max_rows=200)
-        return rows, f"local csv tail n={len(rows)}"
-    except Exception as exc:
-        return [], f"local csv error: {exc}"
+        if not date_col:
+            return [], "local csv has no acquisition date; ignored"
+        cutoff = (datetime.now(timezone.utc) - timedelta(hours=LOCAL_FIRMS_MAX_AGE_HOURS)).strftime("%Y-%m-%d")
+        recent = df[df[date_col].astype(str).str[:10] >= cutoff]
+        if recent.empty:
+            newest = str(df[date_col].astype(str).max())[:10] if len(df) else "n/a"
+            return [], f"local csv is archive only (newest {newest}); no live fires reported"
+        rows = _parse_firms_csv(recent.to_csv(index=False), settings, max_rows=500)
+        horizon = datetime.now(timezone.utc) - timedelta(hours=LOCAL_FIRMS_MAX_AGE_HOURS)
+        rows = [r for r in rows if r.ts >= horizon]
+        return rows, f"local csv recent n={len(rows)}"
+    except Exception:  # noqa: BLE001
+        log.warning("local FIRMS csv unreadable", exc_info=True)
+        return [], "local csv unreadable"
 
 
 def _parse_firms_csv(text: str, settings: Settings, max_rows: int = 500) -> list[FireEventIn]:
