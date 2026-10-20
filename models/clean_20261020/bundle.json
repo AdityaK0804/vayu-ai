@@ -38,5 +38,19 @@
     0.1,
     0.5,
     0.9
-  ]
+  ],
+  "calibration_by_horizon": {
+    "24": {
+      "scale": 1.0518,
+      "source": "calibration.json"
+    },
+    "48": {
+      "scale": 1.0968,
+      "source": "calibration.json"
+    },
+    "72": {
+      "scale": 1.106,
+      "source": "calibration.json"
+    }
+  }
 }
