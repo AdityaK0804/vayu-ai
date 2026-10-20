@@ -116,6 +116,7 @@ class _PgConnection:
         import psycopg  # optional dependency; only needed with DATABASE_URL
 
         self._conn = psycopg.connect(url, autocommit=True, connect_timeout=10)
+        self._pipeline: Any = None
 
     @staticmethod
     def _sql(sql: str) -> str:
@@ -127,12 +128,40 @@ class _PgConnection:
         stripped = sql.strip().upper()
         if stripped.startswith("PRAGMA"):
             return _PgCursor(self._conn.cursor())
+        # Store.tx() brackets bulk writes with BEGIN/COMMIT. Run everything in
+        # between in psycopg pipeline mode so thousands of row upserts go out
+        # in a few network round trips instead of one each; against a remote
+        # database (Render -> Supabase) per-row round trips made one city's
+        # surface snapshot take minutes.
+        if stripped == "BEGIN":
+            self._conn.execute("BEGIN")
+            self._pipeline = self._conn.pipeline()
+            self._pipeline.__enter__()
+            return _PgCursor(self._conn.cursor())
+        if stripped in ("COMMIT", "ROLLBACK"):
+            pipe, self._pipeline = self._pipeline, None
+            if pipe is not None:
+                try:
+                    pipe.__exit__(None, None, None)  # flush + sync queued statements
+                except Exception:
+                    self._conn.execute("ROLLBACK")
+                    if stripped == "COMMIT":
+                        raise
+                    return _PgCursor(self._conn.cursor())  # already rolling back
+            self._conn.execute(stripped)
+            return _PgCursor(self._conn.cursor())
         cur = self._conn.cursor()
         if stripped.startswith(("INSERT INTO INGEST_LOG", "INSERT INTO ALERTS")):
             cur.execute(self._sql(sql.rstrip().rstrip(";")) + " RETURNING id", tuple(params))
+            if self._pipeline is not None:
+                self._pipeline.sync()
             row = cur.fetchone()
             return _PgCursor(cur, lastrowid=int(row[0]) if row else None)
         cur.execute(self._sql(sql), tuple(params))
+        if self._pipeline is not None and not stripped.startswith(
+            ("INSERT", "UPDATE", "DELETE")
+        ):
+            self._pipeline.sync()  # reads inside a transaction need their result now
         return _PgCursor(cur)
 
     def executescript(self, script: str) -> None:

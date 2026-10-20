@@ -442,3 +442,31 @@ def test_postgres_roundtrip(monkeypatch):
             s.execute("DELETE FROM observations WHERE city_id = ?", ("pgtest",))
             s.execute("DELETE FROM cities WHERE id = ?", ("pgtest",))
             s.execute("DELETE FROM ingest_log WHERE source = ?", ("test",))
+
+
+@pytest.mark.skipif(not __import__("os").environ.get("VAYU_TEST_DATABASE_URL"),
+                    reason="set VAYU_TEST_DATABASE_URL to run against a real Postgres")
+def test_postgres_bulk_snapshot_and_rollback(monkeypatch):
+    """Bulk writes run pipelined inside tx(); a failing tx must roll back cleanly."""
+    import os
+
+    monkeypatch.setenv("DATABASE_URL", os.environ["VAYU_TEST_DATABASE_URL"])
+    ts = _iso(NOW)
+    cells = [{"h3": f"pgbulk{i:05d}", "lat": 21.0 + i * 1e-4, "lon": 81.0, "pm25": 40.0, "aqi": 90}
+             for i in range(1500)]
+    with Store.open() as s:
+        try:
+            assert s.replace_hex_snapshot("pgbulk", ts, cells) == 1500
+            assert s.scalar("SELECT COUNT(*) FROM hex_snapshot WHERE city_id = ?", ("pgbulk",)) == 1500
+            # replace is delete-then-insert: same ts again must not duplicate
+            s.replace_hex_snapshot("pgbulk", ts, cells[:10])
+            assert s.scalar("SELECT COUNT(*) FROM hex_snapshot WHERE city_id = ?", ("pgbulk",)) == 10
+            # a bad row aborts the whole transaction and leaves the old snapshot
+            with pytest.raises(Exception):
+                s.replace_hex_snapshot("pgbulk", ts, [*cells[:5], {"h3": "x", "lat": None, "lon": 1}])
+            assert s.scalar("SELECT COUNT(*) FROM hex_snapshot WHERE city_id = ?", ("pgbulk",)) == 10
+            # connection still usable after the rollback
+            assert s.log_ingest("test", "ok") > 0
+        finally:
+            s.execute("DELETE FROM hex_snapshot WHERE city_id = ?", ("pgbulk",))
+            s.execute("DELETE FROM ingest_log WHERE source = ?", ("test",))

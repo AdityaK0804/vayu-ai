@@ -116,3 +116,10 @@ Deployed `backend-p0-staging` to Render (free, Singapore) against Supabase Postg
   anything, so every city failed and no air-quality rows were written. Weather is now
   best-effort: on failure the city's CAMS air-quality observations are still stored
   and the error is logged.
+- **Refresh hung for minutes per city on remote Postgres.** The adapter ran in
+  autocommit and sent every row of a bulk upsert as its own round trip; one city's
+  surface snapshot is ~6,000 `hex_snapshot` rows, so with Render (Singapore) ->
+  Supabase (Mumbai) latency the refresh never got past the first city. `Store.tx()`
+  blocks now run in psycopg pipeline mode (statements queued, synced at COMMIT; reads
+  and `RETURNING` sync immediately). A failing statement still rolls the whole
+  transaction back. New test `test_postgres_bulk_snapshot_and_rollback`.
