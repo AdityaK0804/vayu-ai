@@ -39,6 +39,7 @@ def main() -> int:
     ap.add_argument("--om-dir", default="/workspace/vayu-data/fetched/open_meteo")
     a = ap.parse_args()
     vdir = tc.ROOT / "models" / a.version
+    tc.TRANSFORM = json.loads((vdir / "bundle.json").read_text()).get("target_transform", "none")
     pms, inputs, _, cams_start = tc.load_clean_stations(Path(a.om_dir), tc.ROOT / "data" / "cpcb")
     t_cal, t_eval = pd.Timestamp("2025-01-01", tz="UTC"), pd.Timestamp("2025-07-01", tz="UTC")
     out = {"created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -57,8 +58,8 @@ def main() -> int:
         ca, ev = hold[block == 0], hold[block == 1]
         preds = {}
         for qv in (0.1, 0.5, 0.9):
-            m = lgb.LGBMRegressor(objective="quantile", alpha=qv, **tc.PARAMS).fit(tr[tc.FEATURES], tr["target"])
-            preds[qv] = (m.predict(ca[tc.FEATURES]), m.predict(ev[tc.FEATURES]))
+            m = lgb.LGBMRegressor(objective="quantile", alpha=qv, **tc.PARAMS).fit(tr[tc.FEATURES], tc.fwd(tr["target"]))
+            preds[qv] = (tc.inv(m.predict(ca[tc.FEATURES])), tc.inv(m.predict(ev[tc.FEATURES])))
         p10c, p50c, p90c = (np.minimum(preds[0.1][0], preds[0.5][0]), preds[0.5][0],
                             np.maximum(preds[0.9][0], preds[0.5][0]))
         p10e, p50e, p90e = (np.minimum(preds[0.1][1], preds[0.5][1]), preds[0.5][1],

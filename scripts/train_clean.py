@@ -28,6 +28,18 @@ FEATURES = (list(CAMS.values()) + ["temp_c", "rh_pct", "dew_point_c", "wind_spee
             "pm25_roll24_mean", "pm25_roll24_std"])
 PARAMS = dict(n_estimators=400, learning_rate=0.05, num_leaves=31, min_child_samples=50,
               subsample=0.8, subsample_freq=1, colsample_bytree=0.8, verbose=-1, n_jobs=4)
+# Target transform. "log1p": fit on log1p(PM2.5), predict expm1. Quantiles are
+# invariant under monotone transforms, so p10/p50/p90 map back exactly. Chosen
+# by time-split + LOSO ablation (see models/<version>/metrics.json).
+TRANSFORM = "log1p"
+
+
+def fwd(y):
+    return np.log1p(y) if TRANSFORM == "log1p" else y
+
+
+def inv(p):
+    return np.expm1(p) if TRANSFORM == "log1p" else p
 
 
 def load_station_pm(path: Path) -> pd.Series:
@@ -119,10 +131,10 @@ def scores(y, p):
 
 
 def evaluate(train, test):
-    m = lgb.LGBMRegressor(objective="regression_l1", **PARAMS).fit(train[FEATURES], train["target"])
+    m = lgb.LGBMRegressor(objective="regression_l1", **PARAMS).fit(train[FEATURES], fwd(train["target"]))
     t = test.dropna(subset=["cams_pm25"])
     y = t["target"].values
-    return {"n": int(len(t)), "model": scores(y, m.predict(t[FEATURES])),
+    return {"n": int(len(t)), "model": scores(y, inv(m.predict(t[FEATURES]))),
             "persistence": scores(y, t["pm25_lag1"].values), "cams": scores(y, t["cams_pm25"].values)}
 
 
@@ -133,14 +145,16 @@ def main() -> int:
     ap.add_argument("--out", default=str(ROOT / "models"))
     ap.add_argument("--skip-loso", action="store_true")
     ap.add_argument("--version", default=None)
+    ap.add_argument("--transform", default=TRANSFORM, choices=["log1p", "none"])
     a = ap.parse_args()
+    globals()["TRANSFORM"] = a.transform
     om, cdir = Path(a.om_dir), Path(a.cpcb_dir)
     pms, inputs, log, cams_start = load_clean_stations(om, cdir)
     report = {"created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
               "data": log, "cams_history_start": str(cams_start.date()),
               "note": "Rows restricted to hours with CAMS available (Open-Meteo CAMS history starts "
                       "2022-08-01). CPCB IST timestamps floored to UTC hours (30-min alignment error).",
-              "horizons": {}}
+              "target_transform": a.transform, "horizons": {}}
     version = a.version or ("clean_" + datetime.now(timezone.utc).strftime("%Y%m%d"))
     vdir = Path(a.out) / version
     vdir.mkdir(parents=True, exist_ok=True)
@@ -171,17 +185,17 @@ def main() -> int:
         cov_models = {}
         for qv in (0.1, 0.5, 0.9):
             mdl = lgb.LGBMRegressor(objective="quantile", alpha=qv, **PARAMS)
-            cov_models[qv] = mdl.fit(tr[FEATURES], tr["target"]).predict(te[FEATURES])
+            cov_models[qv] = inv(mdl.fit(tr[FEATURES], fwd(tr["target"])).predict(te[FEATURES]))
         inside = (te["target"] >= cov_models[0.1]) & (te["target"] <= cov_models[0.9])
         res["time_split_p10_p90_coverage"] = round(float(inside.mean()), 3)
         for qv in (0.1, 0.5, 0.9):
-            mdl = lgb.LGBMRegressor(objective="quantile", alpha=qv, **PARAMS).fit(allf[FEATURES], allf["target"])
+            mdl = lgb.LGBMRegressor(objective="quantile", alpha=qv, **PARAMS).fit(allf[FEATURES], fwd(allf["target"]))
             # Plain LightGBM text: diffable, no pickle/version coupling on Render.
             mdl.booster_.save_model(str(vdir / f"pm25_h{h}_p{int(qv*100)}.txt"))
         report["horizons"][str(h)] = res
         print(h, json.dumps({k: v for k, v in res.items() if k != "loso"}), flush=True)
     (vdir / "bundle.json").write_text(json.dumps({"version": version, "features": FEATURES,
-        "calibration": {}, "horizons": list(HORIZONS), "quantiles": [0.1, 0.5, 0.9]}, indent=2))
+        "calibration": {}, "target_transform": TRANSFORM, "horizons": list(HORIZONS), "quantiles": [0.1, 0.5, 0.9]}, indent=2))
     (vdir / "metrics.json").write_text(json.dumps(report, indent=2))
     print("wrote", vdir)
     return 0

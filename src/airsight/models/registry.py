@@ -483,6 +483,7 @@ def load_artifacts(version: str, horizon: int, target: str = TARGET) -> dict[str
                 raise FileNotFoundError(f"missing model artifact {path}")
             bundle[key] = {"model": lgb.Booster(model_file=str(path)), "features": meta["features"]}
         bundle["features"] = list(meta["features"])
+        bundle["target_transform"] = meta.get("target_transform", "none")
         by_h = meta.get("calibration_by_horizon") or {}
         bundle["calibration"] = by_h.get(str(horizon)) or meta.get("calibration") or {}
         return bundle
@@ -550,6 +551,10 @@ def predict_frame(bundle: dict[str, Any], rows: pd.DataFrame) -> pd.DataFrame:
     out["p10"] = bundle["p10"]["model"].predict(x)
     out["p50"] = bundle["p50"]["model"].predict(x)
     out["p90"] = bundle["p90"]["model"].predict(x)
+    if bundle.get("target_transform") == "log1p":
+        # Model trained on log1p(PM2.5); quantiles map back exactly.
+        for k in ("p10", "p50", "p90"):
+            out[k] = np.expm1(out[k])
     calibration = bundle.get("calibration") or {}
     scale = float(calibration.get("scale") or 1.0)
     if scale != 1.0:
