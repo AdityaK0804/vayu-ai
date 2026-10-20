@@ -99,3 +99,33 @@ def test_weather_backoff_and_push(tmp_path, monkeypatch):
         assert res["rows"] == 4
         with pytest.raises(ValueError):
             ingest.ingest_weather_payload(s, payload, [cities[0]["id"]])
+
+
+def test_collect_raw_parses_scheduler_rows(tmp_path, monkeypatch):
+    import json
+
+    from airsight.live import ingest
+    from airsight.store import Store
+
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("DATA_GOV_IN_API_KEY", raising=False)
+    now = datetime.now(timezone.utc)
+    stamp = now.astimezone(__import__("zoneinfo").ZoneInfo("Asia/Kolkata")).strftime("%d-%m-%Y %H:00:00")
+    body = {"records": [_rec("AIIMS, Raipur - CECB", p, v, when=stamp) for p, v in
+                        [("PM2.5", 77), ("PM10", 98), ("NO2", 8)]]}
+    with Store.open(tmp_path / "r.db") as s:
+        # no raw table -> graceful
+        assert cpcb.collect_raw(s)[1]["status"] == "no_raw_table"
+        s.execute("CREATE TABLE cpcb_datagov_raw (id INTEGER PRIMARY KEY, fetched_at TEXT, status_code INT,"
+                  " body TEXT, parsed_at TEXT, parse_note TEXT)")
+        s.execute("INSERT INTO cpcb_datagov_raw(fetched_at, status_code, body) VALUES (?,?,?)",
+                  (now.strftime("%Y-%m-%dT%H:%M:%SZ"), 200, json.dumps(body)))
+        s.execute("INSERT INTO cpcb_datagov_raw(fetched_at, status_code, body) VALUES (?,?,?)",
+                  (now.strftime("%Y-%m-%dT%H:%M:%SZ"), 403, None))
+        ingest.seed_registry(s)
+        out = ingest.ingest_cpcb(s)
+        assert out["status"] == "ok" and out["n_stations"] == 1
+        assert s.scalar("SELECT COUNT(*) FROM cpcb_datagov_raw WHERE parsed_at IS NULL") == 0
+        assert s.scalar("SELECT COUNT(*) FROM observations WHERE source = 'cpcb'") == 1
+        # second pass: nothing pending, no key -> not_configured fallback, no duplicates
+        assert ingest.ingest_cpcb(s)["status"] in ("not_configured", "no_pending")

@@ -1,0 +1,11 @@
+# Applied by scripts/train_clean.py. Source: vayu-data/CLEANUP.md (20 Oct 2026).
+drop_files:
+  - cpcb_bhilai_hathkhoj_2021_2025.csv          # D1: byte-identical copy of Civic Center
+  - cpcb_bhilai_civic_center_2021_2025.csv.superseded  # D2
+quarantine:   # station_id: [start_utc, end_utc)  (hours copied between stations)
+  - {station_id: kunjemara_01, start: "2025-01-01", end: "2026-01-01", reason: "D3 identical to milupara 2025"}
+  - {station_id: milupara_01,  start: "2025-01-01", end: "2026-01-01", reason: "D3 identical to kunjemara 2025"}
+  - {station_id: chhal_01,     start: "2025-01-01", end: "2026-01-01", reason: "D4 identical to 32 Bungalows 2025"}
+  - {station_id: bhilai_02,    start: "2025-01-01", end: "2026-01-01", reason: "D4 identical to chhal 2025"}
+  - {station_id: bilaspur_01,  start: "2021-01-01", end: "2025-01-01", reason: "D5 identical to urja nagar 2021-2024"}
+  - {station_id: korba_02,     start: "2021-01-01", end: "2025-01-01", reason: "D5 identical to mangala 2021-2024"}
