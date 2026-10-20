@@ -1,0 +1,174 @@
+"""Retrain PM2.5 forecast models on the cleaned 14-station CPCB set.
+
+Applies config/data_quarantine.yaml (CLEANUP.md), joins Open-Meteo CAMS +
+ERA5 history per station, evaluates against persistence and CAMS baselines
+(time split + leave-one-station-out) and writes artifacts in the registry's
+joblib contract: models/<version>/pm25_h{H}_p{10,50,90}.joblib.
+
+    python scripts/train_clean.py --om-dir /workspace/vayu-data/fetched/open_meteo
+"""
+from __future__ import annotations
+
+import argparse, json, math, sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+import lightgbm as lgb, numpy as np, pandas as pd, yaml
+
+ROOT = Path(__file__).resolve().parents[1]
+HORIZONS = (24, 48, 72)
+CAMS = {"pm2_5": "cams_pm25", "pm10": "cams_pm10", "nitrogen_dioxide": "cams_no2",
+        "sulphur_dioxide": "cams_so2", "ozone": "cams_o3", "dust": "cams_dust"}
+MET = {"temperature_2m": "temp_c", "relative_humidity_2m": "rh_pct", "dew_point_2m": "dew_point_c",
+       "wind_speed_10m": "wind_speed", "boundary_layer_height": "blh_m",
+       "surface_pressure": "surface_pressure", "precipitation": "precip_mm"}
+FEATURES = (list(CAMS.values()) + ["temp_c", "rh_pct", "dew_point_c", "wind_speed", "wind_dir_sin",
+            "wind_dir_cos", "blh_m", "surface_pressure", "precip_mm", "hour", "dow", "month",
+            "is_weekend", "hour_sin", "hour_cos", "pm25_lag1", "pm25_lag3", "pm25_lag24",
+            "pm25_roll24_mean", "pm25_roll24_std"])
+PARAMS = dict(n_estimators=400, learning_rate=0.05, num_leaves=31, min_child_samples=50,
+              subsample=0.8, subsample_freq=1, colsample_bytree=0.8, verbose=-1, n_jobs=4)
+
+
+def load_station_pm(path: Path) -> pd.Series:
+    df = pd.read_csv(path, usecols=[0, 1])
+    df.columns = ["ts", "pm25"]
+    # CPCB timestamps are IST hour-starts; shift to UTC and snap to the hour.
+    ts = (pd.to_datetime(df["ts"]) - pd.Timedelta(hours=5, minutes=30)).dt.floor("h")
+    s = pd.Series(pd.to_numeric(df["pm25"], errors="coerce").values, index=ts.dt.tz_localize("UTC"))
+    s = s[(s > 0) & (s < 1000)]
+    return s.groupby(level=0).mean()
+
+
+def load_om(om_dir: Path, oid: int, kind: str, mapping: dict) -> pd.DataFrame:
+    h = json.loads((om_dir / f"{oid}_{kind}.json").read_text())["hourly"]
+    df = pd.DataFrame({v: h.get(k) for k, v in mapping.items()})
+    df.index = pd.to_datetime(h["time"]).tz_localize("UTC")
+    if kind == "weather_archive":
+        wd = np.deg2rad(pd.Series(h["wind_direction_10m"], index=df.index, dtype=float))
+        df["wind_dir_sin"], df["wind_dir_cos"] = np.sin(wd), np.cos(wd)
+    return df.astype(float)
+
+
+def station_frame(pm: pd.Series, cams: pd.DataFrame, met: pd.DataFrame, horizon: int) -> pd.DataFrame:
+    idx = pd.date_range(pm.index.min(), pm.index.max(), freq="h")
+    pm = pm.reindex(idx)
+    # Issue-time state, mirroring forecast.service._recent_state.
+    st = pd.DataFrame(index=idx)
+    st["pm25_lag1"] = pm
+    st["pm25_lag3"] = pm.shift(2)
+    st["pm25_lag24"] = pm.shift(23)
+    st["pm25_roll24_mean"] = pm.rolling(24, min_periods=6).mean()
+    st["pm25_roll24_std"] = pm.rolling(24, min_periods=6).std(ddof=0)
+    out = st.shift(horizon)  # row = target hour; state known `horizon` hours earlier
+    out["target"] = pm
+    out = out.join(cams, how="left").join(met, how="left")
+    ts = out.index
+    out["hour"], out["dow"], out["month"] = ts.hour, ts.dayofweek, ts.month
+    out["is_weekend"] = (ts.dayofweek >= 5).astype(int)
+    out["hour_sin"] = np.sin(2 * math.pi * out["hour"] / 24)
+    out["hour_cos"] = np.cos(2 * math.pi * out["hour"] / 24)
+    return out.dropna(subset=["target", "pm25_lag1"])
+
+
+def scores(y, p):
+    e = p - y
+    return {"mae": round(float(np.mean(np.abs(e))), 2), "rmse": round(float(np.sqrt(np.mean(e**2))), 2),
+            "bias": round(float(np.mean(e)), 2)}
+
+
+def evaluate(train, test):
+    m = lgb.LGBMRegressor(objective="regression_l1", **PARAMS).fit(train[FEATURES], train["target"])
+    t = test.dropna(subset=["cams_pm25"])
+    y = t["target"].values
+    return {"n": int(len(t)), "model": scores(y, m.predict(t[FEATURES])),
+            "persistence": scores(y, t["pm25_lag1"].values), "cams": scores(y, t["cams_pm25"].values)}
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--om-dir", default="/workspace/vayu-data/fetched/open_meteo")
+    ap.add_argument("--cpcb-dir", default=str(ROOT / "data" / "cpcb"))
+    ap.add_argument("--out", default=str(ROOT / "models"))
+    ap.add_argument("--skip-loso", action="store_true")
+    a = ap.parse_args()
+    om, cdir = Path(a.om_dir), Path(a.cpcb_dir)
+    q = yaml.safe_load((ROOT / "config" / "data_quarantine.yaml").read_text())
+    st = pd.read_csv(ROOT / "config" / "stations.csv")
+    ids = pd.read_csv(ROOT / "config" / "cpcb_stations.csv").set_index("station_id")["openaq_id"]
+    cams_start = None
+    pms, inputs, log = {}, {}, []
+    for r in st.itertuples():
+        if r.source_file in q["drop_files"]:
+            continue
+        f = next(cdir.rglob(r.source_file))
+        pm = load_station_pm(f)
+        n0 = len(pm)
+        for qq in q["quarantine"]:
+            if qq["station_id"] == r.station_id:
+                lo, hi = pd.Timestamp(qq["start"], tz="UTC"), pd.Timestamp(qq["end"], tz="UTC")
+                pm = pm[(pm.index < lo) | (pm.index >= hi)]
+        if pm.empty:
+            log.append({"station_id": r.station_id, "file": r.source_file, "pm25_hours": n0,
+                        "kept_after_quarantine": 0, "excluded": "no clean hours"})
+            continue
+        oid = int(ids[r.station_id])
+        cams = load_om(om, oid, "airquality", CAMS)
+        cams_start = cams.index.min()
+        pms[r.station_id] = pm
+        inputs[r.station_id] = (cams, load_om(om, oid, "weather_archive", MET))
+        log.append({"station_id": r.station_id, "file": r.source_file, "pm25_hours": n0,
+                    "kept_after_quarantine": int(len(pm))})
+    report = {"created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+              "data": log, "cams_history_start": str(cams_start.date()),
+              "note": "Rows restricted to hours with CAMS available (Open-Meteo CAMS history starts "
+                      "2022-08-01). CPCB IST timestamps floored to UTC hours (30-min alignment error).",
+              "horizons": {}}
+    version = "clean_" + datetime.now(timezone.utc).strftime("%Y%m%d")
+    vdir = Path(a.out) / version
+    vdir.mkdir(parents=True, exist_ok=True)
+    split = pd.Timestamp("2025-01-01", tz="UTC")
+    for h in HORIZONS:
+        frames = {s: station_frame(pms[s], *inputs[s], h).assign(station=s) for s in pms}
+        allf = pd.concat(frames.values())
+        allf = allf[allf.index >= cams_start]
+        res = {"n_rows": int(len(allf))}
+        res["time_split"] = evaluate(allf[allf.index < split], allf[allf.index >= split])
+        res["time_split"]["desc"] = "train < 2025-01-01 UTC, test >= 2025-01-01 UTC, all stations"
+        if not a.skip_loso:
+            per, pooled = {}, []
+            for s in frames:
+                te = allf[allf.station == s]
+                if len(te.dropna(subset=["cams_pm25"])) < 500:
+                    continue
+                per[s] = evaluate(allf[allf.station != s], te)
+            res["loso"] = per
+            tot = sum(v["n"] for v in per.values())
+            res["loso_weighted_mae"] = {k: round(sum(v[k]["mae"] * v["n"] for v in per.values()) / tot, 2)
+                                        for k in ("model", "persistence", "cams")}
+            res["loso_model_beats_both"] = sum(
+                v["model"]["mae"] < min(v["persistence"]["mae"], v["cams"]["mae"]) for v in per.values())
+            res["loso_stations"] = len(per)
+        # Final artifacts: all clean rows, quantiles; coverage measured on the time split.
+        tr, te = allf[allf.index < split], allf[allf.index >= split]
+        cov_models = {}
+        for qv in (0.1, 0.5, 0.9):
+            mdl = lgb.LGBMRegressor(objective="quantile", alpha=qv, **PARAMS)
+            cov_models[qv] = mdl.fit(tr[FEATURES], tr["target"]).predict(te[FEATURES])
+        inside = (te["target"] >= cov_models[0.1]) & (te["target"] <= cov_models[0.9])
+        res["time_split_p10_p90_coverage"] = round(float(inside.mean()), 3)
+        for qv in (0.1, 0.5, 0.9):
+            mdl = lgb.LGBMRegressor(objective="quantile", alpha=qv, **PARAMS).fit(allf[FEATURES], allf["target"])
+            # Plain LightGBM text: diffable, no pickle/version coupling on Render.
+            mdl.booster_.save_model(str(vdir / f"pm25_h{h}_p{int(qv*100)}.txt"))
+        report["horizons"][str(h)] = res
+        print(h, json.dumps({k: v for k, v in res.items() if k != "loso"}), flush=True)
+    (vdir / "bundle.json").write_text(json.dumps({"version": version, "features": FEATURES,
+        "calibration": {}, "horizons": list(HORIZONS), "quantiles": [0.1, 0.5, 0.9]}, indent=2))
+    (vdir / "metrics.json").write_text(json.dumps(report, indent=2))
+    print("wrote", vdir)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
