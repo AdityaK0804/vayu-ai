@@ -39,25 +39,7 @@ def main() -> int:
     ap.add_argument("--om-dir", default="/workspace/vayu-data/fetched/open_meteo")
     a = ap.parse_args()
     vdir = tc.ROOT / "models" / a.version
-    q = yaml.safe_load((tc.ROOT / "config" / "data_quarantine.yaml").read_text())
-    st = pd.read_csv(tc.ROOT / "config" / "stations.csv")
-    ids = pd.read_csv(tc.ROOT / "config" / "cpcb_stations.csv").set_index("station_id")["openaq_id"]
-    pms, inputs, cams_start = {}, {}, None
-    for r in st.itertuples():
-        if r.source_file in q["drop_files"]:
-            continue
-        pm = tc.load_station_pm(next((tc.ROOT / "data" / "cpcb").rglob(r.source_file)))
-        for qq in q["quarantine"]:
-            if qq["station_id"] == r.station_id:
-                lo, hi = pd.Timestamp(qq["start"], tz="UTC"), pd.Timestamp(qq["end"], tz="UTC")
-                pm = pm[(pm.index < lo) | (pm.index >= hi)]
-        if pm.empty:
-            continue
-        oid = int(ids[r.station_id])
-        cams = tc.load_om(Path(a.om_dir), oid, "airquality", tc.CAMS)
-        cams_start = cams.index.min()
-        pms[r.station_id] = pm
-        inputs[r.station_id] = (cams, tc.load_om(Path(a.om_dir), oid, "weather_archive", tc.MET))
+    pms, inputs, _, cams_start = tc.load_clean_stations(Path(a.om_dir), tc.ROOT / "data" / "cpcb")
     t_cal, t_eval = pd.Timestamp("2025-01-01", tz="UTC"), pd.Timestamp("2025-07-01", tz="UTC")
     out = {"created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
            "method": "split-conformal scaling of p10/p90 half-widths around p50 (CQR)",
