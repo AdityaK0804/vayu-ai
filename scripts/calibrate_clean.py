@@ -36,11 +36,16 @@ def apply(scale, p10, p50, p90):
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--version", required=True)
+    ap.add_argument("--firms-dir", default="/workspace/vayu-data/fetched/firms")
     ap.add_argument("--om-dir", default="/workspace/vayu-data/fetched/open_meteo")
     a = ap.parse_args()
     vdir = tc.ROOT / "models" / a.version
-    tc.TRANSFORM = json.loads((vdir / "bundle.json").read_text()).get("target_transform", "none")
+    meta = json.loads((vdir / "bundle.json").read_text())
+    tc.TRANSFORM = meta.get("target_transform", "none")
     pms, inputs, _, cams_start = tc.load_clean_stations(Path(a.om_dir), tc.ROOT / "data" / "cpcb")
+    fires = {}
+    if "fire_frp_upwind" in meta["features"]:
+        fires = tc.attach_fire(a.firms_dir)(pms, inputs, cams_start)
     t_cal, t_eval = pd.Timestamp("2025-01-01", tz="UTC"), pd.Timestamp("2025-07-01", tz="UTC")
     out = {"created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
            "method": "split-conformal scaling of p10/p90 half-widths around p50 (CQR)",
@@ -48,7 +53,7 @@ def main() -> int:
            "windows": {"train": "< 2025-01-01", "calibration": ">= 2025-01-01, even 7-day blocks",
                        "evaluation": ">= 2025-01-01, odd 7-day blocks (never used for fitting)"}, "horizons": {}}
     for h in tc.HORIZONS:
-        f = pd.concat(tc.station_frame(pms[s], *inputs[s], h) for s in pms)
+        f = pd.concat(tc.station_frame(pms[s], *inputs[s], h, fire=fires.get(s)) for s in pms)
         f = f[f.index >= cams_start]
         # Held-out period split into alternating 7-day blocks so both the
         # calibration and evaluation sets span every season (monsoon vs winter
