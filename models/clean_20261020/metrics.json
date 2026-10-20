@@ -1,0 +1,892 @@
+{
+  "created_at": "2026-10-20T15:28:33Z",
+  "data": [
+    {
+      "station_id": "korba_01",
+      "file": "cpcb_korba_rampur_2021_2025.csv",
+      "pm25_hours": 21735,
+      "kept_after_quarantine": 21735
+    },
+    {
+      "station_id": "korba_02",
+      "file": "cpcb_korba_urja_nagar_2021_2025.csv",
+      "pm25_hours": 14854,
+      "kept_after_quarantine": 0,
+      "excluded": "no clean hours"
+    },
+    {
+      "station_id": "raipur_01",
+      "file": "cpcb_raipur_aiims_2021_2025.csv",
+      "pm25_hours": 24126,
+      "kept_after_quarantine": 24126
+    },
+    {
+      "station_id": "raipur_02",
+      "file": "cpcb_raipur_bhatagaon_2021_2025.csv",
+      "pm25_hours": 22745,
+      "kept_after_quarantine": 22745
+    },
+    {
+      "station_id": "raipur_03",
+      "file": "cpcb_raipur_krishak_nagar_2021_2025.csv",
+      "pm25_hours": 24007,
+      "kept_after_quarantine": 24007
+    },
+    {
+      "station_id": "raipur_04",
+      "file": "cpcb_raipur_siltara_2021_2025.csv",
+      "pm25_hours": 14918,
+      "kept_after_quarantine": 14918
+    },
+    {
+      "station_id": "bhilai_01",
+      "file": "cpcb_bhilai_hathkhoj_2022_2025.csv",
+      "pm25_hours": 24095,
+      "kept_after_quarantine": 24095
+    },
+    {
+      "station_id": "bhilai_02",
+      "file": "cpcb_bhilai_32_bungalows_2021_2025.csv",
+      "pm25_hours": 15909,
+      "kept_after_quarantine": 8677
+    },
+    {
+      "station_id": "bhilai_03",
+      "file": "cpcb_bhilai_civic_center_2021_2025.csv",
+      "pm25_hours": 25092,
+      "kept_after_quarantine": 25092
+    },
+    {
+      "station_id": "bilaspur_01",
+      "file": "cpcb_bilaspur_mangala_2021_2025.csv",
+      "pm25_hours": 22778,
+      "kept_after_quarantine": 7924
+    },
+    {
+      "station_id": "tumidih_01",
+      "file": "cpcb_tumidih_tumidih_2021_2025.csv",
+      "pm25_hours": 17641,
+      "kept_after_quarantine": 17641
+    },
+    {
+      "station_id": "milupara_01",
+      "file": "cpcb_milupara_milupara_2021_2025.csv",
+      "pm25_hours": 16818,
+      "kept_after_quarantine": 10506
+    },
+    {
+      "station_id": "chhal_01",
+      "file": "cpcb_chhal_chhal_2021_2025.csv",
+      "pm25_hours": 23030,
+      "kept_after_quarantine": 15798
+    },
+    {
+      "station_id": "kunjemara_01",
+      "file": "cpcb_kunjemara_kunjemara_2021_2025.csv",
+      "pm25_hours": 22236,
+      "kept_after_quarantine": 15924
+    }
+  ],
+  "cams_history_start": "2022-08-01",
+  "note": "Rows restricted to hours with CAMS available (Open-Meteo CAMS history starts 2022-08-01). CPCB IST timestamps floored to UTC hours (30-min alignment error).",
+  "horizons": {
+    "24": {
+      "n_rows": 206932,
+      "time_split": {
+        "n": 56504,
+        "model": {
+          "mae": 8.1,
+          "rmse": 13.6,
+          "bias": -0.97
+        },
+        "persistence": {
+          "mae": 9.16,
+          "rmse": 16.29,
+          "bias": -0.11
+        },
+        "cams": {
+          "mae": 24.96,
+          "rmse": 33.04,
+          "bias": 21.05
+        },
+        "desc": "train < 2025-01-01 UTC, test >= 2025-01-01 UTC, all stations"
+      },
+      "loso": {
+        "korba_01": {
+          "n": 19354,
+          "model": {
+            "mae": 6.94,
+            "rmse": 11.37,
+            "bias": -1.78
+          },
+          "persistence": {
+            "mae": 7.58,
+            "rmse": 14.16,
+            "bias": -0.13
+          },
+          "cams": {
+            "mae": 17.88,
+            "rmse": 23.35,
+            "bias": 11.43
+          }
+        },
+        "raipur_01": {
+          "n": 22384,
+          "model": {
+            "mae": 7.89,
+            "rmse": 11.96,
+            "bias": -0.56
+          },
+          "persistence": {
+            "mae": 9.62,
+            "rmse": 14.48,
+            "bias": 0.06
+          },
+          "cams": {
+            "mae": 25.12,
+            "rmse": 32.45,
+            "bias": 22.89
+          }
+        },
+        "raipur_02": {
+          "n": 20552,
+          "model": {
+            "mae": 8.05,
+            "rmse": 13.18,
+            "bias": 0.04
+          },
+          "persistence": {
+            "mae": 9.99,
+            "rmse": 16.86,
+            "bias": -0.04
+          },
+          "cams": {
+            "mae": 27.01,
+            "rmse": 34.41,
+            "bias": 24.93
+          }
+        },
+        "raipur_03": {
+          "n": 22438,
+          "model": {
+            "mae": 5.72,
+            "rmse": 8.03,
+            "bias": 1.03
+          },
+          "persistence": {
+            "mae": 6.95,
+            "rmse": 9.92,
+            "bias": -0.03
+          },
+          "cams": {
+            "mae": 28.37,
+            "rmse": 36.08,
+            "bias": 27.68
+          }
+        },
+        "raipur_04": {
+          "n": 13093,
+          "model": {
+            "mae": 13.56,
+            "rmse": 21.9,
+            "bias": -7.33
+          },
+          "persistence": {
+            "mae": 15.33,
+            "rmse": 24.19,
+            "bias": -0.09
+          },
+          "cams": {
+            "mae": 22.11,
+            "rmse": 30.67,
+            "bias": 7.06
+          }
+        },
+        "bhilai_01": {
+          "n": 22642,
+          "model": {
+            "mae": 10.62,
+            "rmse": 16.57,
+            "bias": -3.92
+          },
+          "persistence": {
+            "mae": 12.59,
+            "rmse": 18.77,
+            "bias": 0.03
+          },
+          "cams": {
+            "mae": 21.61,
+            "rmse": 29.28,
+            "bias": 15.73
+          }
+        },
+        "bhilai_02": {
+          "n": 8420,
+          "model": {
+            "mae": 8.29,
+            "rmse": 13.04,
+            "bias": -2.26
+          },
+          "persistence": {
+            "mae": 10.25,
+            "rmse": 15.41,
+            "bias": 0.17
+          },
+          "cams": {
+            "mae": 20.82,
+            "rmse": 27.61,
+            "bias": 17.65
+          }
+        },
+        "bhilai_03": {
+          "n": 18436,
+          "model": {
+            "mae": 6.39,
+            "rmse": 11.33,
+            "bias": 0.07
+          },
+          "persistence": {
+            "mae": 7.32,
+            "rmse": 13.59,
+            "bias": -0.04
+          },
+          "cams": {
+            "mae": 26.8,
+            "rmse": 34.25,
+            "bias": 25.8
+          }
+        },
+        "bilaspur_01": {
+          "n": 7204,
+          "model": {
+            "mae": 9.16,
+            "rmse": 17.57,
+            "bias": -4.46
+          },
+          "persistence": {
+            "mae": 11.4,
+            "rmse": 21.59,
+            "bias": -0.35
+          },
+          "cams": {
+            "mae": 15.73,
+            "rmse": 23.63,
+            "bias": 8.02
+          }
+        },
+        "tumidih_01": {
+          "n": 14186,
+          "model": {
+            "mae": 12.04,
+            "rmse": 21.39,
+            "bias": -5.54
+          },
+          "persistence": {
+            "mae": 14.85,
+            "rmse": 25.43,
+            "bias": 0.04
+          },
+          "cams": {
+            "mae": 18.5,
+            "rmse": 27.2,
+            "bias": 5.1
+          }
+        },
+        "milupara_01": {
+          "n": 8430,
+          "model": {
+            "mae": 7.26,
+            "rmse": 11.7,
+            "bias": -0.03
+          },
+          "persistence": {
+            "mae": 8.8,
+            "rmse": 14.99,
+            "bias": 0.02
+          },
+          "cams": {
+            "mae": 18.64,
+            "rmse": 24.09,
+            "bias": 15.61
+          }
+        },
+        "chhal_01": {
+          "n": 14704,
+          "model": {
+            "mae": 9.25,
+            "rmse": 13.93,
+            "bias": -3.3
+          },
+          "persistence": {
+            "mae": 11.09,
+            "rmse": 16.59,
+            "bias": -0.13
+          },
+          "cams": {
+            "mae": 16.8,
+            "rmse": 23.07,
+            "bias": 8.31
+          }
+        },
+        "kunjemara_01": {
+          "n": 15089,
+          "model": {
+            "mae": 8.45,
+            "rmse": 13.79,
+            "bias": -0.63
+          },
+          "persistence": {
+            "mae": 9.79,
+            "rmse": 16.73,
+            "bias": -0.14
+          },
+          "cams": {
+            "mae": 20.31,
+            "rmse": 26.15,
+            "bias": 13.76
+          }
+        }
+      },
+      "loso_weighted_mae": {
+        "model": 8.56,
+        "persistence": 10.19,
+        "cams": 22.4
+      },
+      "loso_model_beats_both": 13,
+      "loso_stations": 13,
+      "time_split_p10_p90_coverage": 0.775
+    },
+    "48": {
+      "n_rows": 202144,
+      "time_split": {
+        "n": 55532,
+        "model": {
+          "mae": 9.09,
+          "rmse": 15.03,
+          "bias": -0.89
+        },
+        "persistence": {
+          "mae": 10.71,
+          "rmse": 18.75,
+          "bias": -0.11
+        },
+        "cams": {
+          "mae": 25.02,
+          "rmse": 33.19,
+          "bias": 21.07
+        },
+        "desc": "train < 2025-01-01 UTC, test >= 2025-01-01 UTC, all stations"
+      },
+      "loso": {
+        "korba_01": {
+          "n": 18590,
+          "model": {
+            "mae": 7.98,
+            "rmse": 13.64,
+            "bias": -1.77
+          },
+          "persistence": {
+            "mae": 9.28,
+            "rmse": 17.39,
+            "bias": -0.03
+          },
+          "cams": {
+            "mae": 17.99,
+            "rmse": 24.05,
+            "bias": 11.4
+          }
+        },
+        "raipur_01": {
+          "n": 22170,
+          "model": {
+            "mae": 8.65,
+            "rmse": 12.84,
+            "bias": -0.51
+          },
+          "persistence": {
+            "mae": 11.24,
+            "rmse": 16.45,
+            "bias": 0.0
+          },
+          "cams": {
+            "mae": 24.98,
+            "rmse": 32.27,
+            "bias": 22.78
+          }
+        },
+        "raipur_02": {
+          "n": 20400,
+          "model": {
+            "mae": 8.65,
+            "rmse": 13.86,
+            "bias": 0.38
+          },
+          "persistence": {
+            "mae": 11.63,
+            "rmse": 19.12,
+            "bias": -0.01
+          },
+          "cams": {
+            "mae": 26.97,
+            "rmse": 34.22,
+            "bias": 24.86
+          }
+        },
+        "raipur_03": {
+          "n": 21974,
+          "model": {
+            "mae": 6.47,
+            "rmse": 8.94,
+            "bias": 1.61
+          },
+          "persistence": {
+            "mae": 8.44,
+            "rmse": 11.78,
+            "bias": -0.05
+          },
+          "cams": {
+            "mae": 28.42,
+            "rmse": 36.14,
+            "bias": 27.72
+          }
+        },
+        "raipur_04": {
+          "n": 12615,
+          "model": {
+            "mae": 15.42,
+            "rmse": 24.42,
+            "bias": -9.44
+          },
+          "persistence": {
+            "mae": 18.44,
+            "rmse": 27.67,
+            "bias": -0.14
+          },
+          "cams": {
+            "mae": 22.15,
+            "rmse": 30.87,
+            "bias": 6.84
+          }
+        },
+        "bhilai_01": {
+          "n": 22219,
+          "model": {
+            "mae": 11.65,
+            "rmse": 17.87,
+            "bias": -5.01
+          },
+          "persistence": {
+            "mae": 14.96,
+            "rmse": 21.4,
+            "bias": 0.08
+          },
+          "cams": {
+            "mae": 21.53,
+            "rmse": 29.21,
+            "bias": 15.61
+          }
+        },
+        "bhilai_02": {
+          "n": 8339,
+          "model": {
+            "mae": 9.01,
+            "rmse": 13.66,
+            "bias": -3.5
+          },
+          "persistence": {
+            "mae": 12.42,
+            "rmse": 17.57,
+            "bias": -0.04
+          },
+          "cams": {
+            "mae": 20.44,
+            "rmse": 26.85,
+            "bias": 17.31
+          }
+        },
+        "bhilai_03": {
+          "n": 18022,
+          "model": {
+            "mae": 7.14,
+            "rmse": 14.25,
+            "bias": 0.21
+          },
+          "persistence": {
+            "mae": 8.62,
+            "rmse": 17.18,
+            "bias": -0.19
+          },
+          "cams": {
+            "mae": 26.82,
+            "rmse": 34.83,
+            "bias": 25.67
+          }
+        },
+        "bilaspur_01": {
+          "n": 7188,
+          "model": {
+            "mae": 9.71,
+            "rmse": 18.76,
+            "bias": -5.7
+          },
+          "persistence": {
+            "mae": 13.07,
+            "rmse": 24.86,
+            "bias": -0.51
+          },
+          "cams": {
+            "mae": 16.01,
+            "rmse": 24.17,
+            "bias": 8.03
+          }
+        },
+        "tumidih_01": {
+          "n": 13198,
+          "model": {
+            "mae": 12.74,
+            "rmse": 22.99,
+            "bias": -6.7
+          },
+          "persistence": {
+            "mae": 16.86,
+            "rmse": 28.64,
+            "bias": 0.12
+          },
+          "cams": {
+            "mae": 18.39,
+            "rmse": 27.25,
+            "bias": 5.42
+          }
+        },
+        "milupara_01": {
+          "n": 7973,
+          "model": {
+            "mae": 7.94,
+            "rmse": 12.51,
+            "bias": -0.06
+          },
+          "persistence": {
+            "mae": 10.75,
+            "rmse": 17.18,
+            "bias": -0.11
+          },
+          "cams": {
+            "mae": 18.63,
+            "rmse": 24.1,
+            "bias": 15.59
+          }
+        },
+        "chhal_01": {
+          "n": 14506,
+          "model": {
+            "mae": 10.16,
+            "rmse": 15.18,
+            "bias": -4.27
+          },
+          "persistence": {
+            "mae": 13.31,
+            "rmse": 19.46,
+            "bias": -0.14
+          },
+          "cams": {
+            "mae": 16.89,
+            "rmse": 23.11,
+            "bias": 8.44
+          }
+        },
+        "kunjemara_01": {
+          "n": 14950,
+          "model": {
+            "mae": 9.51,
+            "rmse": 14.61,
+            "bias": -0.33
+          },
+          "persistence": {
+            "mae": 11.43,
+            "rmse": 18.97,
+            "bias": -0.28
+          },
+          "cams": {
+            "mae": 20.18,
+            "rmse": 26.0,
+            "bias": 13.62
+          }
+        }
+      },
+      "loso_weighted_mae": {
+        "model": 9.43,
+        "persistence": 12.04,
+        "cams": 22.4
+      },
+      "loso_model_beats_both": 13,
+      "loso_stations": 13,
+      "time_split_p10_p90_coverage": 0.756
+    },
+    "72": {
+      "n_rows": 199846,
+      "time_split": {
+        "n": 54959,
+        "model": {
+          "mae": 9.65,
+          "rmse": 16.06,
+          "bias": -0.75
+        },
+        "persistence": {
+          "mae": 11.62,
+          "rmse": 19.7,
+          "bias": -0.15
+        },
+        "cams": {
+          "mae": 25.06,
+          "rmse": 33.44,
+          "bias": 21.03
+        },
+        "desc": "train < 2025-01-01 UTC, test >= 2025-01-01 UTC, all stations"
+      },
+      "loso": {
+        "korba_01": {
+          "n": 18163,
+          "model": {
+            "mae": 8.73,
+            "rmse": 15.73,
+            "bias": -1.69
+          },
+          "persistence": {
+            "mae": 10.17,
+            "rmse": 18.57,
+            "bias": -0.24
+          },
+          "cams": {
+            "mae": 18.14,
+            "rmse": 25.08,
+            "bias": 11.2
+          }
+        },
+        "raipur_01": {
+          "n": 22006,
+          "model": {
+            "mae": 9.01,
+            "rmse": 13.28,
+            "bias": -0.6
+          },
+          "persistence": {
+            "mae": 12.32,
+            "rmse": 17.81,
+            "bias": 0.03
+          },
+          "cams": {
+            "mae": 24.96,
+            "rmse": 32.29,
+            "bias": 22.83
+          }
+        },
+        "raipur_02": {
+          "n": 20217,
+          "model": {
+            "mae": 8.99,
+            "rmse": 14.08,
+            "bias": 0.6
+          },
+          "persistence": {
+            "mae": 12.36,
+            "rmse": 19.8,
+            "bias": 0.15
+          },
+          "cams": {
+            "mae": 27.01,
+            "rmse": 34.3,
+            "bias": 24.95
+          }
+        },
+        "raipur_03": {
+          "n": 21798,
+          "model": {
+            "mae": 6.88,
+            "rmse": 9.4,
+            "bias": 2.19
+          },
+          "persistence": {
+            "mae": 9.4,
+            "rmse": 12.93,
+            "bias": 0.07
+          },
+          "cams": {
+            "mae": 28.36,
+            "rmse": 36.11,
+            "bias": 27.72
+          }
+        },
+        "raipur_04": {
+          "n": 12487,
+          "model": {
+            "mae": 16.41,
+            "rmse": 25.87,
+            "bias": -10.72
+          },
+          "persistence": {
+            "mae": 20.33,
+            "rmse": 29.9,
+            "bias": -0.27
+          },
+          "cams": {
+            "mae": 22.43,
+            "rmse": 31.31,
+            "bias": 6.72
+          }
+        },
+        "bhilai_01": {
+          "n": 22021,
+          "model": {
+            "mae": 12.13,
+            "rmse": 18.74,
+            "bias": -5.82
+          },
+          "persistence": {
+            "mae": 16.26,
+            "rmse": 23.28,
+            "bias": -0.1
+          },
+          "cams": {
+            "mae": 21.46,
+            "rmse": 29.17,
+            "bias": 15.36
+          }
+        },
+        "bhilai_02": {
+          "n": 8272,
+          "model": {
+            "mae": 9.02,
+            "rmse": 13.79,
+            "bias": -3.83
+          },
+          "persistence": {
+            "mae": 13.34,
+            "rmse": 19.15,
+            "bias": -0.14
+          },
+          "cams": {
+            "mae": 20.33,
+            "rmse": 26.72,
+            "bias": 17.29
+          }
+        },
+        "bhilai_03": {
+          "n": 17786,
+          "model": {
+            "mae": 7.51,
+            "rmse": 12.54,
+            "bias": 0.53
+          },
+          "persistence": {
+            "mae": 9.09,
+            "rmse": 16.1,
+            "bias": -0.23
+          },
+          "cams": {
+            "mae": 27.14,
+            "rmse": 34.78,
+            "bias": 26.14
+          }
+        },
+        "bilaspur_01": {
+          "n": 7147,
+          "model": {
+            "mae": 10.04,
+            "rmse": 19.64,
+            "bias": -6.25
+          },
+          "persistence": {
+            "mae": 14.37,
+            "rmse": 26.23,
+            "bias": -0.36
+          },
+          "cams": {
+            "mae": 16.27,
+            "rmse": 24.79,
+            "bias": 8.02
+          }
+        },
+        "tumidih_01": {
+          "n": 12873,
+          "model": {
+            "mae": 13.12,
+            "rmse": 23.68,
+            "bias": -7.46
+          },
+          "persistence": {
+            "mae": 17.47,
+            "rmse": 27.9,
+            "bias": -0.24
+          },
+          "cams": {
+            "mae": 18.46,
+            "rmse": 27.43,
+            "bias": 5.42
+          }
+        },
+        "milupara_01": {
+          "n": 7789,
+          "model": {
+            "mae": 8.11,
+            "rmse": 12.6,
+            "bias": 0.4
+          },
+          "persistence": {
+            "mae": 11.67,
+            "rmse": 18.05,
+            "bias": 0.14
+          },
+          "cams": {
+            "mae": 18.94,
+            "rmse": 24.69,
+            "bias": 16.04
+          }
+        },
+        "chhal_01": {
+          "n": 14458,
+          "model": {
+            "mae": 10.66,
+            "rmse": 15.81,
+            "bias": -4.79
+          },
+          "persistence": {
+            "mae": 14.68,
+            "rmse": 21.06,
+            "bias": -0.14
+          },
+          "cams": {
+            "mae": 16.86,
+            "rmse": 23.1,
+            "bias": 8.34
+          }
+        },
+        "kunjemara_01": {
+          "n": 14829,
+          "model": {
+            "mae": 9.98,
+            "rmse": 15.11,
+            "bias": -0.31
+          },
+          "persistence": {
+            "mae": 12.26,
+            "rmse": 19.96,
+            "bias": -0.27
+          },
+          "cams": {
+            "mae": 20.11,
+            "rmse": 25.92,
+            "bias": 13.5
+          }
+        }
+      },
+      "loso_weighted_mae": {
+        "model": 9.88,
+        "persistence": 13.05,
+        "cams": 22.47
+      },
+      "loso_model_beats_both": 13,
+      "loso_stations": 13,
+      "time_split_p10_p90_coverage": 0.751
+    }
+  }
+}
