@@ -1,0 +1,18 @@
+{
+  "source": "s3://openaq-data-archive/records/csv.gz (OpenAQ AWS open data, no key)",
+  "checked": "2026-10-20",
+  "pairwise_2025_archive": {
+    "kunjemara_01 vs milupara_01": {"n": 4528, "identical_share": 0.001, "r": -0.013},
+    "chhal_01 vs bhilai_02": {"n": 5661, "identical_share": 0.001, "r": 0.044}
+  },
+  "archive_vs_contaminated_cpcb_file_2025": {
+    "milupara_01": {"n": 4740, "r": 0.902, "mae": 2.42, "note": "the shared 2025 CPCB file is Milupara's real series"},
+    "kunjemara_01": {"n": 4693, "r": 0.509, "mae": 15.6},
+    "chhal_01": {"n": 5615, "r": 0.297, "mae": 4.4},
+    "bhilai_02": {"n": 5874, "r": 0.442, "mae": 14.6}
+  },
+  "not_recovered": {
+    "korba_02 (Urja Nagar) 2021-2024": "no archive files",
+    "bilaspur_01 (Mangala) 2021-2024": "archive has 1505 h (2021) + 1373 h (2022), none 2023-2024; all before CAMS history start 2022-08, so not used"
+  }
+}
