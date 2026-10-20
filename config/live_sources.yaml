@@ -1,0 +1,34 @@
+# Live data sources. Endpoints, identifiers and areas live here, not in code.
+# API keys come from the environment only (never commit them):
+#   DATA_GOV_IN_API_KEY, FIRMS_MAP_KEY, OPENAQ_API_KEY
+
+cpcb_datagov:
+  # data.gov.in "Real time Air Quality Index from various locations" (CPCB CAAQMS).
+  base_url: "https://api.data.gov.in/resource"
+  resource_id: "3b01bcb8-0b14-4abf-b6f2-c1bfd384ba69"
+  state: "Chhattisgarh"
+  page_size: 500
+  # The API edge stalls requests that send the default python-httpx User-Agent.
+  user_agent: "vayu-ai/1.0 (+https://github.com/AdityaK0804/vayu-ai)"
+  # The feed publishes, per pollutant, min/max/avg of the CPCB *pollutant
+  # sub-index* over the last 24 h (CO 30 at a clean site is an index, not mg/m3).
+  # We invert the CPCB breakpoints to get concentrations, store those, and
+  # recompute the AQI from them. Set to "concentration" if CPCB changes this.
+  value_kind: "sub_index"
+  timezone: "Asia/Kolkata"          # last_update is local time
+  # Station registry: CPCB name -> our station_id/city_id, from the CAAQMS list
+  # (see name_source / coord_source columns).
+  stations_file: "cpcb_stations.csv"
+  # Readings older than this are not stored as current.
+  max_age_hours: 6
+
+firms:
+  # Chhattisgarh state extent [W, S, E, N] (Survey of India boundary, rounded out).
+  state_bbox: [80.2, 17.7, 84.5, 24.2]
+  days: 2
+
+weather:
+  # Open-Meteo forecast API rate-limits shared cloud IPs. Weather changes
+  # slowly, so fetch it at most this often per city and back off on 429.
+  min_interval_minutes: 180
+  backoff_minutes_after_429: 60
