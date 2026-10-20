@@ -95,6 +95,8 @@ def run_cycle(
                 {"city_id": c.get("city_id"), "ok": bool(c.get("ok"))} for c in summary.get("cities", [])
             ],
             "fires": {k: (summary.get("fires") or {}).get(k) for k in ("status", "stored", "n")},
+            "cpcb": {k: (summary.get("cpcb") or {}).get(k) for k in ("status", "n_stations", "fetched_at")},
+            "weather": {k: (summary.get("weather") or {}).get(k) for k in ("status", "n", "until")},
             "forecasts": forecasts,
             "freshness": store.source_freshness(),
         }

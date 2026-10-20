@@ -110,6 +110,12 @@ def _age_hours(ts: str | None) -> float | None:
 
 
 def _quality(source: str | None, *, calibrated: bool = False) -> dict[str, Any]:
+    if source == "cpcb":
+        return {
+            "kind": "measured",
+            "label": "Measured — CPCB CAAQMS station (data.gov.in), 24 h average",
+            "calibrated": calibrated,
+        }
     if source == "openaq":
         return {
             "kind": "measured",
@@ -622,6 +628,25 @@ def v2_refresh(body: RefreshRequest | None = None, _admin: str = Depends(require
         raise ApiError(409, "A refresh is already running.", code="refresh_in_progress") from None
     _point_cache.clear()
     return result
+
+
+class WeatherPush(BaseModel):
+    city_ids: list[str] = Field(..., min_length=1, max_length=50)
+    # Raw Open-Meteo /v1/forecast JSON (object or list, one entry per city, in order).
+    open_meteo: Any
+
+
+@router.post("/admin/ingest/weather")
+def v2_ingest_weather(body: WeatherPush, _admin: str = Depends(require_admin)) -> dict[str, Any]:
+    """Accept Open-Meteo weather fetched outside Render (whose shared egress IPs
+    get HTTP 429). Requires an admin token. Used by the GitHub Actions job."""
+    from airsight.live.ingest import ingest_weather_payload
+
+    try:
+        with _open_store() as store:
+            return ingest_weather_payload(store, body.open_meteo, [c.lower() for c in body.city_ids])
+    except ValueError as exc:
+        raise ApiError(422, str(exc), code="bad_weather_payload") from None
 
 
 class AlertCreate(BaseModel):

@@ -352,8 +352,9 @@ CREATE INDEX IF NOT EXISTS idx_alerts_ts ON alerts(ts);
 # well inside its limit; anything older is reported as stale.
 SOURCE_STALE_HOURS: dict[str, float] = {
     "cams": 3.0,
+    "cpcb": 3.0,
     "openaq": 3.0,
-    "met": 3.0,
+    "met": 6.0,
     "forecast": 3.0,
     "fires": 6.0,
 }
@@ -1143,6 +1144,9 @@ class Store:
                 f"SELECT MAX(ts) FROM observations WHERE source = 'open-meteo-cams' AND ts <= ?{where_city}",
                 (now_iso, *cp),
             ),
+            "cpcb": self.scalar(
+                f"SELECT MAX(ts) FROM observations WHERE source = 'cpcb'{where_city}", cp
+            ),
             "openaq": self.scalar(
                 f"SELECT MAX(ts) FROM observations WHERE source = 'openaq'{where_city}", cp
             ),
@@ -1150,7 +1154,7 @@ class Store:
             "forecast": self.scalar(f"SELECT MAX(run_ts) FROM air_forecast WHERE 1=1{where_city}", cp),
             "fires": self.scalar("SELECT MAX(ts) FROM fires"),
         }
-        sync_sources = {"cams": "city_batch", "openaq": "openaq", "met": "city_batch",
+        sync_sources = {"cams": "city_batch", "cpcb": "cpcb", "openaq": "openaq", "met": "open-meteo-weather",
                         "forecast": "forecast", "fires": "firms"}
         out: dict[str, Any] = {}
         for name, data_ts in latest.items():
@@ -1170,6 +1174,16 @@ class Store:
                 "stale": age is None or age > limit,
             }
         return out
+
+    def get_meta(self, key: str) -> str | None:
+        return self.scalar("SELECT value FROM meta WHERE key = ?", (key,))
+
+    def set_meta(self, key: str, value: str) -> None:
+        self._conn.execute(
+            "INSERT INTO meta(key, value) VALUES(?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+            (key, str(value)),
+        )
 
     @property
     def is_empty(self) -> bool:

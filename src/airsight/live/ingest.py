@@ -46,9 +46,16 @@ from airsight.grid.surface import (
 from airsight.live import fires as fires_mod
 from airsight.live.openmeteo import PointSeries, fetch_air_quality, fetch_weather
 from airsight.live.openaq import fetch_latest as openaq_latest
+from airsight.live import cpcb as cpcb_mod
+from airsight.live.openmeteo import OpenMeteoError
+from airsight.live.sources_config import section as source_section
 from airsight.store import Store, to_iso, utcnow
 
 log = logging.getLogger(__name__)
+
+# Measured sources, best first. CPCB via data.gov.in is the official feed;
+# OpenAQ mirrors the same CAAQMS stations and serves as a cross-check.
+MEASURED_RANK: dict[str, int] = {"cpcb": 0, "openaq": 1}
 
 CAMS_SOURCE = "open-meteo-cams"
 WX_SOURCE = "open-meteo"
@@ -173,6 +180,10 @@ def ingest_cities(
         if not cities:
             return {"ok": False, "detail": "no cities matched", "cities": []}
 
+        # State-wide CPCB feed first so measured stations anchor the surfaces.
+        cpcb_summary = ingest_cpcb(store)
+        weather = _weather_batch(store, cities, past_days=past_days, forecast_days=forecast_days)
+
         results: list[dict[str, Any]] = []
         for city in cities:
             try:
@@ -184,6 +195,7 @@ def ingest_cities(
                         forecast_days=forecast_days,
                         build_surface=build_surfaces,
                         openaq=openaq,
+                        weather=weather.get(city["id"]),
                     )
                 )
             except Exception as exc:  # noqa: BLE001 - keep the loop alive
@@ -204,6 +216,8 @@ def ingest_cities(
             "n_ok": ok,
             "cities": results,
             "fires": fire_summary,
+            "cpcb": cpcb_summary,
+            "weather": weather.get("_status"),
         }
         store.log_ingest(
             "city_batch",
@@ -226,6 +240,7 @@ def _ingest_city(
     forecast_days: int,
     build_surface: bool,
     openaq: bool,
+    weather: Any = None,
 ) -> dict[str, Any]:
     city_id = city["id"]
     lat, lon = float(city["lat"]), float(city["lon"])
@@ -245,11 +260,8 @@ def _ingest_city(
     # Weather is an input to the forecast, not to the observed AQI. A weather
     # outage (e.g. Open-Meteo 429 on a shared cloud egress IP) must not discard
     # the air-quality readings we already have for this city.
-    try:
-        wx = fetch_weather([(lat, lon)], past_days=past_days, forecast_days=forecast_days)
-    except Exception as exc:  # noqa: BLE001
-        log.warning("weather fetch failed for %s, storing air quality only: %s", city_id, exc)
-        wx = []
+    # Weather is fetched once per refresh for all cities (see _weather_batch).
+    wx = [weather] if weather is not None else []
 
     now_hour = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:00")
     obs_rows: list[dict[str, Any]] = []
@@ -413,6 +425,93 @@ def _ingest_city(
     }
 
 
+def ingest_cpcb(store: Store) -> dict[str, Any]:
+    """Store current CPCB station readings (data.gov.in) for the whole state."""
+    rows, status = cpcb_mod.fetch_latest()
+    if rows:
+        store.upsert_stations([
+            {
+                "station_id": r["station_id"], "city_id": r["city_id"], "name": r["name"],
+                "lat": r["lat"], "lon": r["lon"], "source": "cpcb",
+                "h3_r7": _h3(r["lat"], r["lon"], 7), "h3_r8": _h3(r["lat"], r["lon"], 8),
+            }
+            for r in rows
+        ])
+        store.upsert_observations([
+            {**r, "h3_r7": _h3(r["lat"], r["lon"], 7), "h3_r8": _h3(r["lat"], r["lon"], 8)}
+            for r in rows
+        ])
+    store.log_ingest(cpcb_mod.SOURCE, status.get("status", "unknown"), rows=len(rows),
+                     detail=str(status.get("detail"))[:400])
+    return {k: status.get(k) for k in ("status", "n_records", "n_stations", "fetched_at", "detail")}
+
+
+def _weather_batch(
+    store: Store, cities: Sequence[dict[str, Any]], *, past_days: int, forecast_days: int
+) -> dict[str, Any]:
+    """One multi-point Open-Meteo request for every city that needs weather.
+
+    Open-Meteo rate-limits shared cloud egress IPs, so: skip cities whose met
+    data was refreshed within ``weather.min_interval_minutes``, send all the
+    rest in one call, and after a 429 back off for ``backoff_minutes_after_429``.
+    Met rows pushed by the external weather job count as fresh too.
+    """
+    cfg = source_section("weather")
+    interval = float(cfg.get("min_interval_minutes") or 180)
+    backoff = float(cfg.get("backoff_minutes_after_429") or 60)
+    now = datetime.now(timezone.utc)
+    until = store.get_meta("weather_backoff_until")
+    if until and to_iso(until) and to_iso(until) > now.strftime("%Y-%m-%dT%H:%M:%SZ"):
+        return {"_status": {"status": "backoff", "until": until}}
+    due = []
+    for city in cities:
+        last = store.scalar(
+            "SELECT MAX(ingested_at) FROM met WHERE city_id = ?", (city["id"],)
+        )
+        if last and to_iso(last) and to_iso(last) > (now - timedelta(minutes=interval)).strftime("%Y-%m-%dT%H:%M:%SZ"):
+            continue
+        due.append(city)
+    if not due:
+        return {"_status": {"status": "fresh", "n": 0}}
+    try:
+        series = fetch_weather(
+            [(float(c["lat"]), float(c["lon"])) for c in due],
+            past_days=past_days, forecast_days=forecast_days,
+        )
+    except OpenMeteoError as exc:
+        if "429" in str(exc):
+            store.set_meta("weather_backoff_until", (now + timedelta(minutes=backoff)).strftime("%Y-%m-%dT%H:%M:%SZ"))
+        log.warning("weather batch failed, storing air quality only: %s", exc)
+        store.log_ingest("open-meteo-weather", "error", detail=str(exc)[:300])
+        return {"_status": {"status": "error", "detail": str(exc)[:200]}}
+    except Exception as exc:  # noqa: BLE001
+        log.warning("weather batch failed: %s", exc)
+        return {"_status": {"status": "error", "detail": type(exc).__name__}}
+    out: dict[str, Any] = {c["id"]: s for c, s in zip(due, series)}
+    out["_status"] = {"status": "ok", "n": len(out)}
+    store.log_ingest("open-meteo-weather", "ok", rows=len(series))
+    return out
+
+
+def ingest_weather_payload(store: Store, payload: Any, city_ids: Sequence[str]) -> dict[str, Any]:
+    """Store an Open-Meteo forecast response fetched elsewhere (e.g. a GitHub
+    Actions job) for *city_ids*, in request order. Same parser as live fetches."""
+    from airsight.live.openmeteo import _as_list, _parse_series
+
+    entries = _as_list(payload)
+    if len(entries) != len(city_ids):
+        raise ValueError("payload has %d locations for %d city ids" % (len(entries), len(city_ids)))
+    n = 0
+    for cid, entry in zip(city_ids, entries):
+        city = store.city(cid)
+        if not city:
+            raise ValueError(f"unknown city {cid}")
+        rows = _met_rows(_parse_series(entry, float(city["lat"]), float(city["lon"])), city["id"])
+        n += store.upsert_met(rows)
+    store.log_ingest("open-meteo-weather", "ok", rows=n, detail="pushed by external job")
+    return {"cities": len(city_ids), "rows": n}
+
+
 def _measured_aqi(store: Store, reading: dict[str, Any]) -> int | None:
     """CPCB AQI for a new measured reading using the station's stored history.
 
@@ -440,8 +539,8 @@ def _ingest_openaq(
     )
     radius = 60_000 if saw_stations else 120_000
     rows, status = openaq_latest((lat, lon), radius_m=radius)
-    if status.get("status") == "ok":
-        store.log_ingest("openaq", "ok", rows=len(rows), detail=city["id"])
+    store.log_ingest("openaq", status.get("status", "unknown"), rows=len(rows),
+                     detail=f"{city['id']}: {status.get('detail') or ''}"[:400])
     return rows, status
 
 
@@ -496,8 +595,9 @@ def _at(series: PointSeries, idx: int, key: str) -> float | None:
 def ingest_fires(
     store: Store, bbox: Sequence[float] | None = None, days: int = 2
 ) -> dict[str, Any]:
-    area = list(bbox) if bbox else _state_bbox(store)
-    rows, status = fires_mod.fetch_fires(area, days=days)
+    fcfg = source_section("firms")
+    area = list(bbox) if bbox else (fcfg.get("state_bbox") or _state_bbox(store))
+    rows, status = fires_mod.fetch_fires(area, days=int(fcfg.get("days") or days))
     if rows:
         enriched = []
         for row in rows:
@@ -554,7 +654,7 @@ def refresh_surface(
     anchors: list[dict[str, Any]] = []
     seen: set[tuple[float, float]] = set()
     # Measured stations first — they win ties in the IDW weighting.
-    for row in sorted(latest, key=lambda r: 0 if r["source"] == "openaq" else 1):
+    for row in sorted(latest, key=lambda r: MEASURED_RANK.get(r["source"], 9)):
         if row.get("pm25") is None:
             continue
         station = next(
@@ -572,7 +672,7 @@ def refresh_surface(
                 "lat": float(station["lat"]),
                 "lon": float(station["lon"]),
                 "pm25": float(row["pm25"]),
-                "weight": 2.0 if row["source"] == "openaq" else 1.0,
+                "weight": 2.0 if row["source"] in MEASURED_RANK else 1.0,
                 "source": row["source"],
             }
         )
@@ -638,9 +738,14 @@ def city_summary(store: Store, city_id: str) -> dict[str, Any]:
 
     # Prefer a measured station; fall back to the CAMS grid point.
     window = store.observations(city_id, since=_hours_ago(48), limit=6000)
-    measured_rows = [r for r in window if r["source"] == "openaq"]
-    rows = measured_rows or [r for r in window if r["source"] == CAMS_SOURCE]
-    rows = [r for r in rows if r.get("pm25") is not None]
+    # CPCB official feed first, then OpenAQ (same stations, cross-check), then CAMS.
+    rows = []
+    for src in sorted(MEASURED_RANK, key=MEASURED_RANK.get):
+        rows = [r for r in window if r["source"] == src and (r.get("pm25") is not None or r.get("pm10") is not None)]
+        if rows:
+            break
+    rows = rows or [r for r in window if r["source"] == CAMS_SOURCE]
+    rows = [r for r in rows if r.get("pm25") is not None or r.get("source") == "cpcb"]
 
     # Keep one station (the freshest) so averaging is not polluted by mixing
     # two locations into a single 24-hour window.
@@ -654,7 +759,20 @@ def city_summary(store: Store, city_id: str) -> dict[str, Any]:
     latest = station_rows[-1]
 
     # Gap-aware hourly grid: a 24h window spans 24 clock hours, not 24 rows.
-    naqi = naqi_from_rows(station_rows)
+    if latest["source"] == "cpcb":
+        # CPCB values are already 24 h averages; the AQI was computed at ingest
+        # from those concentrations. Re-averaging snapshots would smear it.
+        from airsight.aqi.cpcb_naqi import compute_naqi
+
+        naqi = compute_naqi(latest)
+        cp_aqi = None if latest.get("aqi") is None else int(round(float(latest["aqi"])))
+        naqi["aqi"] = cp_aqi
+        naqi["band"] = band_for_aqi(cp_aqi)
+        naqi["dominant_pollutant"] = latest.get("dominant") or naqi.get("dominant_pollutant")
+        naqi["cpcb_valid"] = cp_aqi is not None
+        naqi["averaging"] = {"basis": "CPCB 24 h station average (data.gov.in)"}
+    else:
+        naqi = naqi_from_rows(station_rows)
     aqi = naqi.get("aqi")
 
     pm_values = [r["pm25"] for r in station_rows[-24:] if r.get("pm25") is not None]
@@ -678,7 +796,7 @@ def city_summary(store: Store, city_id: str) -> dict[str, Any]:
         "averaging": naqi.get("averaging"),
         "aqi_basis": "cpcb_naqi",
         "cpcb_valid": naqi.get("cpcb_valid"),
-        "measured": latest["source"] == "openaq",
+        "measured": latest["source"] in MEASURED_RANK,
         "source": latest["source"],
         "ts": latest["ts"],
         "pm25_24h": round(mean24, 1) if mean24 is not None else None,
