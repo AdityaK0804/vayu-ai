@@ -288,7 +288,7 @@ def build_city_advisory(city_id: str, fac: dict) -> dict:
     live = live_for(city_id)
     pr = priority_top(city_id)
     pm25 = live.get("current_pm25") or live.get("measured_pm25_24h") or pr.get("predicted_pm25")
-    aqi = live.get("current_us_aqi") or live.get("measured_us_aqi")
+    aqi = live.get("measured_aqi") or live.get("current_aqi")
     if pm25 is not None:
         try:
             pm25 = round(float(pm25), 1)
@@ -311,7 +311,8 @@ def build_city_advisory(city_id: str, fac: dict) -> dict:
         "districts_matched": fac["districts_matched"],
         "air": {
             "pm25": pm25,
-            "us_aqi": aqi,
+            "aqi": aqi,
+            "aqi_basis": "cpcb_naqi",
             "band_en": band_en,
             "band_hi": band_hi,
             "severity": sev,

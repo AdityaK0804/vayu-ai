@@ -159,7 +159,8 @@ def attach_live(cities: list[dict]) -> list[dict]:
             continue
         c["live"] = {
             "pm25": lv.get("current_pm25") or lv.get("measured_pm25_24h"),
-            "us_aqi": lv.get("current_us_aqi") or lv.get("measured_us_aqi"),
+            "aqi": lv.get("measured_aqi") or lv.get("current_aqi"),
+            "aqi_basis": "cpcb_naqi",
             "measured": lv.get("measured"),
             "updated": lv.get("updated"),
             "n_stations": lv.get("n_stations"),

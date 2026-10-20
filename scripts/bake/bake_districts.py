@@ -127,9 +127,9 @@ def static_features(lats, lons) -> pd.DataFrame:
 
 
 
-# EPA PM2.5 -> US AQI breakpoints (24h)
-_AQI = [(0.0, 12.0, 0, 50), (12.1, 35.4, 51, 100), (35.5, 55.4, 101, 150),
-        (55.5, 150.4, 151, 200), (150.5, 250.4, 201, 300), (250.5, 500.4, 301, 500)]
+# CPCB NAQI PM2.5 breakpoints (24h mean). US EPA breakpoints are not used.
+_AQI = [(0.0, 30.0, 0, 50), (30.0, 60.0, 51, 100), (60.0, 90.0, 101, 200),
+        (90.0, 120.0, 201, 300), (120.0, 250.0, 301, 400), (250.0, 500.0, 401, 500)]
 
 
 def aqi_from_pm25(pm: float) -> int:
@@ -337,7 +337,7 @@ def main() -> None:
     gdf["source"] = np.where(gdf.n_stations > 0, "measured+model", "model only")
 
     # --- AQI, measured pollutants, model-side detail ---
-    gdf["us_aqi"] = [aqi_from_pm25(float(v)) for v in gdf.pm25]
+    gdf["aqi"] = [aqi_from_pm25(float(v)) for v in gdf.pm25]
     gdf["measured"] = station_observations(gdf, st)
     gdf["shares"] = source_shares(model, feats, X)
 
@@ -387,7 +387,7 @@ def main() -> None:
         cities_out.append({
             "id": c["id"], "name": c["name"], "role": c.get("role"),
             "lat": c["lat"], "lon": c["lon"],
-            "pm25": round(pm, 1), "us_aqi": aqi_from_pm25(pm),
+            "pm25": round(pm, 1), "aqi": aqi_from_pm25(pm),
             "risk": round(min(100.0, pm / (CPCB_STD * 2) * 100), 1),
             "n_stations": ns,
             "has_stations": bool(c.get("has_stations")),
@@ -417,11 +417,11 @@ def main() -> None:
         live_aqi = [None] * len(gdf)
         live_n = [0] * len(gdf)
     gdf["live_pm25"] = live_pm
-    gdf["live_us_aqi"] = live_aqi
+    gdf["live_aqi_cpcb"] = live_aqi
     gdf["live_stations"] = live_n
     # what the UI should actually paint: measured when we have it, model otherwise
     gdf["display_pm25"] = [lp if lp is not None else mp for lp, mp in zip(live_pm, gdf.pm25)]
-    gdf["display_aqi"] = [la if la is not None else ma for la, ma in zip(live_aqi, gdf.us_aqi)]
+    gdf["display_aqi"] = [la if la is not None else ma for la, ma in zip(live_aqi, gdf.aqi)]
     gdf["display_basis"] = ["measured" if lp is not None else "model" for lp in live_pm]
     say(f"{sum(1 for x in live_pm if x is not None)} districts painted from MEASURED stations, "
         f"{sum(1 for x in live_pm if x is None)} from the model")

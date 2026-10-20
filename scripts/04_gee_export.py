@@ -46,18 +46,24 @@ CHANNELS = {
         "band": "Optical_Depth_055",
         "scale": 1000,
         "note": "best satellite proxy for surface PM2.5; daily 1km; from 2000",
+        # MCD19A2 AOD_QA bits 0-2 = cloud mask (001 = clear); bits 8-11 =
+        # QA for AOD (0000 = best quality). Values are scaled by 0.001.
+        "qa": "modis_aod",
+        "scale_factor": 0.001,
     },
     "no2": {
         "collection": "COPERNICUS/S5P/OFFL/L3_NO2",
         "band": "NO2_column_number_density",
         "scale": 1000,
         "note": "traffic/combustion proxy; from Jul 2018",
+        "qa": "s5p",
     },
     "so2": {
         "collection": "COPERNICUS/S5P/OFFL/L3_SO2",
         "band": "SO2_column_number_density",
         "scale": 1000,
         "note": "coal/industry proxy - BIG for Korba; from Jul 2018",
+        "qa": "s5p",
     },
 }
 
@@ -103,6 +109,40 @@ def build_fc(ee, points):
     ])
 
 
+# Copernicus S5P PUM: qa_value > 0.5 removes cloud-covered, snow/ice and
+# high-zenith retrievals. The L3 GEE products keep "cloud_fraction" (and the
+# SO2 one "qa_value" is not always present), so mask on cloud_fraction as well.
+S5P_MAX_CLOUD_FRACTION = 0.3
+
+
+def s5p_qa_mask(img, band):
+    """Pure helper (testable without ee objects being real)."""
+    masked = img.select(band)
+    # cloud_fraction is exported in both NO2 and SO2 L3 collections
+    masked = masked.updateMask(img.select("cloud_fraction").lt(S5P_MAX_CLOUD_FRACTION))
+    return masked.copyProperties(img, ["system:time_start"]) if hasattr(masked, "copyProperties") else masked
+
+
+def modis_aod_qa_mask(img, band, scale_factor=0.001):
+    qa = img.select("AOD_QA")
+    cloud_clear = qa.bitwiseAnd(0b111).eq(1)            # bits 0-2: 001 = clear
+    best_quality = qa.rightShift(8).bitwiseAnd(0b1111).eq(0)  # bits 8-11: 0000 = best
+    out = img.select(band).updateMask(cloud_clear.And(best_quality)).multiply(scale_factor).rename(band)
+    return out.copyProperties(img, ["system:time_start"]) if hasattr(out, "copyProperties") else out
+
+
+def apply_qa(col, ch):
+    """DATA-05: mask clouds / poor retrievals and apply scale factors before
+    any temporal mean. Raw bands are never averaged unmasked."""
+    band = ch["band"]
+    kind = ch.get("qa")
+    if kind == "s5p":
+        return col.map(lambda img: s5p_qa_mask(img, band))
+    if kind == "modis_aod":
+        return col.map(lambda img: modis_aod_qa_mask(img, band, ch.get("scale_factor", 0.001)))
+    return col.select(band)
+
+
 def export_channel(ee, city, fc, ch_key, year, tag):
     ch = CHANNELS[ch_key]
     start = ee.Date(f"{year}-01-01")
@@ -110,8 +150,8 @@ def export_channel(ee, city, fc, ch_key, year, tag):
 
     col = (ee.ImageCollection(ch["collection"])
            .filterDate(start, end)
-           .filterBounds(ee.Geometry.Rectangle(city["bbox"]))
-           .select(ch["band"]))
+           .filterBounds(ee.Geometry.Rectangle(city["bbox"])))
+    col = apply_qa(col, ch)
 
     n_days = end.difference(start, "day")
     days = ee.List.sequence(0, n_days.subtract(1))
